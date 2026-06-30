@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Trankui | Crew audiovisive affidabili</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <section class="auth-screen" id="authScreen">
+      <div class="auth-card">
+        <header class="auth-nav">
+          <img class="brand-logo auth-logo" src="./logo.png" alt="Trankui" />
+          <nav aria-label="Informazioni su Trankui">
+            <a href="./trankui.html">Chi è Trankui</a>
+            <a href="./faq.html">FAQ</a>
+          </nav>
+        </header>
+        <div class="auth-layout">
+          <section class="auth-intro">
+            <p class="eyebrow">Nato in Sardegna per il settore audiovisivo</p>
+            <h1>La crew giusta, quando serve davvero.</h1>
+            <p>Trankui aiuta producer, registi e professionisti audiovisivi a trovare collaboratori disponibili, affidabili e verificabili, anche fuori dalla propria rete di contatti.</p>
+            <div class="auth-problem-list">
+              <div><i data-lucide="calendar-check" aria-hidden="true"></i><strong>Disponibilità reale</strong><span>Trova chi può lavorare nella data della produzione.</span></div>
+              <div><i data-lucide="shield-check" aria-hidden="true"></i><strong>Fiducia operativa</strong><span>Valuta collaborazioni concluse, soft skill e affidabilità.</span></div>
+              <div><i data-lucide="messages-square" aria-hidden="true"></i><strong>Meno passaparola dispersivo</strong><span>Costruisci la crew senza inseguire chat, gruppi e telefonate.</span></div>
+            </div>
+          </section>
+          <section class="auth-entry">
+            <div class="auth-mode" role="tablist" aria-label="Accesso a Trankui">
+              <button class="tiny-button active" type="button" data-auth-mode="signup">Crea profilo</button>
+              <button class="tiny-button" type="button" data-auth-mode="signin">Accedi</button>
+            </div>
+            <h2 id="authTitle">Crea il tuo profilo</h2>
+            <p class="auth-copy" id="authCopy">Inizia a farti trovare per ruolo, zona e disponibilità.</p>
+            <form class="auth-form" id="authForm">
+              <div class="field">
+                <label for="authName">Nome e cognome</label>
+                <input id="authName" name="name" placeholder="Es. Davide Toro" required />
+              </div>
+              <div class="field">
+                <label for="authEmail">Email</label>
+                <input id="authEmail" name="email" type="email" placeholder="nome@email.it" required />
+              </div>
+              <div class="field">
+                <label for="authPassword">Password</label>
+                <input id="authPassword" name="password" type="password" minlength="8" autocomplete="new-password" required />
+              </div>
+              <button class="primary-button" type="submit" id="authSubmit"><i data-lucide="user-plus" aria-hidden="true"></i>Crea profilo</button>
+              <label class="consent-line" id="privacyConsentLine">
+                <input id="privacyConsent" name="privacyConsent" type="checkbox" required />
+                <span>Accetto la <a href="./privacy.html" target="_blank">Privacy Policy</a> e i <a href="./termini.html" target="_blank">Termini di utilizzo</a>.</span>
+              </label>
+              <label class="consent-line" id="calendarConsentLine">
+                <input id="calendarConsent" name="calendarConsent" type="checkbox" />
+                <span>Autorizzo Trankui a usare le disponibilità per mostrarmi nelle ricerche pertinenti.</span>
+              </label>
+            </form>
+            <div class="quick-login" id="authStatus" aria-live="polite"></div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <div class="app-shell hidden" id="appShell">
+      <aside class="sidebar" aria-label="Navigazione principale">
+        <div class="brand">
+          <img class="brand-logo" src="./logo.png" alt="Trankui" />
+        </div>
+
+        <nav class="nav-list">
+          <button class="nav-item active" type="button" data-view="search"><i data-lucide="search" aria-hidden="true"></i>Trova crew</button>
+          <button class="nav-item" type="button" data-view="board"><i data-lucide="clipboard-list" aria-hidden="true"></i>Bacheca</button>
+          <button class="nav-item" type="button" data-view="requests"><i data-lucide="activity" aria-hidden="true"></i>Attività</button>
+          <button class="nav-item" type="button" data-view="calendar"><i data-lucide="calendar-days" aria-hidden="true"></i>Disponibilità</button>
+          <button class="nav-item" type="button" data-view="profile"><i data-lucide="user-round" aria-hidden="true"></i>Profilo</button>
+          <button class="nav-item" type="button" data-view="admin"><i data-lucide="users-round" aria-hidden="true"></i>Community</button>
+        </nav>
+
+        <div class="utility-links"><a href="./trankui.html">Trankui</a><a href="./faq.html">FAQ</a></div>
+
+        <div class="sidebar-note">
+          <span>Utente attivo</span>
+          <strong id="sidebarUser">-</strong>
+          <button class="tiny-button" type="button" id="logoutButton">Esci</button>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow" id="pageEyebrow">Crew finder</p>
+            <h1 id="pageTitle">Trova un collaboratore affidabile in pochi minuti</h1>
+          </div>
+          <div class="topbar-actions">
+            <button class="secondary-button" type="button" id="openBoard"><i data-lucide="plus" aria-hidden="true"></i>Pubblica richiesta</button>
+            <button class="ghost-button" type="button" id="openAvailability"><i data-lucide="calendar-clock" aria-hidden="true"></i>Aggiorna disponibilità</button>
+          </div>
+        </header>
+
+        <section class="view active-view" id="view-search">
+          <form class="search-panel" id="searchForm">
+            <div class="field">
+              <label for="role"><i data-lucide="clapperboard" aria-hidden="true"></i>Ruolo</label>
+              <select id="role" name="role"></select>
+            </div>
+            <div class="field">
+              <label for="date"><i data-lucide="calendar" aria-hidden="true"></i>Data</label>
+              <input id="date" name="date" type="date" />
+            </div>
+            <div class="field">
+              <label for="zone"><i data-lucide="map-pin" aria-hidden="true"></i>Zona</label>
+              <select id="zone" name="zone"></select>
+            </div>
+            <button class="primary-button" type="submit"><i data-lucide="search" aria-hidden="true"></i>Cerca</button>
+            <details class="search-more">
+              <summary>Altri filtri</summary>
+              <div class="search-more-grid">
+                <div class="field">
+                  <label for="production">Produzione</label>
+                  <select id="production" name="production"></select>
+                </div>
+                <div class="field">
+                  <label for="urgency">Urgenza</label>
+                  <select id="urgency" name="urgency">
+                    <option>Entro 3 giorni</option>
+                    <option>Questa settimana</option>
+                    <option>Data flessibile</option>
+                  </select>
+                </div>
+              </div>
+            </details>
+          </form>
+
+          <div class="alert-panel" id="availabilityAlert"></div>
+
+          <div class="status-row">
+            <div>
+              <strong id="resultCount">0 professionisti disponibili</strong>
+              <span id="resultContext"></span>
+            </div>
+            <div class="sort-chip">Ruolo principale → secondario · disponibilità · fiducia</div>
+          </div>
+
+          <div class="content-grid">
+            <section class="results-list" id="resultsList"></section>
+            <section class="profile-panel" id="profilePanel"></section>
+          </div>
+        </section>
+
+        <section class="view" id="view-board">
+          <div class="section-head board-head">
+            <div>
+              <h2>Richieste aperte</h2>
+              <span>Un percorso di riserva quando la ricerca diretta non chiude la crew.</span>
+            </div>
+            <button class="primary-button" type="button" id="togglePostForm"><i data-lucide="plus" aria-hidden="true"></i>Nuova richiesta</button>
+          </div>
+          <form class="post-form hidden" id="postForm">
+            <div class="field"><label for="postRole">Ruolo</label><select id="postRole" name="role"></select></div>
+            <div class="field"><label for="postDate">Data</label><input id="postDate" name="date" type="date" required /></div>
+            <div class="field"><label for="postZone">Zona</label><select id="postZone" name="zone"></select></div>
+            <div class="field"><label for="postProduction">Produzione</label><select id="postProduction" name="production"></select></div>
+            <div class="field"><label for="postBudget">Budget indicativo</label><input id="postBudget" name="budget" placeholder="Es. 350-450 euro" /></div>
+            <div class="field post-description"><label for="postDescription">Dettagli essenziali</label><textarea id="postDescription" name="description" placeholder="Call time, durata e informazioni utili per decidere." required></textarea></div>
+            <div class="post-form-actions">
+              <button class="primary-button" type="submit"><i data-lucide="send" aria-hidden="true"></i>Pubblica</button>
+              <button class="secondary-button" type="button" id="cancelPost">Annulla</button>
+            </div>
+          </form>
+          <div class="board-list" id="boardList"></div>
+        </section>
+
+        <section class="view" id="view-requests">
+          <div class="section-head">
+            <h2>Attività</h2>
+            <span>Richieste dirette, candidature, match accettati e feedback post-lavoro.</span>
+          </div>
+          <div class="activity-summary" id="activitySummary"></div>
+          <div class="feedback-queue" id="feedbackQueue"></div>
+          <div class="request-list" id="requestList"></div>
+        </section>
+
+        <section class="view" id="view-calendar">
+          <div class="section-head">
+            <h2>Il tuo calendario</h2>
+            <span>Scegli uno stato e seleziona le date. Le collaborazioni confermate restano bloccate.</span>
+          </div>
+          <div class="availability-grid" id="availabilityGrid"></div>
+        </section>
+
+        <section class="view" id="view-profile">
+          <div class="section-head">
+            <h2>Profilo professionista</h2>
+            <span>Modifica le informazioni usate nella ricerca e nel trust layer.</span>
+          </div>
+          <form class="profile-form" id="profileForm"></form>
+          <div class="profile-calendar-settings">
+            <div class="section-head">
+              <h2>Calendari collegati</h2>
+              <span>Gestisci sincronizzazione, esportazione e privacy del calendario.</span>
+            </div>
+            <div class="integrations-grid" id="integrationsGrid"></div>
+          </div>
+        </section>
+
+        <section class="view" id="view-admin">
+          <div class="section-head">
+            <h2>Community Trankui</h2>
+            <span>Una vista della rete professionale e delle collaborazioni create.</span>
+          </div>
+          <div class="mission-strip" id="betaStats"></div>
+          <div class="admin-grid" id="userDirectory"></div>
+        </section>
+      </main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="./config.js"></script>
+    <script src="./backend.js"></script>
+    <script src="./lucide.min.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
