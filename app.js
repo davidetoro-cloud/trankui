@@ -16,6 +16,8 @@ const state = {
   search: { roleId: "", date: isoDate(new Date()), zone: "Cagliari", production: "Spot" },
   availabilityMode: "available",
   month: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+  activeChatId: null,
+  chatSubscription: null,
 };
 
 const qs = (selector, root = document) => root.querySelector(selector);
@@ -81,16 +83,25 @@ function optionList(items, selected = "") {
 function setAuthMode(mode) {
   state.authMode = mode;
   const signup = mode === "signup";
+  const signin = mode === "signin";
+  const recovery = mode === "recovery";
+  const newPassword = mode === "new-password";
   qsa("[data-auth-mode]").forEach((button) => button.classList.toggle("active", button.dataset.authMode === mode));
-  qs("#authTitle").textContent = signup ? "Crea il tuo profilo" : "Bentornato";
-  qs("#authCopy").textContent = signup ? "Inizia a farti trovare per ruolo, zona e disponibilita." : "Accedi al tuo spazio professionale.";
-  qs("#authSubmit").innerHTML = signup ? `${icon("user-plus")}Crea profilo` : `${icon("log-in")}Accedi`;
+  qs("#authTitle").textContent = signup ? "Crea il tuo profilo" : signin ? "Bentornato" : recovery ? "Recupera la password" : "Scegli una nuova password";
+  qs("#authCopy").textContent = signup ? "Inizia a farti trovare per ruolo, zona e disponibilita." : signin ? "Accedi al tuo spazio professionale." : recovery ? "Ti invieremo un link sicuro via email." : "Inserisci una nuova password di almeno 8 caratteri.";
+  qs("#authSubmit").innerHTML = signup ? `${icon("user-plus")}Crea profilo` : signin ? `${icon("log-in")}Accedi` : recovery ? `${icon("mail")}Invia link` : `${icon("key-round")}Aggiorna password`;
   qs("#authName").closest(".field").classList.toggle("hidden", !signup);
+  qs("#authEmail").closest(".field").classList.toggle("hidden", newPassword);
+  qs("#authPassword").closest(".field").classList.toggle("hidden", recovery);
   qs("#privacyConsentLine").classList.toggle("hidden", !signup);
   qs("#calendarConsentLine").classList.toggle("hidden", !signup);
+  qs("#forgotPassword").classList.toggle("hidden", !signin);
+  qs("#backToLogin").classList.toggle("hidden", !(recovery || newPassword));
   qs("#authName").required = signup;
+  qs("#authEmail").required = !newPassword;
+  qs("#authPassword").required = !recovery;
   qs("#privacyConsent").required = signup;
-  qs("#authPassword").autocomplete = signup ? "new-password" : "current-password";
+  qs("#authPassword").autocomplete = signup || newPassword ? "new-password" : "current-password";
   qs("#authStatus").textContent = "";
   redrawIcons();
 }
@@ -113,11 +124,19 @@ async function handleAuth(event) {
         await backend.recordConsent("availability_search", "2026-06-30", form.get("calendarConsent") === "on");
         await enterApp(result.session);
       } else {
-        qs("#authStatus").innerHTML = `<strong>Controlla la tua email</strong><span>Abbiamo inviato il link di conferma. Dopo averlo aperto potrai accedere.</span>`;
+        qs("#authStatus").innerHTML = `<strong>Controlla la tua email</strong><span>Abbiamo inviato il link di conferma. Controlla anche Spam e Promozioni.</span><button class="auth-text-button" type="button" id="resendConfirmation">Reinvia email di verifica</button>`;
       }
-    } else {
+    } else if (state.authMode === "signin") {
       const result = await backend.signIn({ email: form.get("email").trim(), password: form.get("password") });
       await enterApp(result.session);
+    } else if (state.authMode === "recovery") {
+      await backend.requestPasswordReset(form.get("email").trim());
+      qs("#authStatus").innerHTML = `<strong>Email inviata</strong><span>Apri il link ricevuto per scegliere una nuova password.</span>`;
+    } else {
+      await backend.updatePassword(form.get("password"));
+      showToast("Password aggiornata");
+      const session = await backend.session();
+      await enterApp(session);
     }
   } catch (error) {
     qs("#authStatus").textContent = errorMessage(error);
@@ -160,6 +179,7 @@ async function loadAppData() {
 
 function renderApp() {
   qs("#sidebarUser").textContent = state.profile?.full_name || state.session?.user?.email || "Profilo Trankui";
+  qs("#sidebarAvatar").textContent = initials(state.profile?.full_name || state.session?.user?.email);
   renderSearchControls();
   renderSearchResults();
   renderBoard();
@@ -338,15 +358,44 @@ function renderActivity() {
 
 async function openChat(collaborationId) {
   try {
-    const messages = await backend.messages(collaborationId);
-    const history = messages.map((message) => `${message.sender?.full_name || "Utente"}: ${message.body}`).join("\n");
-    const body = window.prompt(`${history || "Nessun messaggio. Inizia la conversazione."}\n\nScrivi un nuovo messaggio:`);
-    if (!body?.trim()) return;
-    await backend.sendMessage(collaborationId, body.trim());
-    showToast("Messaggio inviato");
+    const collaboration = state.collaborations.find((item) => item.id === collaborationId);
+    const other = otherParticipant(collaboration);
+    state.activeChatId = collaborationId;
+    qs("#chatTitle").textContent = other?.full_name || "Conversazione";
+    qs("#chatAvatar").textContent = initials(other?.full_name);
+    qs("#chatContext").textContent = `${collaboration?.role?.name || "Collaborazione"} · ${formatDate(collaboration?.work_date)}`;
+    qs("#chatBackdrop").classList.remove("hidden");
+    document.body.classList.add("modal-open");
+    await refreshChat();
+    state.chatSubscription?.unsubscribe?.();
+    state.chatSubscription = backend.subscribeToMessages(collaborationId, refreshChat);
+    qs("#chatInput").focus();
+    redrawIcons();
   } catch (error) {
     showToast(errorMessage(error), true);
   }
+}
+
+async function refreshChat() {
+  if (!state.activeChatId) return;
+  const messages = await backend.messages(state.activeChatId);
+  const currentUserId = state.session?.user?.id;
+  qs("#chatMessages").innerHTML = messages.length ? messages.map((message) => {
+    const mine = message.sender_id === currentUserId;
+    const time = new Intl.DateTimeFormat("it-IT", { hour: "2-digit", minute: "2-digit" }).format(new Date(message.created_at));
+    return `<div class="chat-row ${mine ? "mine" : "theirs"}"><div class="chat-bubble"><p>${escapeHtml(message.body)}</p><time>${time}</time></div></div>`;
+  }).join("") : `<div class="chat-empty">${icon("messages-square")}<strong>Inizia la conversazione</strong><span>Condividi call time, dettagli operativi e prossimi passi.</span></div>`;
+  const panel = qs("#chatMessages");
+  panel.scrollTop = panel.scrollHeight;
+  redrawIcons();
+}
+
+function closeChat() {
+  state.chatSubscription?.unsubscribe?.();
+  state.chatSubscription = null;
+  state.activeChatId = null;
+  qs("#chatBackdrop").classList.add("hidden");
+  document.body.classList.remove("modal-open");
 }
 
 async function submitReview(collaborationId) {
@@ -381,10 +430,12 @@ function monthDays() {
 function renderCalendar() {
   const ownAvailability = new Map(state.availability.filter((item) => item.profile_id === state.session?.user?.id).map((item) => [item.work_date, item.status]));
   const labels = { available: "Disponibile", maybe: "Forse", busy: "Occupato" };
-  qs("#availabilityGrid").innerHTML = `<div class="calendar-toolbar"><button class="icon-button" data-month="-1" title="Mese precedente">${icon("chevron-left")}</button><h3>${new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" }).format(state.month)}</h3><button class="icon-button" data-month="1" title="Mese successivo">${icon("chevron-right")}</button></div>
-    <div class="availability-modes">${Object.entries(labels).map(([value, label]) => `<button class="tiny-button ${state.availabilityMode === value ? "active" : ""}" data-mode="${value}">${label}</button>`).join("")}</div>
+  const monthName = new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" }).format(state.month);
+  qs("#availabilityGrid").innerHTML = `<div class="availability-toolbar"><div><span class="toolbar-label">Segna le giornate come</span><div class="availability-modes">${Object.entries(labels).map(([value, label]) => `<button class="availability-mode ${state.availabilityMode === value ? "active" : ""}" data-mode="${value}"><span class="mode-dot ${value}"></span>${label}</button>`).join("")}</div></div><p>Seleziona uno stato, poi clicca sui giorni che vuoi aggiornare.</p></div>
+    <div class="month-calendar"><div class="month-calendar-head"><button class="calendar-arrow" data-month="-1" title="Mese precedente">${icon("chevron-left")}</button><h3>${monthName}</h3><button class="calendar-arrow" data-month="1" title="Mese successivo">${icon("chevron-right")}</button></div>
     <div class="calendar-weekdays">${["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"].map((day) => `<span>${day}</span>`).join("")}</div>
-    <div class="calendar-grid">${monthDays().map((date) => date ? `<button class="calendar-day ${ownAvailability.get(isoDate(date)) || ""}" data-day="${isoDate(date)}"><span>${date.getDate()}</span><small>${labels[ownAvailability.get(isoDate(date))] || ""}</small></button>` : `<span class="calendar-day empty"></span>`).join("")}</div>`;
+    <div class="calendar-month-grid">${monthDays().map((date) => date ? `<button class="calendar-day ${ownAvailability.get(isoDate(date)) || ""} ${isoDate(date) === isoDate(new Date()) ? "today" : ""}" data-day="${isoDate(date)}" title="${labels[ownAvailability.get(isoDate(date))] || "Nessuno stato"}"><span>${date.getDate()}</span></button>` : `<span class="calendar-empty"></span>`).join("")}</div>
+    <div class="calendar-legend"><span><i class="legend-dot available"></i>Disponibile</span><span><i class="legend-dot maybe"></i>Forse</span><span><i class="legend-dot busy"></i>Occupato</span></div></div>`;
 }
 
 async function setDayAvailability(date) {
@@ -472,6 +523,15 @@ function switchView(view) {
 document.addEventListener("click", async (event) => {
   const authMode = event.target.closest("[data-auth-mode]");
   if (authMode) return setAuthMode(authMode.dataset.authMode);
+  if (event.target.closest("#forgotPassword")) return setAuthMode("recovery");
+  if (event.target.closest("#backToLogin")) return setAuthMode("signin");
+  if (event.target.closest("#resendConfirmation")) {
+    const email = qs("#authEmail").value.trim();
+    if (!email) return showToast("Inserisci prima la tua email", true);
+    try { await backend.resendConfirmation(email); qs("#authStatus").innerHTML = `<strong>Email reinviata</strong><span>Controlla anche Spam e Promozioni.</span>`; }
+    catch (error) { showToast(errorMessage(error), true); }
+    return;
+  }
   const nav = event.target.closest("[data-view]");
   if (nav) return switchView(nav.dataset.view);
   const go = event.target.closest("[data-go]");
@@ -517,6 +577,21 @@ qs("#togglePostForm").addEventListener("click", () => qs("#postForm").classList.
 qs("#cancelPost").addEventListener("click", () => qs("#postForm").classList.add("hidden"));
 qs("#openBoard").addEventListener("click", () => { switchView("board"); qs("#postForm").classList.remove("hidden"); });
 qs("#openAvailability").addEventListener("click", () => switchView("calendar"));
+qs("#openProfile").addEventListener("click", () => switchView("profile"));
+qs("#closeChat").addEventListener("click", closeChat);
+qs("#chatBackdrop").addEventListener("click", (event) => { if (event.target === event.currentTarget) closeChat(); });
+qs("#chatForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const input = qs("#chatInput");
+  const body = input.value.trim();
+  if (!body || !state.activeChatId) return;
+  input.disabled = true;
+  try { await backend.sendMessage(state.activeChatId, body); input.value = ""; await refreshChat(); }
+  catch (error) { showToast(errorMessage(error), true); }
+  finally { input.disabled = false; input.focus(); }
+});
+document.addEventListener("keydown", (event) => { if (event.key === "Escape" && state.activeChatId) closeChat(); });
+
 qs("#logoutButton").addEventListener("click", async () => { await backend.signOut(); state.session = null; qs("#appShell").classList.add("hidden"); qs("#authScreen").classList.remove("hidden"); });
 qs("#profileForm").addEventListener("input", (event) => {
   if (event.target.matches("[data-role-search]")) qsa("[data-role-label]").forEach((label) => label.classList.toggle("hidden", !label.dataset.roleLabel.includes(event.target.value.toLowerCase())));
@@ -533,7 +608,14 @@ async function init() {
   }
   const session = await backend.session();
   if (session) await enterApp(session);
-  backend.onAuthChange(async (nextSession) => {
+  backend.onAuthChange(async (nextSession, event) => {
+    if (event === "PASSWORD_RECOVERY") {
+      state.session = nextSession;
+      qs("#authScreen").classList.remove("hidden");
+      qs("#appShell").classList.add("hidden");
+      setAuthMode("new-password");
+      return;
+    }
     if (nextSession && !state.session) await enterApp(nextSession);
   });
 }

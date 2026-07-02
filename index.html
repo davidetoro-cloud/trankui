@@ -10,7 +10,7 @@
     <section class="auth-screen" id="authScreen">
       <div class="auth-card">
         <header class="auth-nav">
-          <img class="brand-logo auth-logo" src="./logo.png" alt="Trankui" />
+          <img class="brand-logo auth-logo" src="./assets/logo.png" alt="Trankui" />
           <nav aria-label="Informazioni su Trankui">
             <a href="./trankui.html">Chi è Trankui</a>
             <a href="./faq.html">FAQ</a>
@@ -18,7 +18,7 @@
         </header>
         <div class="auth-layout">
           <section class="auth-intro">
-            <p class="eyebrow">Nato in Sardegna per il settore audiovisivo</p>
+            <p class="eyebrow">La piattaforma operativa per il settore audiovisivo</p>
             <h1>La crew giusta, quando serve davvero.</h1>
             <p>Trankui aiuta producer, registi e professionisti audiovisivi a trovare collaboratori disponibili, affidabili e verificabili, anche fuori dalla propria rete di contatti.</p>
             <div class="auth-problem-list">
@@ -48,6 +48,8 @@
                 <input id="authPassword" name="password" type="password" minlength="8" autocomplete="new-password" required />
               </div>
               <button class="primary-button" type="submit" id="authSubmit"><i data-lucide="user-plus" aria-hidden="true"></i>Crea profilo</button>
+              <button class="auth-text-button hidden" type="button" id="forgotPassword">Password dimenticata?</button>
+              <button class="auth-text-button hidden" type="button" id="backToLogin">Torna all'accesso</button>
               <label class="consent-line" id="privacyConsentLine">
                 <input id="privacyConsent" name="privacyConsent" type="checkbox" required />
                 <span>Accetto la <a href="./privacy.html" target="_blank">Privacy Policy</a> e i <a href="./termini.html" target="_blank">Termini di utilizzo</a>.</span>
@@ -66,7 +68,7 @@
     <div class="app-shell hidden" id="appShell">
       <aside class="sidebar" aria-label="Navigazione principale">
         <div class="brand">
-          <img class="brand-logo" src="./logo.png" alt="Trankui" />
+          <img class="brand-logo" src="./assets/logo.png" alt="Trankui" />
         </div>
 
         <nav class="nav-list">
@@ -74,15 +76,16 @@
           <button class="nav-item" type="button" data-view="board"><i data-lucide="clipboard-list" aria-hidden="true"></i>Bacheca</button>
           <button class="nav-item" type="button" data-view="requests"><i data-lucide="activity" aria-hidden="true"></i>Attività</button>
           <button class="nav-item" type="button" data-view="calendar"><i data-lucide="calendar-days" aria-hidden="true"></i>Disponibilità</button>
-          <button class="nav-item" type="button" data-view="profile"><i data-lucide="user-round" aria-hidden="true"></i>Profilo</button>
           <button class="nav-item" type="button" data-view="admin"><i data-lucide="users-round" aria-hidden="true"></i>Community</button>
         </nav>
 
         <div class="utility-links"><a href="./trankui.html">Trankui</a><a href="./faq.html">FAQ</a></div>
 
         <div class="sidebar-note">
-          <span>Utente attivo</span>
-          <strong id="sidebarUser">-</strong>
+          <button class="user-menu-button" type="button" id="openProfile" title="Apri il profilo">
+            <span class="user-avatar" id="sidebarAvatar">T</span>
+            <strong id="sidebarUser">-</strong>
+          </button>
           <button class="tiny-button" type="button" id="logoutButton">Esci</button>
         </div>
       </aside>
@@ -214,13 +217,39 @@
           <div class="admin-grid" id="userDirectory"></div>
         </section>
       </main>
+      <footer class="app-footer">
+        <div><img src="./assets/logo.png" alt="Trankui" /><span>Il modo semplice per costruire crew affidabili.</span></div>
+        <nav aria-label="Link utili"><a href="./trankui.html">Chi è Trankui</a><a href="./faq.html">FAQ</a><a href="./privacy.html">Privacy</a><a href="./termini.html">Termini</a><a href="mailto:welcome@trankui.com">Contatti</a></nav>
+        <span>© 2026 Trankui</span>
+      </footer>
     </div>
+
+    <div class="chat-backdrop hidden" id="chatBackdrop">
+      <section class="chat-dialog" role="dialog" aria-modal="true" aria-labelledby="chatTitle">
+        <header class="chat-head">
+          <button class="close-button" type="button" id="closeChat" title="Chiudi chat"><i data-lucide="x" aria-hidden="true"></i></button>
+          <div class="chat-person"><span class="user-avatar" id="chatAvatar">T</span><div><strong id="chatTitle">Conversazione</strong><span id="chatContext">Collaborazione</span></div></div>
+          <button class="icon-button" type="button" title="Dettagli collaborazione"><i data-lucide="info" aria-hidden="true"></i></button>
+        </header>
+        <div class="chat-messages" id="chatMessages" aria-live="polite"></div>
+        <form class="chat-compose" id="chatForm">
+          <textarea id="chatInput" rows="1" maxlength="2000" placeholder="Scrivi un messaggio…" aria-label="Messaggio"></textarea>
+          <button class="primary-button" type="submit" title="Invia messaggio"><i data-lucide="send" aria-hidden="true"></i><span>Invia</span></button>
+        </form>
+      </section>
+    </div>
+
+    <aside class="cookie-banner hidden" id="cookieBanner" aria-label="Preferenze cookie">
+      <div><i data-lucide="cookie" aria-hidden="true"></i><p><strong>La tua privacy conta.</strong><span>Trankui usa cookie tecnici necessari per accesso e sicurezza. Gli eventuali cookie facoltativi saranno attivati solo con il tuo consenso.</span></p></div>
+      <div class="cookie-actions"><a href="./privacy.html">Scopri di più</a><button class="secondary-button" type="button" id="essentialCookies">Solo necessari</button><button class="primary-button" type="button" id="acceptCookies">Accetta</button></div>
+    </aside>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="./config.js"></script>
     <script src="./backend.js"></script>
-    <script src="./lucide.min.js"></script>
+    <script src="./assets/lucide.min.js"></script>
+    <script src="./cookie-consent.js"></script>
     <script src="./app.js"></script>
   </body>
 </html>
