@@ -12,12 +12,14 @@ const state = {
   posts: [],
   collaborations: [],
   reviews: [],
+  calendarConnections: [],
   selectedProfileId: null,
   search: { roleId: "", date: isoDate(new Date()), zone: "Cagliari", production: "Spot" },
   availabilityMode: "available",
   month: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
   activeChatId: null,
   chatSubscription: null,
+  activeReviewId: null,
 };
 
 const qs = (selector, root = document) => root.querySelector(selector);
@@ -158,18 +160,20 @@ async function loadAppData() {
     state.profile = await backend.ownProfile();
     const start = new Date(state.month.getFullYear(), state.month.getMonth(), 1);
     const end = new Date(state.month.getFullYear(), state.month.getMonth() + 1, 0);
-    const [profiles, availability, posts, collaborations, reviews] = await Promise.all([
+    const [profiles, availability, posts, collaborations, reviews, calendarConnections] = await Promise.all([
       backend.publicProfiles(),
       backend.availabilityForRange(isoDate(start), isoDate(end)),
       backend.listPosts(),
       backend.collaborations(),
       backend.ownReviews(),
+      backend.calendarConnections(),
     ]);
     state.profiles = profiles;
     state.availability = availability;
     state.posts = posts;
     state.collaborations = collaborations;
     state.reviews = reviews;
+    state.calendarConnections = calendarConnections;
     state.search.roleId ||= state.roles[0]?.id || "";
     renderApp();
   } catch (error) {
@@ -179,7 +183,7 @@ async function loadAppData() {
 
 function renderApp() {
   qs("#sidebarUser").textContent = state.profile?.full_name || state.session?.user?.email || "Profilo Trankui";
-  qs("#sidebarAvatar").textContent = initials(state.profile?.full_name || state.session?.user?.email);
+  qs("#sidebarAvatar").innerHTML = state.profile?.avatar_url ? `<img src="${escapeHtml(state.profile.avatar_url)}" alt="" />` : initials(state.profile?.full_name || state.session?.user?.email);
   renderSearchControls();
   renderSearchResults();
   renderBoard();
@@ -255,13 +259,14 @@ async function renderSelectedProfile() {
   }
   const primary = profile.roles?.name || profile.primary_other_role_name || "Professionista";
   const secondary = (profile.secondary_roles || []).map((item) => item.roles?.name || item.other_role_name).filter(Boolean);
-  qs("#profilePanel").innerHTML = `<div class="profile-hero"><div class="avatar large">${initials(profile.full_name)}</div>
+  const socialLinks = [["instagram_url", "instagram", "Instagram"], ["facebook_url", "facebook", "Facebook"], ["tiktok_url", "music-2", "TikTok"], ["linkedin_url", "linkedin", "LinkedIn"]].filter(([key]) => profile[key]);
+  qs("#profilePanel").innerHTML = `<div class="profile-hero"><div class="avatar large">${profile.avatar_url ? `<img src="${escapeHtml(profile.avatar_url)}" alt="Foto di ${escapeHtml(profile.full_name)}" />` : initials(profile.full_name)}</div>
     <div><p class="eyebrow">${profile.verified ? "Profilo verificato" : "Profilo professionale"}</p><h2>${escapeHtml(profile.full_name)}</h2><span>${escapeHtml(primary)} · ${escapeHtml(profile.city)}, ${escapeHtml(profile.region)}</span></div></div>
     <div class="trust-row"><div><strong>${profile.years_experience}</strong><span>anni esperienza</span></div><div><strong>${profile.verified ? "Si" : "In verifica"}</strong><span>identita</span></div></div>
     <p>${escapeHtml(profile.bio || "Bio professionale non ancora inserita.")}</p>
     ${secondary.length ? `<div class="tag-row">${secondary.map((role) => `<span>${escapeHtml(role)}</span>`).join("")}</div>` : ""}
     <dl class="profile-facts"><div><dt>Trasferte</dt><dd>${escapeHtml(profile.travel_area || "Da concordare")}</dd></div><div><dt>Attrezzatura</dt><dd>${escapeHtml(profile.equipment || "Da chiedere")}</dd></div></dl>
-    ${profile.portfolio_url ? `<a class="secondary-button" href="${escapeHtml(profile.portfolio_url)}" target="_blank" rel="noopener">${icon("external-link")}Portfolio</a>` : ""}
+    <div class="profile-links">${profile.portfolio_url ? `<a class="secondary-button" href="${escapeHtml(profile.portfolio_url)}" target="_blank" rel="noopener">${icon("external-link")}Portfolio</a>` : ""}${socialLinks.map(([key, iconName, label]) => `<a class="icon-button" href="${escapeHtml(profile[key])}" target="_blank" rel="noopener" title="${label}">${icon(iconName)}</a>`).join("")}</div>
     <button class="primary-button full-button" type="button" data-request="${profile.id}">${icon("send")}Invia richiesta di collaborazione</button>
     <div id="publicReviews"><span>Caricamento reputazione...</span></div>`;
   redrawIcons();
@@ -269,10 +274,10 @@ async function renderSelectedProfile() {
     const reviews = await backend.publishedReviews(profile.id);
     const host = qs("#publicReviews");
     if (!host || state.selectedProfileId !== profile.id) return;
-    host.innerHTML = reviews.length ? `<h3>Feedback collaborazioni</h3>${reviews.slice(0, 3).map((review) => {
+    host.innerHTML = reviews.length ? `<div class="review-summary"><div><strong>${(reviews.reduce((sum, review) => sum + review.reliability, 0) / reviews.length).toFixed(1)}</strong><span>${icon("star")} ${reviews.length} recensioni blind</span></div><p>Feedback pubblicati solo dopo la recensione reciproca.</p></div><div class="public-review-grid">${reviews.slice(0, 6).map((review) => {
       const average = (review.punctuality + review.communication + review.reliability + review.organization + review.problem_solving) / 5;
-      return `<blockquote><strong>${average.toFixed(1)}/5</strong> ${escapeHtml(review.public_comment || "Collaborazione consigliata")}</blockquote>`;
-    }).join("")}` : `<span>Nessuna recensione pubblicata.</span>`;
+      return `<blockquote><div><strong>${average.toFixed(1)}</strong>${icon("star")}</div><p>${escapeHtml(review.public_comment || "Collaborazione consigliata")}</p><footer>${escapeHtml(review.author_name)} · ${new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" }).format(new Date(review.created_at))}</footer></blockquote>`;
+    }).join("")}</div>` : `<span>Nessuna recensione pubblicata.</span>`;
   } catch (_) {
     const host = qs("#publicReviews");
     if (host) host.innerHTML = "";
@@ -351,7 +356,8 @@ function renderActivity() {
     return `<article class="request-card"><div class="request-card-main"><div class="avatar">${initials(other?.full_name)}</div><div><h3>${escapeHtml(other?.full_name || "Professionista")}</h3><span>${escapeHtml(item.role?.name || "Collaborazione")} · ${formatDate(item.work_date)} · ${escapeHtml(item.zone)}</span><p>${escapeHtml(item.note)}</p></div></div>
       <div class="request-actions"><span class="status-chip">${statusLabel(item.status)}</span>
       ${item.status === "pending" && incoming ? `<button class="primary-button" data-transition="accepted" data-collaboration="${item.id}">Accetta</button><button class="secondary-button" data-transition="rejected" data-collaboration="${item.id}">Rifiuta</button>` : ""}
-      ${item.status === "accepted" ? `<button class="secondary-button" data-chat="${item.id}">${icon("messages-square")}Chat</button><button class="primary-button" data-complete="${item.id}">Conferma lavoro concluso</button>` : ""}
+      ${item.status === "accepted" ? `<button class="secondary-button" data-chat="${item.id}">${icon("messages-square")}Chat</button>${((item.requester_id === state.session?.user?.id && item.requester_completed) || (item.professional_id === state.session?.user?.id && item.professional_completed)) ? `<span class="completion-wait">${icon("clock")}In attesa della conferma dell'altra persona</span>` : `<button class="primary-button" data-complete="${item.id}">Lavoro concluso</button>`}` : ""}
+      ${item.status === "completed" && !reviewedIds.has(item.id) ? `<button class="primary-button" data-review="${item.id}">${icon("star")}Lascia recensione</button>` : ""}
       </div></article>`;
   }).join("") : `<div class="empty-state">${icon("inbox")}<strong>Nessuna attivita</strong><span>Le richieste di collaborazione compariranno qui.</span></div>`;
 }
@@ -398,21 +404,38 @@ function closeChat() {
   document.body.classList.remove("modal-open");
 }
 
-async function submitReview(collaborationId) {
+function openReview(collaborationId) {
   const collaboration = state.collaborations.find((item) => item.id === collaborationId);
   const recipient = otherParticipant(collaboration);
-  const scoreRaw = window.prompt(`Valuta la collaborazione con ${recipient?.full_name || "il professionista"} da 1 a 5`, "5");
-  if (scoreRaw === null) return;
-  const score = Math.max(1, Math.min(5, Number(scoreRaw)));
-  if (!Number.isFinite(score)) return showToast("Inserisci un voto da 1 a 5", true);
-  const comment = window.prompt("Scrivi un commento pubblico breve", "Collaborazione affidabile e professionale.") ?? "";
+  state.activeReviewId = collaborationId;
+  qs("#reviewTitle").textContent = `Com'è andata con ${recipient?.full_name || "il collaboratore"}?`;
+  qs("#reviewContext").textContent = `${collaboration?.role?.name || "Collaborazione"} · ${formatDate(collaboration.work_date)}`;
+  qs("#reviewBackdrop").classList.remove("hidden");
+  document.body.classList.add("modal-open");
+  redrawIcons();
+}
+
+function closeReview() {
+  state.activeReviewId = null;
+  qs("#reviewBackdrop").classList.add("hidden");
+  document.body.classList.remove("modal-open");
+}
+
+async function submitReview(event) {
+  event.preventDefault();
+  const collaboration = state.collaborations.find((item) => item.id === state.activeReviewId);
+  const recipient = otherParticipant(collaboration);
+  const form = new FormData(event.currentTarget);
   try {
     await backend.submitReview({
-      collaboration_id: collaborationId, recipient_id: recipient.id, recommend: score >= 4,
-      punctuality: score, communication: score, reliability: score, organization: score,
-      problem_solving: score, public_comment: comment, private_note: "",
+      collaboration_id: collaboration.id, recipient_id: recipient.id, recommend: form.get("recommend") === "on",
+      punctuality: Number(form.get("punctuality")), communication: Number(form.get("communication")),
+      reliability: Number(form.get("reliability")), organization: Number(form.get("organization")),
+      problem_solving: Number(form.get("problem_solving")), public_comment: form.get("public_comment").trim(), private_note: form.get("private_note").trim(),
     });
-    showToast("Feedback registrato");
+    closeReview();
+    event.currentTarget.reset();
+    showToast("Feedback salvato. Sarà visibile dopo la recensione reciproca.");
     await loadAppData();
   } catch (error) {
     showToast(errorMessage(error), true);
@@ -453,7 +476,9 @@ async function setDayAvailability(date) {
 function renderProfileForm() {
   const profile = state.profile || {};
   const selectedSecondary = new Set((profile.secondaryRoles || []).map((item) => item.role_id));
-  qs("#profileForm").innerHTML = `<div class="form-section"><div class="field"><label>Nome e cognome *</label><input name="full_name" value="${escapeHtml(profile.full_name)}" required /></div>
+  const secondaryNames = (profile.secondaryRoles || []).map((item) => item.roles?.name || item.other_role_name).filter(Boolean);
+  qs("#profileForm").innerHTML = `<div class="profile-photo-editor"><div class="avatar profile-photo-preview">${profile.avatar_url ? `<img src="${escapeHtml(profile.avatar_url)}" alt="Foto profilo" />` : initials(profile.full_name)}</div><div><strong>Foto profilo</strong><span>JPG, PNG o WebP, massimo 5 MB.</span><label class="secondary-button" for="avatarFile">${icon("camera")}Carica foto</label><input class="visually-hidden" id="avatarFile" type="file" accept="image/jpeg,image/png,image/webp" data-avatar-file /><input type="hidden" name="avatar_url" value="${escapeHtml(profile.avatar_url)}" /></div></div>
+    <div class="form-section"><div class="field"><label>Nome e cognome *</label><input name="full_name" value="${escapeHtml(profile.full_name)}" required /></div>
     <div class="field"><label>Ruolo principale *</label><select name="primary_role_id" required>${groupedRoleOptions(profile.primary_role_id)}</select></div>
     <div class="field"><label>Citta *</label><select name="city" required><option value="">Scegli</option>${optionList(zones, profile.city)}</select></div>
     <div class="field"><label>Anni di esperienza</label><input name="years_experience" type="number" min="0" max="80" value="${profile.years_experience || 0}" /></div>
@@ -462,9 +487,13 @@ function renderProfileForm() {
     <div class="field"><label>Telefono privato</label><input name="phone" value="${escapeHtml(profile.phone)}" placeholder="Visibile solo dopo un match" /></div>
     <div class="field"><label>Portfolio</label><input name="portfolio_url" type="url" value="${escapeHtml(profile.portfolio_url)}" placeholder="https://" /></div>
     <div class="field"><label>Brand utilizzati</label><input name="brands" value="${escapeHtml((profile.brands || []).join(", "))}" placeholder="Sony, ARRI, Aputure" /></div>
-    <div class="field full"><label>Attrezzatura principale</label><textarea name="equipment">${escapeHtml(profile.equipment)}</textarea></div></div>
-    <fieldset class="secondary-role-picker"><legend>Competenze secondarie <small>opzionali, massimo 5</small></legend><input class="role-search" type="search" placeholder="Cerca un ruolo" data-role-search />
-      <div class="role-check-grid">${state.roles.map((role) => `<label data-role-label="${escapeHtml(role.name.toLowerCase())}"><input type="checkbox" name="secondary_roles" value="${role.id}" ${selectedSecondary.has(role.id) ? "checked" : ""} ${role.id === profile.primary_role_id ? "disabled" : ""}/><span>${escapeHtml(role.name)}</span></label>`).join("")}</div></fieldset>
+    <div class="field full"><label>Attrezzatura principale</label><textarea name="equipment">${escapeHtml(profile.equipment)}</textarea></div>
+    <div class="field"><label>${icon("instagram")}Instagram</label><input name="instagram_url" type="url" value="${escapeHtml(profile.instagram_url)}" placeholder="https://instagram.com/…" /></div>
+    <div class="field"><label>${icon("facebook")}Facebook</label><input name="facebook_url" type="url" value="${escapeHtml(profile.facebook_url)}" placeholder="https://facebook.com/…" /></div>
+    <div class="field"><label>${icon("music-2")}TikTok</label><input name="tiktok_url" type="url" value="${escapeHtml(profile.tiktok_url)}" placeholder="https://tiktok.com/@…" /></div>
+    <div class="field"><label>${icon("linkedin")}LinkedIn</label><input name="linkedin_url" type="url" value="${escapeHtml(profile.linkedin_url)}" placeholder="https://linkedin.com/in/…" /></div></div>
+    <details class="secondary-role-picker"><summary><span><strong>Competenze secondarie</strong><small>Opzionali, massimo 5</small></span><span class="secondary-role-summary">${secondaryNames.length ? escapeHtml(secondaryNames.join(", ")) : "Nessuna selezionata"}</span>${icon("chevron-down")}</summary><div class="role-picker-popover"><input class="role-search" type="search" placeholder="Cerca un ruolo" data-role-search />
+      <div class="role-check-grid">${state.roles.map((role) => `<label data-role-label="${escapeHtml(role.name.toLowerCase())}"><input type="checkbox" name="secondary_roles" value="${role.id}" ${selectedSecondary.has(role.id) ? "checked" : ""} ${role.id === profile.primary_role_id ? "disabled" : ""}/><span>${escapeHtml(role.name)}</span></label>`).join("")}</div></div></details>
     <label class="consent-line"><input name="availability_visible" type="checkbox" ${profile.availability_visible ? "checked" : ""}/><span>Mostra il mio profilo nelle ricerche quando risulto disponibile.</span></label>
     <button class="primary-button" type="submit">${icon("save")}Salva profilo</button>`;
 }
@@ -482,6 +511,8 @@ async function saveProfile(event) {
       full_name: fullName, primary_role_id: primaryRoleId, bio: form.get("bio"), city,
       region: "Sardegna", travel_area: form.get("travel_area"), years_experience: form.get("years_experience"),
       portfolio_url: form.get("portfolio_url"), equipment: form.get("equipment"),
+      avatar_url: form.get("avatar_url"), instagram_url: form.get("instagram_url"), facebook_url: form.get("facebook_url"),
+      tiktok_url: form.get("tiktok_url"), linkedin_url: form.get("linkedin_url"),
       brands: form.get("brands").split(",").map((item) => item.trim()).filter(Boolean),
       production_types: productions, phone: form.get("phone"),
       availability_visible: form.get("availability_visible") === "on",
@@ -495,9 +526,23 @@ async function saveProfile(event) {
 }
 
 function renderIntegrations() {
-  qs("#integrationsGrid").innerHTML = `<article class="integration-card"><div class="integration-icon">${icon("calendar-days")}</div><div><h3>Google Calendar</h3><span>Importazione automatica di occupato/libero</span></div><span class="status-chip">Configurazione OAuth necessaria</span></article>
-    <article class="integration-card"><div class="integration-icon">${icon("calendar-range")}</div><div><h3>Apple Calendar</h3><span>Sincronizzazione tramite calendario privato</span></div><span class="status-chip">Configurazione necessaria</span></article>
+  const connection = (provider) => state.calendarConnections.find((item) => item.provider === provider);
+  const google = connection("google");
+  const apple = connection("apple");
+  qs("#integrationsGrid").innerHTML = `<article class="integration-card"><div class="integration-icon">${icon("calendar-days")}</div><div><h3>Google Calendar</h3><span>${google?.last_synced_at ? `Ultimo aggiornamento ${new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(google.last_synced_at))}` : "Autorizza la lettura dello stato libero/occupato."}</span></div><button class="${google?.status === "connected" ? "secondary-button" : "primary-button"}" type="button" ${google?.status === "connected" ? "data-sync-google" : "data-connect-google"}>${google?.status === "connected" ? `${icon("refresh-cw")}Sincronizza` : `${icon("link")}Collega Google`}</button></article>
+    <article class="integration-card"><div class="integration-icon">${icon("calendar-range")}</div><div><h3>Apple Calendar</h3><span>Importa un file .ics esportato da Calendario.</span></div><label class="${apple?.status === "connected" ? "secondary-button" : "primary-button"}" for="appleCalendarFile">${apple?.status === "connected" ? `${icon("refresh-cw")}Aggiorna` : `${icon("upload")}Importa .ics`}</label><input class="visually-hidden" id="appleCalendarFile" type="file" accept="text/calendar,.ics" data-apple-calendar /></article>
     <p class="integration-note">Trankui non legge titoli, clienti o dettagli degli eventi: usa soltanto lo stato libero/occupato dopo autorizzazione esplicita.</p>`;
+}
+
+async function importAppleCalendar(file) {
+  const text = await file.text();
+  const dates = [...text.matchAll(/^DTSTART(?:;VALUE=DATE)?(?:;[^:]*)?:(\d{8})/gm)].map((match) => `${match[1].slice(0, 4)}-${match[1].slice(4, 6)}-${match[1].slice(6, 8)}`);
+  const uniqueDates = [...new Set(dates)];
+  if (!uniqueDates.length) throw new Error("Il file non contiene eventi importabili");
+  await Promise.all(uniqueDates.slice(0, 366).map((date) => backend.setAvailability(date, "busy")));
+  await backend.saveCalendarConnection("apple", { status: "connected", external_calendar_id: file.name, last_synced_at: new Date().toISOString() });
+  showToast(`${uniqueDates.length} giornate occupate importate da Apple Calendar`);
+  await loadAppData();
 }
 
 function renderCommunity() {
@@ -552,11 +597,15 @@ document.addEventListener("click", async (event) => {
   const transition = event.target.closest("[data-transition]");
   if (transition) { try { await backend.transitionCollaboration(transition.dataset.collaboration, transition.dataset.transition); showToast("Richiesta aggiornata"); await loadAppData(); } catch (error) { showToast(errorMessage(error), true); } return; }
   const complete = event.target.closest("[data-complete]");
-  if (complete) { try { await backend.confirmComplete(complete.dataset.complete); showToast("Conferma registrata"); await loadAppData(); } catch (error) { showToast(errorMessage(error), true); } return; }
+  if (complete) { try { const result = await backend.confirmComplete(complete.dataset.complete); await loadAppData(); if (result.status === "completed") openReview(result.id); else showToast("Conferma registrata. Attendi quella dell'altra persona."); } catch (error) { showToast(errorMessage(error), true); } return; }
   const chat = event.target.closest("[data-chat]");
   if (chat) return openChat(chat.dataset.chat);
   const review = event.target.closest("[data-review]");
-  if (review) return submitReview(review.dataset.review);
+  if (review) return openReview(review.dataset.review);
+  const googleCalendar = event.target.closest("[data-connect-google]");
+  if (googleCalendar) { try { await backend.connectGoogleCalendar(); } catch (error) { showToast(errorMessage(error), true); } return; }
+  const syncGoogle = event.target.closest("[data-sync-google]");
+  if (syncGoogle) { try { syncGoogle.disabled = true; const count = await backend.syncGoogleCalendar(); showToast(`${count} giornate occupate sincronizzate`); await loadAppData(); } catch (error) { showToast(errorMessage(error), true); } finally { syncGoogle.disabled = false; } return; }
   const day = event.target.closest("[data-day]");
   if (day) return setDayAvailability(day.dataset.day);
   const mode = event.target.closest("[data-mode]");
@@ -573,6 +622,9 @@ qs("#searchForm").addEventListener("submit", (event) => {
 });
 qs("#postForm").addEventListener("submit", createPost);
 qs("#profileForm").addEventListener("submit", saveProfile);
+qs("#reviewForm").addEventListener("submit", submitReview);
+qs("#closeReview").addEventListener("click", closeReview);
+qs("#reviewBackdrop").addEventListener("click", (event) => { if (event.target === event.currentTarget) closeReview(); });
 qs("#togglePostForm").addEventListener("click", () => qs("#postForm").classList.toggle("hidden"));
 qs("#cancelPost").addEventListener("click", () => qs("#postForm").classList.add("hidden"));
 qs("#openBoard").addEventListener("click", () => { switchView("board"); qs("#postForm").classList.remove("hidden"); });
@@ -590,12 +642,31 @@ qs("#chatForm").addEventListener("submit", async (event) => {
   catch (error) { showToast(errorMessage(error), true); }
   finally { input.disabled = false; input.focus(); }
 });
-document.addEventListener("keydown", (event) => { if (event.key === "Escape" && state.activeChatId) closeChat(); });
+document.addEventListener("keydown", (event) => { if (event.key === "Escape" && state.activeChatId) closeChat(); if (event.key === "Escape" && state.activeReviewId) closeReview(); });
 
 qs("#logoutButton").addEventListener("click", async () => { await backend.signOut(); state.session = null; qs("#appShell").classList.add("hidden"); qs("#authScreen").classList.remove("hidden"); });
 qs("#profileForm").addEventListener("input", (event) => {
   if (event.target.matches("[data-role-search]")) qsa("[data-role-label]").forEach((label) => label.classList.toggle("hidden", !label.dataset.roleLabel.includes(event.target.value.toLowerCase())));
   if (event.target.name === "secondary_roles" && qsa('input[name="secondary_roles"]:checked').length > 5) { event.target.checked = false; showToast("Massimo 5 competenze secondarie", true); }
+});
+qs("#profileForm").addEventListener("change", async (event) => {
+  if (!event.target.matches("[data-avatar-file]")) return;
+  const file = event.target.files?.[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) return showToast("La foto non può superare 5 MB", true);
+  try {
+    event.target.disabled = true;
+    const url = await backend.uploadAvatar(file);
+    qs('input[name="avatar_url"]', qs("#profileForm")).value = url;
+    qs(".profile-photo-preview").innerHTML = `<img src="${escapeHtml(url)}" alt="Anteprima foto profilo" />`;
+    showToast("Foto caricata. Salva il profilo per confermare.");
+  } catch (error) { showToast(errorMessage(error), true); }
+  finally { event.target.disabled = false; }
+});
+qs("#integrationsGrid").addEventListener("change", async (event) => {
+  if (!event.target.matches("[data-apple-calendar]")) return;
+  try { await importAppleCalendar(event.target.files?.[0]); }
+  catch (error) { showToast(errorMessage(error), true); }
 });
 
 async function init() {
@@ -607,7 +678,14 @@ async function init() {
     return;
   }
   const session = await backend.session();
-  if (session) await enterApp(session);
+  if (session) {
+    if (new URLSearchParams(window.location.search).get("calendar") === "google") {
+      const count = await backend.syncGoogleCalendar();
+      showToast(`${count} giornate occupate importate da Google Calendar`);
+      history.replaceState({}, "", window.location.pathname);
+    }
+    await enterApp(session);
+  }
   backend.onAuthChange(async (nextSession, event) => {
     if (event === "PASSWORD_RECOVERY") {
       state.session = nextSession;

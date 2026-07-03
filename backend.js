@@ -20,6 +20,13 @@
     { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }
   );
 
+  function authRedirectUrl() {
+    const path = window.location.pathname.endsWith("/")
+      ? window.location.pathname
+      : window.location.pathname.replace(/[^/]+$/, "");
+    return `${window.location.origin}${path}`;
+  }
+
   function unwrap(result) {
     if (result.error) throw result.error;
     return result.data;
@@ -36,7 +43,7 @@
       password,
       options: {
         data: { full_name: name },
-        emailRedirectTo: `${config.siteUrl || window.location.origin}/`,
+        emailRedirectTo: authRedirectUrl(),
       },
     }));
   }
@@ -45,12 +52,28 @@
     return unwrap(await client.auth.signInWithPassword({ email, password }));
   }
 
+  async function resendConfirmation(email) {
+    return unwrap(await client.auth.resend({
+      type: "signup",
+      email,
+      options: { emailRedirectTo: authRedirectUrl() },
+    }));
+  }
+
+  async function requestPasswordReset(email) {
+    return unwrap(await client.auth.resetPasswordForEmail(email, { redirectTo: authRedirectUrl() }));
+  }
+
+  async function updatePassword(password) {
+    return unwrap(await client.auth.updateUser({ password }));
+  }
+
   async function signOut() {
     unwrap(await client.auth.signOut());
   }
 
   function onAuthChange(callback) {
-    return client.auth.onAuthStateChange((_event, currentSession) => callback(currentSession));
+    return client.auth.onAuthStateChange((event, currentSession) => callback(currentSession, event));
   }
 
   async function roles() {
@@ -87,6 +110,10 @@
       brands: profile.brands || [],
       production_types: profile.production_types || [],
       avatar_url: profile.avatar_url || null,
+      instagram_url: profile.instagram_url || null,
+      facebook_url: profile.facebook_url || null,
+      tiktok_url: profile.tiktok_url || null,
+      linkedin_url: profile.linkedin_url || null,
       availability_visible: Boolean(profile.availability_visible),
       profile_status: profile.profile_status || "draft",
     };
@@ -104,9 +131,19 @@
     return ownProfile();
   }
 
+  async function uploadAvatar(file) {
+    const current = await session();
+    if (!current) throw new Error("Sessione scaduta");
+    const extension = (file.name.split(".").pop() || "jpg").toLowerCase();
+    const path = `${current.user.id}/profile.${extension}`;
+    unwrap(await client.storage.from("avatars").upload(path, file, { upsert: true, contentType: file.type }));
+    const { data } = client.storage.from("avatars").getPublicUrl(path);
+    return `${data.publicUrl}?v=${Date.now()}`;
+  }
+
   async function publicProfiles() {
     return unwrap(await client.from("profiles")
-      .select("id,full_name,primary_role_id,primary_other_role_name,bio,city,region,travel_area,years_experience,portfolio_url,equipment,brands,production_types,avatar_url,verified,created_at,roles:primary_role_id(id,name,category,slug),secondary_roles(role_id,other_role_name,position,roles(id,name,category,slug))")
+      .select("id,full_name,primary_role_id,primary_other_role_name,bio,city,region,travel_area,years_experience,portfolio_url,equipment,brands,production_types,avatar_url,instagram_url,facebook_url,tiktok_url,linkedin_url,verified,created_at,roles:primary_role_id(id,name,category,slug),secondary_roles(role_id,other_role_name,position,roles(id,name,category,slug))")
       .eq("profile_status", "active"));
   }
 
@@ -217,6 +254,57 @@
     return unwrap(await client.from("reviews").select("*").order("created_at", { ascending: false }));
   }
 
+  async function calendarConnections() {
+    const current = await session();
+    if (!current) return [];
+    return unwrap(await client.from("calendar_connections").select("*").eq("profile_id", current.user.id));
+  }
+
+  async function saveCalendarConnection(provider, payload) {
+    const current = await session();
+    if (!current) throw new Error("Sessione scaduta");
+    return unwrap(await client.from("calendar_connections").upsert({
+      profile_id: current.user.id,
+      provider,
+      ...payload,
+    }, { onConflict: "profile_id,provider" }).select().single());
+  }
+
+  async function connectGoogleCalendar() {
+    return unwrap(await client.auth.linkIdentity({
+      provider: "google",
+      options: {
+        scopes: "https://www.googleapis.com/auth/calendar.readonly",
+        redirectTo: `${authRedirectUrl()}?calendar=google`,
+      },
+    }));
+  }
+
+  async function syncGoogleCalendar() {
+    const current = await session();
+    const token = current?.provider_token;
+    if (!token) throw new Error("Ricollega Google Calendar per autorizzare la sincronizzazione");
+    const timeMin = new Date();
+    const timeMax = new Date();
+    timeMax.setFullYear(timeMax.getFullYear() + 1);
+    const response = await fetch("https://www.googleapis.com/calendar/v3/freeBusy", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ timeMin: timeMin.toISOString(), timeMax: timeMax.toISOString(), items: [{ id: "primary" }] }),
+    });
+    if (!response.ok) throw new Error("Google Calendar non ha autorizzato la lettura libero/occupato");
+    const data = await response.json();
+    const dates = new Set();
+    for (const period of data.calendars?.primary?.busy || []) {
+      const cursor = new Date(period.start);
+      const end = new Date(period.end);
+      while (cursor < end) { dates.add(cursor.toISOString().slice(0, 10)); cursor.setDate(cursor.getDate() + 1); }
+    }
+    await Promise.all([...dates].map((date) => setAvailability(date, "busy")));
+    await saveCalendarConnection("google", { status: "connected", external_calendar_id: "primary", last_synced_at: new Date().toISOString() });
+    return dates.size;
+  }
+
   async function collaborationContact(collaborationId) {
     const result = unwrap(await client.rpc("collaboration_contact", { target_collaboration: collaborationId }));
     return result?.[0] || null;
@@ -239,11 +327,15 @@
     session,
     signUp,
     signIn,
+    resendConfirmation,
+    requestPasswordReset,
+    updatePassword,
     signOut,
     onAuthChange,
     roles,
     ownProfile,
     saveProfile,
+    uploadAvatar,
     publicProfiles,
     availabilityForRange,
     setAvailability,
@@ -261,6 +353,10 @@
     submitReview,
     publishedReviews,
     ownReviews,
+    calendarConnections,
+    saveCalendarConnection,
+    connectGoogleCalendar,
+    syncGoogleCalendar,
     collaborationContact,
     recordConsent,
   };

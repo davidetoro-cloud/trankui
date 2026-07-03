@@ -4,6 +4,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Trankui | Crew audiovisive affidabili</title>
+    <script>
+      if (new URLSearchParams(window.location.search).get("theme") === "night") {
+        document.documentElement.classList.add("theme-night");
+      }
+    </script>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
@@ -14,6 +19,7 @@
           <nav aria-label="Informazioni su Trankui">
             <a href="./trankui.html">Chi è Trankui</a>
             <a href="./faq.html">FAQ</a>
+            <a href="./blog.html">Blog</a>
           </nav>
         </header>
         <div class="auth-layout">
@@ -79,7 +85,7 @@
           <button class="nav-item" type="button" data-view="admin"><i data-lucide="users-round" aria-hidden="true"></i>Community</button>
         </nav>
 
-        <div class="utility-links"><a href="./trankui.html">Trankui</a><a href="./faq.html">FAQ</a></div>
+        <div class="utility-links"><a href="./trankui.html">Trankui</a><a href="./faq.html">FAQ</a><a href="./blog.html">Blog</a></div>
 
         <div class="sidebar-note">
           <button class="user-menu-button" type="button" id="openProfile" title="Apri il profilo">
@@ -219,9 +225,29 @@
       </main>
       <footer class="app-footer">
         <div><img src="./logo.png" alt="Trankui" /><span>Il modo semplice per costruire crew affidabili.</span></div>
-        <nav aria-label="Link utili"><a href="./trankui.html">Chi è Trankui</a><a href="./faq.html">FAQ</a><a href="./privacy.html">Privacy</a><a href="./termini.html">Termini</a><a href="mailto:welcome@trankui.com">Contatti</a></nav>
+        <nav aria-label="Link utili"><a href="./trankui.html">Chi è Trankui</a><a href="./faq.html">FAQ</a><a href="./blog.html">Blog</a><a href="./privacy.html">Privacy</a><a href="./termini.html">Termini</a><a href="mailto:welcome@trankui.com">Contatti</a></nav>
         <span>© 2026 Trankui</span>
       </footer>
+    </div>
+
+    <div class="modal-backdrop hidden" id="reviewBackdrop">
+      <section class="review-dialog" role="dialog" aria-modal="true" aria-labelledby="reviewTitle">
+        <header class="review-head"><div><p class="eyebrow">Feedback blind</p><h2 id="reviewTitle">Com'è andata la collaborazione?</h2><span id="reviewContext"></span></div><button class="close-button" type="button" id="closeReview" title="Chiudi"><i data-lucide="x"></i></button></header>
+        <form id="reviewForm" class="review-form">
+          <div class="blind-review-note"><i data-lucide="eye-off"></i><span>La recensione sarà pubblicata soltanto quando entrambi avrete lasciato il feedback.</span></div>
+          <div class="review-scores">
+            <label>Puntualità <select name="punctuality"><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></label>
+            <label>Comunicazione <select name="communication"><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></label>
+            <label>Affidabilità <select name="reliability"><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></label>
+            <label>Organizzazione <select name="organization"><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></label>
+            <label>Problem solving <select name="problem_solving"><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></label>
+          </div>
+          <label class="field">Recensione pubblica<textarea name="public_comment" maxlength="1200" required placeholder="Descrivi in modo utile e rispettoso com'è andata."></textarea></label>
+          <label class="field">Nota privata per Trankui <textarea name="private_note" maxlength="1200" placeholder="Non sarà mostrata sul profilo."></textarea></label>
+          <label class="consent-line"><input type="checkbox" name="recommend" checked /><span>Consiglierei questa persona a un'altra crew.</span></label>
+          <button class="primary-button" type="submit"><i data-lucide="send"></i>Invia feedback</button>
+        </form>
+      </section>
     </div>
 
     <div class="chat-backdrop hidden" id="chatBackdrop">
