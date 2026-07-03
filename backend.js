@@ -135,10 +135,10 @@
     const current = await session();
     if (!current) throw new Error("Sessione scaduta");
     const extension = (file.name.split(".").pop() || "jpg").toLowerCase();
-    const path = `${current.user.id}/profile.${extension}`;
+    const path = `${current.user.id}/profile-${Date.now()}.${extension}`;
     unwrap(await client.storage.from("avatars").upload(path, file, { upsert: true, contentType: file.type }));
     const { data } = client.storage.from("avatars").getPublicUrl(path);
-    return `${data.publicUrl}?v=${Date.now()}`;
+    return data.publicUrl;
   }
 
   async function publicProfiles() {

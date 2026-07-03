@@ -1,6 +1,35 @@
 const backend = window.trankuiBackend;
-const zones = ["Cagliari", "Sassari", "Olbia", "Nuoro", "Oristano"];
-const productions = ["Spot", "Evento", "Documentario", "Corporate", "Videoclip", "Real estate", "Turismo"];
+const italianAreas = {
+  "Abruzzo": ["Chieti", "L'Aquila", "Pescara", "Teramo"], "Basilicata": ["Matera", "Potenza"],
+  "Calabria": ["Catanzaro", "Cosenza", "Crotone", "Reggio Calabria", "Vibo Valentia"],
+  "Campania": ["Avellino", "Benevento", "Caserta", "Napoli", "Salerno"],
+  "Emilia-Romagna": ["Bologna", "Ferrara", "Forli-Cesena", "Modena", "Parma", "Piacenza", "Ravenna", "Reggio Emilia", "Rimini"],
+  "Friuli-Venezia Giulia": ["Gorizia", "Pordenone", "Trieste", "Udine"], "Lazio": ["Frosinone", "Latina", "Rieti", "Roma", "Viterbo"],
+  "Liguria": ["Genova", "Imperia", "La Spezia", "Savona"],
+  "Lombardia": ["Bergamo", "Brescia", "Como", "Cremona", "Lecco", "Lodi", "Mantova", "Milano", "Monza e Brianza", "Pavia", "Sondrio", "Varese"],
+  "Marche": ["Ancona", "Ascoli Piceno", "Fermo", "Macerata", "Pesaro e Urbino"], "Molise": ["Campobasso", "Isernia"],
+  "Piemonte": ["Alessandria", "Asti", "Biella", "Cuneo", "Novara", "Torino", "Verbano-Cusio-Ossola", "Vercelli"],
+  "Puglia": ["Bari", "Barletta-Andria-Trani", "Brindisi", "Foggia", "Lecce", "Taranto"],
+  "Sardegna": ["Cagliari", "Nuoro", "Oristano", "Sassari", "Sud Sardegna"],
+  "Sicilia": ["Agrigento", "Caltanissetta", "Catania", "Enna", "Messina", "Palermo", "Ragusa", "Siracusa", "Trapani"],
+  "Toscana": ["Arezzo", "Firenze", "Grosseto", "Livorno", "Lucca", "Massa-Carrara", "Pisa", "Pistoia", "Prato", "Siena"],
+  "Trentino-Alto Adige": ["Bolzano", "Trento"], "Umbria": ["Perugia", "Terni"], "Valle d'Aosta": ["Aosta"],
+  "Veneto": ["Belluno", "Padova", "Rovigo", "Treviso", "Venezia", "Verona", "Vicenza"]
+};
+const specializationGroups = {
+  "Commercial & Advertising": ["Spot TV", "Commercial", "Branded Content", "Product Video", "Fashion Film", "Beauty", "Automotive", "Food & Beverage", "Luxury"],
+  "Corporate": ["Video Aziendali", "Employer Branding", "Corporate Storytelling", "Formazione / E-learning", "Eventi Aziendali", "Interviste"],
+  "Cinema & Fiction": ["Cortometraggi", "Lungometraggi", "Serie TV", "Fiction", "Trailer"],
+  "Documentary": ["Documentari", "Docu-Series", "Reportage", "Travel Documentary", "Naturalistico"],
+  "Broadcast": ["Programmi TV", "News", "Sport TV", "Live Production"],
+  "Eventi": ["Congressi", "Convention", "Festival", "Concerti", "Teatro", "Eventi Sportivi"],
+  "Wedding": ["Matrimoni", "Elopement", "Destination Wedding"], "Motorsport": ["Karting", "Motorsport", "Racing", "Rally"],
+  "Sport": ["Calcio", "Basket", "Tennis", "Fitness", "Outdoor"], "Music": ["Videoclip Musicali", "Live Music", "Concerti"],
+  "Digital & Social": ["Social Media", "YouTube", "TikTok", "Instagram", "Podcast Video"],
+  "E-commerce": ["Amazon", "Product Video", "Packshot", "Demo Prodotto"], "Industrial": ["Industria", "Edilizia", "Manufacturing", "Energia"],
+  "Specializzazioni Tecniche": ["Drone", "FPV", "Underwater", "Timelapse", "Hyperlapse", "Green Screen", "Virtual Production", "Motion Control"]
+};
+const specializations = [...new Set(Object.values(specializationGroups).flat())];
 
 const state = {
   authMode: "signup",
@@ -14,7 +43,7 @@ const state = {
   reviews: [],
   calendarConnections: [],
   selectedProfileId: null,
-  search: { roleId: "", date: isoDate(new Date()), zone: "Cagliari", production: "Spot" },
+  search: { roleId: "", date: isoDate(new Date()), region: "Sardegna", zone: "Cagliari", production: "" },
   availabilityMode: "available",
   month: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
   activeChatId: null,
@@ -25,7 +54,10 @@ const state = {
 const qs = (selector, root = document) => root.querySelector(selector);
 const qsa = (selector, root = document) => [...root.querySelectorAll(selector)];
 const icon = (name) => `<i data-lucide="${name}" aria-hidden="true"></i>`;
-const escapeHtml = (value = "") => String(value).replace(/[&<>"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char]);
+const escapeHtml = (value = "") => {
+  const clean = value == null || value === "null" || value === "undefined" ? "" : value;
+  return String(clean).replace(/[&<>"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char]);
+};
 
 function isoDate(date) {
   const copy = new Date(date);
@@ -42,14 +74,25 @@ function initials(name = "") {
 }
 
 function avatarContent(profile, alt = "") {
+  const fallback = initials(profile?.full_name || profile?.email);
   return profile?.avatar_url
-    ? `<img src="${escapeHtml(profile.avatar_url)}" alt="${escapeHtml(alt || `Foto di ${profile.full_name || "profilo"}`)}" />`
-    : initials(profile?.full_name || profile?.email);
+    ? `<img src="${escapeHtml(profile.avatar_url)}" alt="${escapeHtml(alt || `Foto di ${profile.full_name || "profilo"}`)}" onerror="this.parentElement.textContent='${fallback}'" />`
+    : fallback;
+}
+
+function socialIcon(network) {
+  const paths = {
+    instagram: `<path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5Zm0 2a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H7Zm5 3.5A4.5 4.5 0 1 1 7.5 12 4.5 4.5 0 0 1 12 7.5Zm0 2A2.5 2.5 0 1 0 14.5 12 2.5 2.5 0 0 0 12 9.5ZM17.8 6.2a1.05 1.05 0 1 1-1.05 1.05A1.05 1.05 0 0 1 17.8 6.2Z"/>`,
+    facebook: `<path d="M14 8h3V4.2c-.52-.07-2.3-.2-4.42-.2C8.2 4 5.2 6.68 5.2 11.6V16H2v4h3.2v10h4.9V20h4.1l.65-4h-4.75v-4c0-1.15.32-2 1.9-2H14V8Z" transform="translate(2 -4) scale(.8)"/>`,
+    tiktok: `<path d="M16.6 2c.32 2.67 1.82 4.26 4.4 4.43v3.72a8.73 8.73 0 0 1-4.35-1.02v7.05A6.18 6.18 0 1 1 11.3 10v3.76a2.49 2.49 0 1 0 1.61 2.33V2h3.69Z"/>`,
+    linkedin: `<path d="M5.34 7.5H1.67V20h3.67V7.5ZM3.5 2A2.12 2.12 0 1 0 3.5 6.24 2.12 2.12 0 0 0 3.5 2ZM20.5 12.83c0-3.77-2.01-5.52-4.7-5.52a4.06 4.06 0 0 0-3.68 2.02V7.5H8.45V20h3.67v-6.2c0-1.64.31-3.23 2.35-3.23 2.01 0 2.04 1.88 2.04 3.34V20h3.67l.32-7.17Z"/>`
+  };
+  return `<svg class="social-brand-icon" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">${paths[network] || ""}</svg>`;
 }
 
 function normalizeProfileUrl(value, network) {
   const raw = String(value || "").trim();
-  if (!raw) return "";
+  if (!raw || raw === "null" || raw === "undefined") return "";
   if (/^https?:\/\//i.test(raw)) return raw;
   const clean = raw.replace(/^@/, "").replace(/^\/+|\/+$/g, "");
   const bases = { instagram: "https://instagram.com/", facebook: "https://facebook.com/", tiktok: "https://tiktok.com/@", linkedin: "https://linkedin.com/in/" };
@@ -96,6 +139,14 @@ function groupedRoleOptions(selected = "", includeEmpty = true) {
 function optionList(items, selected = "") {
   return items.map((item) => `<option value="${escapeHtml(item)}" ${item === selected ? "selected" : ""}>${escapeHtml(item)}</option>`).join("");
 }
+
+function groupedOptions(groups, selected = "", emptyLabel = "Tutti") {
+  return `<option value="">${emptyLabel}</option>` + Object.entries(groups).map(([category, items]) =>
+    `<optgroup label="${escapeHtml(category)}">${items.map((item) => `<option value="${escapeHtml(item)}" ${item === selected ? "selected" : ""}>${escapeHtml(item)}</option>`).join("")}</optgroup>`
+  ).join("");
+}
+
+function provincesFor(region) { return italianAreas[region] || []; }
 
 function setAuthMode(mode) {
   state.authMode = mode;
@@ -183,7 +234,9 @@ async function loadAppData() {
       backend.ownReviews(),
       backend.calendarConnections(),
     ]);
-    state.profiles = profiles;
+    state.profiles = profiles.map((profile) => profile.id === state.profile?.id
+      ? { ...profile, ...state.profile, secondary_roles: profile.secondary_roles }
+      : profile);
     state.availability = availability;
     state.posts = posts;
     state.collaborations = collaborations;
@@ -213,12 +266,14 @@ function renderApp() {
 function renderSearchControls() {
   qs("#role").innerHTML = groupedRoleOptions(state.search.roleId, false);
   qs("#date").value = state.search.date;
-  qs("#zone").innerHTML = optionList(zones, state.search.zone);
-  qs("#production").innerHTML = optionList(productions, state.search.production);
+  qs("#region").innerHTML = optionList(Object.keys(italianAreas), state.search.region);
+  qs("#zone").innerHTML = `<option value="">Tutte le province</option>${optionList(provincesFor(state.search.region), state.search.zone)}`;
+  qs("#production").innerHTML = groupedOptions(specializationGroups, state.search.production, "Tutti gli ambiti");
   qs("#postRole").innerHTML = groupedRoleOptions(state.search.roleId, false);
   qs("#postDate").value = state.search.date;
-  qs("#postZone").innerHTML = optionList(zones, state.search.zone);
-  qs("#postProduction").innerHTML = optionList(productions, state.search.production);
+  qs("#postRegion").innerHTML = optionList(Object.keys(italianAreas), state.search.region);
+  qs("#postZone").innerHTML = optionList(provincesFor(state.search.region), state.search.zone);
+  qs("#postProduction").innerHTML = groupedOptions(specializationGroups, state.search.production, "Scegli un ambito");
 }
 
 function availabilityStatus(profileId, date) {
@@ -236,7 +291,9 @@ function filteredProfiles() {
     .filter((profile) => profile.id !== state.session?.user?.id)
     .map((profile) => ({ ...profile, matchRank: profileRoleMatch(profile, state.search.roleId) }))
     .filter((profile) => profile.matchRank < 2)
-    .filter((profile) => !state.search.zone || profile.city === state.search.zone || /sardegna/i.test(profile.travel_area || ""))
+    .filter((profile) => !state.search.region || profile.region === state.search.region || new RegExp(state.search.region, "i").test(profile.travel_area || ""))
+    .filter((profile) => !state.search.zone || profile.city === state.search.zone)
+    .filter((profile) => !state.search.production || (profile.production_types || []).includes(state.search.production))
     .filter((profile) => !state.search.date || availabilityStatus(profile.id, state.search.date) === "available")
     .sort((a, b) => a.matchRank - b.matchRank || Number(b.verified) - Number(a.verified) || b.years_experience - a.years_experience);
 }
@@ -245,7 +302,7 @@ function renderSearchResults() {
   const results = filteredProfiles();
   const role = roleById(state.search.roleId);
   qs("#resultCount").textContent = `${results.length} ${results.length === 1 ? "professionista disponibile" : "professionisti disponibili"}`;
-  qs("#resultContext").textContent = `${role?.name || "Ruolo"} · ${formatDate(state.search.date)} · ${state.search.zone}`;
+  qs("#resultContext").textContent = `${role?.name || "Ruolo"} · ${formatDate(state.search.date)} · ${state.search.zone || state.search.region}${state.search.production ? ` · ${state.search.production}` : ""}`;
   qs("#availabilityAlert").innerHTML = state.profile?.availability_visible
     ? `${icon("calendar-check")}<div><strong>Il tuo calendario e visibile nelle ricerche</strong><span>Aggiorna le date quando cambia la tua agenda.</span></div>`
     : `${icon("calendar-x")}<div><strong>Il tuo profilo non compare ancora per disponibilita</strong><span>Completa il profilo e abilita la visibilita del calendario.</span></div><button class="tiny-button" type="button" data-go="profile">Completa profilo</button>`;
@@ -274,14 +331,16 @@ async function renderSelectedProfile() {
   }
   const primary = profile.roles?.name || profile.primary_other_role_name || "Professionista";
   const secondary = (profile.secondary_roles || []).map((item) => item.roles?.name || item.other_role_name).filter(Boolean);
-  const socialLinks = [["instagram_url", "instagram", "Instagram"], ["facebook_url", "facebook", "Facebook"], ["tiktok_url", "music-2", "TikTok"], ["linkedin_url", "linkedin", "LinkedIn"]].filter(([key]) => profile[key]);
+  const expertise = (profile.production_types || []).filter((item) => specializations.includes(item));
+  const socialLinks = [["instagram_url", "instagram", "Instagram"], ["facebook_url", "facebook", "Facebook"], ["tiktok_url", "tiktok", "TikTok"], ["linkedin_url", "linkedin", "LinkedIn"]].filter(([key]) => profile[key] && profile[key] !== "null");
   qs("#profilePanel").innerHTML = `<div class="profile-hero"><div class="avatar large">${avatarContent(profile)}</div>
     <div><p class="eyebrow">${profile.verified ? "Profilo verificato" : "Profilo professionale"}</p><h2>${escapeHtml(profile.full_name)}</h2><span>${escapeHtml(primary)} · ${escapeHtml(profile.city)}, ${escapeHtml(profile.region)}</span></div></div>
     <div class="trust-row"><div><strong>${profile.years_experience}</strong><span>anni esperienza</span></div><div><strong>${profile.verified ? "Si" : "In verifica"}</strong><span>identita</span></div></div>
     <p>${escapeHtml(profile.bio || "Bio professionale non ancora inserita.")}</p>
     ${secondary.length ? `<div class="tag-row">${secondary.map((role) => `<span>${escapeHtml(role)}</span>`).join("")}</div>` : ""}
+    ${expertise.length ? `<div class="profile-expertise"><strong>Ambiti di specializzazione</strong><div class="tag-row">${expertise.map((item) => `<span>${escapeHtml(item)}</span>`).join("")}</div></div>` : ""}
     <dl class="profile-facts"><div><dt>Trasferte</dt><dd>${escapeHtml(profile.travel_area || "Da concordare")}</dd></div><div><dt>Attrezzatura</dt><dd>${escapeHtml(profile.equipment || "Da chiedere")}</dd></div><div><dt>Brand</dt><dd>${escapeHtml((profile.brands || []).join(", ") || "Non indicati")}</dd></div></dl>
-    <div class="profile-links">${profile.portfolio_url ? `<a class="secondary-button" href="${escapeHtml(profile.portfolio_url)}" target="_blank" rel="noopener">${icon("external-link")}Portfolio</a>` : ""}${socialLinks.map(([key, iconName, label]) => `<a class="icon-button" href="${escapeHtml(profile[key])}" target="_blank" rel="noopener" title="${label}">${icon(iconName)}</a>`).join("")}</div>
+    <div class="profile-links">${profile.portfolio_url ? `<a class="secondary-button" href="${escapeHtml(profile.portfolio_url)}" target="_blank" rel="noopener">${icon("external-link")}Portfolio</a>` : ""}${socialLinks.map(([key, network, label]) => `<a class="social-icon-button" href="${escapeHtml(profile[key])}" target="_blank" rel="noopener" title="${label}" aria-label="${label}">${socialIcon(network)}</a>`).join("")}</div>
     <button class="primary-button full-button" type="button" data-request="${profile.id}">${icon("send")}Invia richiesta di collaborazione</button>
     <div id="publicReviews"><span>Caricamento reputazione...</span></div>`;
   redrawIcons();
@@ -508,10 +567,13 @@ function renderProfileForm() {
   const profile = state.profile || {};
   const selectedSecondary = new Set((profile.secondaryRoles || []).map((item) => item.role_id));
   const secondaryNames = (profile.secondaryRoles || []).map((item) => item.roles?.name || item.other_role_name).filter(Boolean);
+  const selectedSpecializations = new Set(profile.production_types || []);
+  const profileRegion = profile.region && italianAreas[profile.region] ? profile.region : "Sardegna";
   qs("#profileForm").innerHTML = `<div class="profile-photo-editor"><div class="avatar profile-photo-preview">${profile.avatar_url ? `<img src="${escapeHtml(profile.avatar_url)}" alt="Foto profilo" />` : initials(profile.full_name)}</div><div><strong>Foto profilo</strong><span>JPG, PNG o WebP, massimo 5 MB.</span><label class="secondary-button" for="avatarFile">${icon("camera")}Carica foto</label><input class="visually-hidden" id="avatarFile" type="file" accept="image/jpeg,image/png,image/webp" data-avatar-file /><input type="hidden" name="avatar_url" value="${escapeHtml(profile.avatar_url)}" /></div></div>
     <div class="form-section"><div class="field"><label>Nome e cognome *</label><input name="full_name" value="${escapeHtml(profile.full_name)}" required /></div>
     <div class="field"><label>Ruolo principale *</label><select name="primary_role_id" required>${groupedRoleOptions(profile.primary_role_id)}</select></div>
-    <div class="field"><label>Citta *</label><select name="city" required><option value="">Scegli</option>${optionList(zones, profile.city)}</select></div>
+    <div class="field"><label>Regione *</label><select name="region" data-profile-region required>${optionList(Object.keys(italianAreas), profileRegion)}</select></div>
+    <div class="field"><label>Provincia *</label><select name="city" data-profile-province required><option value="">Scegli</option>${optionList(provincesFor(profileRegion), profile.city)}</select></div>
     <div class="field"><label>Anni di esperienza</label><input name="years_experience" type="number" min="0" max="80" value="${profile.years_experience || 0}" /></div>
     <div class="field full"><label>Bio</label><textarea name="bio" maxlength="1200">${escapeHtml(profile.bio)}</textarea></div>
     <div class="field"><label>Disponibilita a trasferte</label><input name="travel_area" value="${escapeHtml(profile.travel_area)}" placeholder="Es. Tutta la Sardegna" /></div>
@@ -519,12 +581,14 @@ function renderProfileForm() {
     <div class="field"><label>Portfolio</label><input name="portfolio_url" type="url" value="${escapeHtml(profile.portfolio_url)}" placeholder="https://" /></div>
     <div class="field"><label>Brand utilizzati</label><input name="brands" value="${escapeHtml((profile.brands || []).join(", "))}" placeholder="Sony, ARRI, Aputure" /></div>
     <div class="field full"><label>Attrezzatura principale</label><textarea name="equipment">${escapeHtml(profile.equipment)}</textarea></div>
-    <div class="field"><label>${icon("instagram")}Instagram</label><input name="instagram_url" value="${escapeHtml(profile.instagram_url)}" placeholder="Link o nome utente" /></div>
-    <div class="field"><label>${icon("facebook")}Facebook</label><input name="facebook_url" value="${escapeHtml(profile.facebook_url)}" placeholder="Link o nome utente" /></div>
-    <div class="field"><label>${icon("music-2")}TikTok</label><input name="tiktok_url" value="${escapeHtml(profile.tiktok_url)}" placeholder="Link o @nomeutente" /></div>
-    <div class="field"><label>${icon("linkedin")}LinkedIn</label><input name="linkedin_url" value="${escapeHtml(profile.linkedin_url)}" placeholder="Link o nome profilo" /></div></div>
-    <details class="secondary-role-picker"><summary><span><strong>Competenze secondarie</strong><small>Opzionali, massimo 5</small></span><span class="secondary-role-summary">${secondaryNames.length ? escapeHtml(secondaryNames.join(", ")) : "Nessuna selezionata"}</span>${icon("chevron-down")}</summary><div class="role-picker-popover"><input class="role-search" type="search" placeholder="Cerca un ruolo" data-role-search />
-      <div class="role-check-grid">${state.roles.map((role) => `<label data-role-label="${escapeHtml(role.name.toLowerCase())}"><input type="checkbox" name="secondary_roles" value="${role.id}" ${selectedSecondary.has(role.id) ? "checked" : ""} ${role.id === profile.primary_role_id ? "disabled" : ""}/><span>${escapeHtml(role.name)}</span></label>`).join("")}</div></div></details>
+    <div class="field social-field"><label>${socialIcon("instagram")}Instagram</label><input name="instagram_url" value="${escapeHtml(profile.instagram_url)}" placeholder="Link o nome utente" /></div>
+    <div class="field social-field"><label>${socialIcon("facebook")}Facebook</label><input name="facebook_url" value="${escapeHtml(profile.facebook_url)}" placeholder="Link o nome utente" /></div>
+    <div class="field social-field"><label>${socialIcon("tiktok")}TikTok</label><input name="tiktok_url" value="${escapeHtml(profile.tiktok_url)}" placeholder="Link o @nomeutente" /></div>
+    <div class="field social-field"><label>${socialIcon("linkedin")}LinkedIn</label><input name="linkedin_url" value="${escapeHtml(profile.linkedin_url)}" placeholder="Link o nome profilo" /></div></div>
+    <details class="compact-multiselect"><summary><span><strong>Competenze secondarie</strong><small>Opzionali · massimo 5</small></span><span class="multiselect-summary" data-secondary-summary>${secondaryNames.length ? escapeHtml(secondaryNames.join(", ")) : "Nessuna selezionata"}</span>${icon("chevron-down")}</summary><div class="multiselect-popover"><input type="search" placeholder="Cerca un ruolo" data-role-search />
+      <div class="multiselect-list">${state.roles.map((role) => `<label data-role-label="${escapeHtml(role.name.toLowerCase())}"><span>${escapeHtml(role.name)}</span><input type="checkbox" name="secondary_roles" value="${role.id}" data-label="${escapeHtml(role.name)}" ${selectedSecondary.has(role.id) ? "checked" : ""} ${role.id === profile.primary_role_id ? "disabled" : ""}/></label>`).join("")}</div></div></details>
+    <details class="compact-multiselect"><summary><span><strong>Ambiti di specializzazione</strong><small>Opzionali · massimo 5</small></span><span class="multiselect-summary" data-specialization-summary>${selectedSpecializations.size ? escapeHtml([...selectedSpecializations].join(", ")) : "Nessuno selezionato"}</span>${icon("chevron-down")}</summary><div class="multiselect-popover"><p class="multiselect-help">Seleziona gli ambiti in cui lavori più frequentemente o in cui ritieni di avere maggiore esperienza. Queste informazioni aiuteranno gli altri professionisti a trovarti per produzioni specifiche.</p><input type="search" placeholder="Cerca un ambito" data-specialization-search />
+      <div class="multiselect-list grouped">${Object.entries(specializationGroups).map(([category, items]) => `<div class="multiselect-group"><strong>${escapeHtml(category)}</strong>${items.map((item) => `<label data-specialization-label="${escapeHtml(item.toLowerCase())}"><span>${escapeHtml(item)}</span><input type="checkbox" name="specializations" value="${escapeHtml(item)}" data-label="${escapeHtml(item)}" ${selectedSpecializations.has(item) ? "checked" : ""}/></label>`).join("")}</div>`).join("")}</div></div></details>
     <label class="consent-line"><input name="availability_visible" type="checkbox" ${profile.availability_visible ? "checked" : ""}/><span>Mostra il mio profilo nelle ricerche quando risulto disponibile.</span></label>
     <button class="primary-button" type="submit">${icon("save")}Salva profilo</button>`;
 }
@@ -533,19 +597,21 @@ async function saveProfile(event) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
   const selected = form.getAll("secondary_roles");
+  const selectedSpecializations = form.getAll("specializations");
   if (selected.length > 5) return showToast("Puoi scegliere al massimo 5 competenze secondarie", true);
+  if (selectedSpecializations.length > 5) return showToast("Puoi scegliere al massimo 5 ambiti di specializzazione", true);
   const fullName = form.get("full_name").trim();
   const primaryRoleId = form.get("primary_role_id");
   const city = form.get("city");
   try {
     state.profile = await backend.saveProfile({
       full_name: fullName, primary_role_id: primaryRoleId, bio: form.get("bio"), city,
-      region: "Sardegna", travel_area: form.get("travel_area"), years_experience: form.get("years_experience"),
+      region: form.get("region"), travel_area: form.get("travel_area"), years_experience: form.get("years_experience"),
       portfolio_url: form.get("portfolio_url"), equipment: form.get("equipment"),
       avatar_url: form.get("avatar_url"), instagram_url: normalizeProfileUrl(form.get("instagram_url"), "instagram"), facebook_url: normalizeProfileUrl(form.get("facebook_url"), "facebook"),
       tiktok_url: normalizeProfileUrl(form.get("tiktok_url"), "tiktok"), linkedin_url: normalizeProfileUrl(form.get("linkedin_url"), "linkedin"),
       brands: form.get("brands").split(",").map((item) => item.trim()).filter(Boolean),
-      production_types: productions, phone: form.get("phone"),
+      production_types: selectedSpecializations, phone: form.get("phone"),
       availability_visible: form.get("availability_visible") === "on",
       profile_status: fullName && primaryRoleId && city ? "active" : "draft",
     }, selected.map((roleId, position) => ({ role_id: roleId, position })));
@@ -576,11 +642,17 @@ async function importAppleCalendar(file) {
   await loadAppData();
 }
 
-function renderCommunity() {
+function renderCommunity(query = qs("#communitySearch")?.value || "") {
   const active = state.profiles.length;
   const verified = state.profiles.filter((profile) => profile.verified).length;
+  const needle = query.trim().toLowerCase();
+  const visibleProfiles = state.profiles.filter((profile) => {
+    const roleNames = [profile.roles?.name, ...(profile.secondary_roles || []).map((item) => item.roles?.name || item.other_role_name)];
+    const searchable = [profile.full_name, profile.city, profile.region, ...roleNames, ...(profile.production_types || [])].filter(Boolean).join(" ").toLowerCase();
+    return !needle || searchable.includes(needle);
+  });
   qs("#betaStats").innerHTML = `<div><strong>${active}</strong><span>profili attivi</span></div><div><strong>${verified}</strong><span>verificati</span></div><div><strong>${state.collaborations.filter((item) => item.status === "completed").length}</strong><span>collaborazioni concluse</span></div>`;
-  qs("#userDirectory").innerHTML = state.profiles.map((profile) => `<button class="community-card" type="button" data-open-profile="${profile.id}"><div class="avatar">${avatarContent(profile)}</div><div><strong>${escapeHtml(profile.full_name)}</strong><span>${escapeHtml(profile.roles?.name || profile.primary_other_role_name || "Professionista")} · ${escapeHtml(profile.city)}</span></div>${profile.verified ? icon("badge-check") : ""}</button>`).join("") || `<div class="empty-state">La community iniziera a comparire qui.</div>`;
+  qs("#userDirectory").innerHTML = visibleProfiles.map((profile) => `<button class="community-card" type="button" data-open-profile="${profile.id}"><div class="avatar">${avatarContent(profile)}</div><div><strong>${escapeHtml(profile.full_name)}</strong><span>${escapeHtml(profile.roles?.name || profile.primary_other_role_name || "Professionista")} · ${escapeHtml(profile.city)}</span></div>${profile.verified ? icon("badge-check") : ""}</button>`).join("") || `<div class="empty-state">${needle ? "Nessun professionista corrisponde alla ricerca." : "La community iniziera a comparire qui."}</div>`;
 }
 
 function switchView(view) {
@@ -650,11 +722,18 @@ document.addEventListener("click", async (event) => {
 qs("#authForm").addEventListener("submit", handleAuth);
 qs("#searchForm").addEventListener("submit", (event) => {
   event.preventDefault(); const form = new FormData(event.currentTarget);
-  state.search = { roleId: form.get("role"), date: form.get("date"), zone: form.get("zone"), production: form.get("production") };
+  state.search = { roleId: form.get("role"), date: form.get("date"), region: form.get("region"), zone: form.get("zone"), production: form.get("production") };
   renderSearchResults(); redrawIcons();
+});
+qs("#region").addEventListener("change", (event) => {
+  qs("#zone").innerHTML = `<option value="">Tutte le province</option>${optionList(provincesFor(event.target.value))}`;
+});
+qs("#postRegion").addEventListener("change", (event) => {
+  qs("#postZone").innerHTML = optionList(provincesFor(event.target.value));
 });
 qs("#postForm").addEventListener("submit", createPost);
 qs("#profileForm").addEventListener("submit", saveProfile);
+qs("#communitySearch").addEventListener("input", (event) => { renderCommunity(event.target.value); redrawIcons(); });
 qs("#reviewForm").addEventListener("submit", submitReview);
 qs("#closeReview").addEventListener("click", closeReview);
 qs("#reviewBackdrop").addEventListener("click", (event) => { if (event.target === event.currentTarget) closeReview(); });
@@ -717,9 +796,21 @@ document.addEventListener("keydown", (event) => {
 qs("#logoutButton").addEventListener("click", async () => { await backend.signOut(); state.session = null; qs("#appShell").classList.add("hidden"); qs("#authScreen").classList.remove("hidden"); });
 qs("#profileForm").addEventListener("input", (event) => {
   if (event.target.matches("[data-role-search]")) qsa("[data-role-label]").forEach((label) => label.classList.toggle("hidden", !label.dataset.roleLabel.includes(event.target.value.toLowerCase())));
-  if (event.target.name === "secondary_roles" && qsa('input[name="secondary_roles"]:checked').length > 5) { event.target.checked = false; showToast("Massimo 5 competenze secondarie", true); }
+  if (event.target.matches("[data-specialization-search]")) qsa("[data-specialization-label]").forEach((label) => label.classList.toggle("hidden", !label.dataset.specializationLabel.includes(event.target.value.toLowerCase())));
+  if (event.target.name === "secondary_roles") {
+    if (qsa('input[name="secondary_roles"]:checked').length > 5) { event.target.checked = false; return showToast("Massimo 5 competenze secondarie", true); }
+    qs("[data-secondary-summary]").textContent = qsa('input[name="secondary_roles"]:checked').map((input) => input.dataset.label).join(", ") || "Nessuna selezionata";
+  }
+  if (event.target.name === "specializations") {
+    if (qsa('input[name="specializations"]:checked').length > 5) { event.target.checked = false; return showToast("Massimo 5 ambiti di specializzazione", true); }
+    qs("[data-specialization-summary]").textContent = qsa('input[name="specializations"]:checked').map((input) => input.dataset.label).join(", ") || "Nessuno selezionato";
+  }
 });
 qs("#profileForm").addEventListener("change", async (event) => {
+  if (event.target.matches("[data-profile-region]")) {
+    qs("[data-profile-province]").innerHTML = `<option value="">Scegli</option>${optionList(provincesFor(event.target.value))}`;
+    return;
+  }
   if (!event.target.matches("[data-avatar-file]")) return;
   const file = event.target.files?.[0];
   if (!file) return;
