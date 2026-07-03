@@ -210,6 +210,23 @@ html.theme-night {
   border-radius: inherit;
 }
 
+.avatar-button, .profile-name-button { border: 0; padding: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; text-align: left; }
+.profile-name-button:hover { text-decoration: underline; }
+.community-card { width: 100%; min-height: 84px; padding: 14px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.community-card strong, .community-card span { display: block; }
+.community-card span { margin-top: 4px; color: var(--muted); font-size: 13px; }
+.community-card:hover { border-color: var(--green); }
+.public-profile-dialog, .delete-account-dialog { position: relative; width: min(720px, calc(100vw - 32px)); max-height: min(860px, calc(100vh - 32px)); overflow: auto; background: var(--surface); border-radius: 8px; padding: 32px; box-shadow: 0 24px 80px rgba(0,0,0,.28); }
+.public-profile-close { position: absolute; top: 16px; right: 16px; z-index: 2; }
+.delete-account-dialog { width: min(520px, calc(100vw - 32px)); }
+.delete-account-dialog header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.account-danger-zone { margin-top: 32px; padding: 24px 0; border-top: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.account-danger-zone h2 { margin: 4px 0; font-size: 20px; }
+.account-danger-zone span { color: var(--muted); }
+.danger-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 16px; border: 1px solid #c83232; border-radius: 8px; background: #fff; color: #a51f1f; font-weight: 700; cursor: pointer; }
+.danger-button:hover { background: #fff2f2; }
+.danger-button:disabled { opacity: .45; cursor: not-allowed; }
+
 .profile-photo-editor {
   display: flex;
   align-items: center;

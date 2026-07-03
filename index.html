@@ -212,6 +212,10 @@
             </div>
             <div class="integrations-grid" id="integrationsGrid"></div>
           </div>
+          <section class="account-danger-zone">
+            <div><p class="eyebrow">Gestione account</p><h2>Cancella account</h2><span>Elimina definitivamente profilo, disponibilità, messaggi e collaborazioni associate.</span></div>
+            <button class="danger-button" type="button" id="openDeleteAccount"><i data-lucide="trash-2" aria-hidden="true"></i>Cancella il mio account</button>
+          </section>
         </section>
 
         <section class="view" id="view-admin">
@@ -262,6 +266,22 @@
           <textarea id="chatInput" rows="1" maxlength="2000" placeholder="Scrivi un messaggio…" aria-label="Messaggio"></textarea>
           <button class="primary-button" type="submit" title="Invia messaggio"><i data-lucide="send" aria-hidden="true"></i><span>Invia</span></button>
         </form>
+      </section>
+    </div>
+
+    <div class="modal-backdrop hidden" id="publicProfileBackdrop">
+      <section class="public-profile-dialog" role="dialog" aria-modal="true" aria-label="Profilo professionale">
+        <button class="close-button public-profile-close" type="button" id="closePublicProfile" title="Chiudi"><i data-lucide="x"></i></button>
+        <div id="publicProfileContent"></div>
+      </section>
+    </div>
+
+    <div class="modal-backdrop hidden" id="deleteAccountBackdrop">
+      <section class="delete-account-dialog" role="dialog" aria-modal="true" aria-labelledby="deleteAccountTitle">
+        <header><div><p class="eyebrow">Azione definitiva</p><h2 id="deleteAccountTitle">Cancellare l'account?</h2></div><button class="close-button" type="button" id="closeDeleteAccount" title="Chiudi"><i data-lucide="x"></i></button></header>
+        <p>Il profilo e i dati collegati non potranno essere recuperati. Riceverai una conferma all'indirizzo email del tuo account.</p>
+        <label class="field">Scrivi <strong>CANCELLA</strong> per confermare<input id="deleteAccountConfirmation" autocomplete="off" /></label>
+        <button class="danger-button full-button" type="button" id="confirmDeleteAccount" disabled><i data-lucide="trash-2"></i>Cancella definitivamente</button>
       </section>
     </div>
 

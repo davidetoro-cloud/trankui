@@ -41,6 +41,21 @@ function initials(name = "") {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "T";
 }
 
+function avatarContent(profile, alt = "") {
+  return profile?.avatar_url
+    ? `<img src="${escapeHtml(profile.avatar_url)}" alt="${escapeHtml(alt || `Foto di ${profile.full_name || "profilo"}`)}" />`
+    : initials(profile?.full_name || profile?.email);
+}
+
+function normalizeProfileUrl(value, network) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (/^https?:\/\//i.test(raw)) return raw;
+  const clean = raw.replace(/^@/, "").replace(/^\/+|\/+$/g, "");
+  const bases = { instagram: "https://instagram.com/", facebook: "https://facebook.com/", tiktok: "https://tiktok.com/@", linkedin: "https://linkedin.com/in/" };
+  return `${bases[network]}${clean}`;
+}
+
 function showToast(message, isError = false) {
   const toast = qs("#toast");
   toast.textContent = message;
@@ -183,7 +198,7 @@ async function loadAppData() {
 
 function renderApp() {
   qs("#sidebarUser").textContent = state.profile?.full_name || state.session?.user?.email || "Profilo Trankui";
-  qs("#sidebarAvatar").innerHTML = state.profile?.avatar_url ? `<img src="${escapeHtml(state.profile.avatar_url)}" alt="" />` : initials(state.profile?.full_name || state.session?.user?.email);
+  qs("#sidebarAvatar").innerHTML = avatarContent(state.profile);
   renderSearchControls();
   renderSearchResults();
   renderBoard();
@@ -238,7 +253,7 @@ function renderSearchResults() {
   qs("#resultsList").innerHTML = results.length ? results.map((profile) => {
     const primary = profile.roles?.name || profile.primary_other_role_name || "Professionista";
     return `<article class="result-card ${profile.id === state.selectedProfileId ? "selected" : ""}" data-profile="${profile.id}">
-      <div class="avatar" aria-hidden="true">${initials(profile.full_name)}</div>
+      <div class="avatar">${avatarContent(profile)}</div>
       <div class="result-main"><div class="result-title"><strong>${escapeHtml(profile.full_name)}</strong>${profile.verified ? icon("badge-check") : ""}</div>
       <span>${escapeHtml(primary)} · ${escapeHtml(profile.city)}</span>
       <small>${profile.matchRank === 0 ? "Ruolo principale" : "Competenza secondaria"} · ${profile.years_experience} anni di esperienza</small></div>
@@ -260,12 +275,12 @@ async function renderSelectedProfile() {
   const primary = profile.roles?.name || profile.primary_other_role_name || "Professionista";
   const secondary = (profile.secondary_roles || []).map((item) => item.roles?.name || item.other_role_name).filter(Boolean);
   const socialLinks = [["instagram_url", "instagram", "Instagram"], ["facebook_url", "facebook", "Facebook"], ["tiktok_url", "music-2", "TikTok"], ["linkedin_url", "linkedin", "LinkedIn"]].filter(([key]) => profile[key]);
-  qs("#profilePanel").innerHTML = `<div class="profile-hero"><div class="avatar large">${profile.avatar_url ? `<img src="${escapeHtml(profile.avatar_url)}" alt="Foto di ${escapeHtml(profile.full_name)}" />` : initials(profile.full_name)}</div>
+  qs("#profilePanel").innerHTML = `<div class="profile-hero"><div class="avatar large">${avatarContent(profile)}</div>
     <div><p class="eyebrow">${profile.verified ? "Profilo verificato" : "Profilo professionale"}</p><h2>${escapeHtml(profile.full_name)}</h2><span>${escapeHtml(primary)} · ${escapeHtml(profile.city)}, ${escapeHtml(profile.region)}</span></div></div>
     <div class="trust-row"><div><strong>${profile.years_experience}</strong><span>anni esperienza</span></div><div><strong>${profile.verified ? "Si" : "In verifica"}</strong><span>identita</span></div></div>
     <p>${escapeHtml(profile.bio || "Bio professionale non ancora inserita.")}</p>
     ${secondary.length ? `<div class="tag-row">${secondary.map((role) => `<span>${escapeHtml(role)}</span>`).join("")}</div>` : ""}
-    <dl class="profile-facts"><div><dt>Trasferte</dt><dd>${escapeHtml(profile.travel_area || "Da concordare")}</dd></div><div><dt>Attrezzatura</dt><dd>${escapeHtml(profile.equipment || "Da chiedere")}</dd></div></dl>
+    <dl class="profile-facts"><div><dt>Trasferte</dt><dd>${escapeHtml(profile.travel_area || "Da concordare")}</dd></div><div><dt>Attrezzatura</dt><dd>${escapeHtml(profile.equipment || "Da chiedere")}</dd></div><div><dt>Brand</dt><dd>${escapeHtml((profile.brands || []).join(", ") || "Non indicati")}</dd></div></dl>
     <div class="profile-links">${profile.portfolio_url ? `<a class="secondary-button" href="${escapeHtml(profile.portfolio_url)}" target="_blank" rel="noopener">${icon("external-link")}Portfolio</a>` : ""}${socialLinks.map(([key, iconName, label]) => `<a class="icon-button" href="${escapeHtml(profile[key])}" target="_blank" rel="noopener" title="${label}">${icon(iconName)}</a>`).join("")}</div>
     <button class="primary-button full-button" type="button" data-request="${profile.id}">${icon("send")}Invia richiesta di collaborazione</button>
     <div id="publicReviews"><span>Caricamento reputazione...</span></div>`;
@@ -282,6 +297,22 @@ async function renderSelectedProfile() {
     const host = qs("#publicReviews");
     if (host) host.innerHTML = "";
   }
+}
+
+async function openPublicProfile(profileId) {
+  state.selectedProfileId = profileId;
+  await renderSelectedProfile();
+  const source = qs("#profilePanel");
+  if (!source || !source.innerHTML.trim()) return showToast("Profilo non disponibile", true);
+  qs("#publicProfileContent").innerHTML = source.innerHTML.replace('id="publicReviews"', 'class="public-reviews"');
+  qs("#publicProfileBackdrop").classList.remove("hidden");
+  document.body.classList.add("modal-open");
+  redrawIcons();
+}
+
+function closePublicProfile() {
+  qs("#publicProfileBackdrop").classList.add("hidden");
+  document.body.classList.remove("modal-open");
 }
 
 async function sendCollaborationRequest(profileId) {
@@ -353,7 +384,7 @@ function renderActivity() {
   qs("#requestList").innerHTML = state.collaborations.length ? state.collaborations.map((item) => {
     const other = otherParticipant(item);
     const incoming = item.professional_id === state.session?.user?.id;
-    return `<article class="request-card"><div class="request-card-main"><div class="avatar">${initials(other?.full_name)}</div><div><h3>${escapeHtml(other?.full_name || "Professionista")}</h3><span>${escapeHtml(item.role?.name || "Collaborazione")} · ${formatDate(item.work_date)} · ${escapeHtml(item.zone)}</span><p>${escapeHtml(item.note)}</p></div></div>
+    return `<article class="request-card"><div class="request-card-main"><button class="avatar avatar-button" type="button" data-open-profile="${other?.id || ""}">${avatarContent(other)}</button><div><h3><button class="profile-name-button" type="button" data-open-profile="${other?.id || ""}">${escapeHtml(other?.full_name || "Professionista")}</button></h3><span>${escapeHtml(item.role?.name || "Collaborazione")} · ${formatDate(item.work_date)} · ${escapeHtml(item.zone)}</span><p>${escapeHtml(item.note)}</p></div></div>
       <div class="request-actions"><span class="status-chip">${statusLabel(item.status)}</span>
       ${item.status === "pending" && incoming ? `<button class="primary-button" data-transition="accepted" data-collaboration="${item.id}">Accetta</button><button class="secondary-button" data-transition="rejected" data-collaboration="${item.id}">Rifiuta</button>` : ""}
       ${item.status === "accepted" ? `<button class="secondary-button" data-chat="${item.id}">${icon("messages-square")}Chat</button>${((item.requester_id === state.session?.user?.id && item.requester_completed) || (item.professional_id === state.session?.user?.id && item.professional_completed)) ? `<span class="completion-wait">${icon("clock")}In attesa della conferma dell'altra persona</span>` : `<button class="primary-button" data-complete="${item.id}">Lavoro concluso</button>`}` : ""}
@@ -368,7 +399,7 @@ async function openChat(collaborationId) {
     const other = otherParticipant(collaboration);
     state.activeChatId = collaborationId;
     qs("#chatTitle").textContent = other?.full_name || "Conversazione";
-    qs("#chatAvatar").textContent = initials(other?.full_name);
+    qs("#chatAvatar").innerHTML = avatarContent(other);
     qs("#chatContext").textContent = `${collaboration?.role?.name || "Collaborazione"} · ${formatDate(collaboration?.work_date)}`;
     qs("#chatBackdrop").classList.remove("hidden");
     document.body.classList.add("modal-open");
@@ -488,10 +519,10 @@ function renderProfileForm() {
     <div class="field"><label>Portfolio</label><input name="portfolio_url" type="url" value="${escapeHtml(profile.portfolio_url)}" placeholder="https://" /></div>
     <div class="field"><label>Brand utilizzati</label><input name="brands" value="${escapeHtml((profile.brands || []).join(", "))}" placeholder="Sony, ARRI, Aputure" /></div>
     <div class="field full"><label>Attrezzatura principale</label><textarea name="equipment">${escapeHtml(profile.equipment)}</textarea></div>
-    <div class="field"><label>${icon("instagram")}Instagram</label><input name="instagram_url" type="url" value="${escapeHtml(profile.instagram_url)}" placeholder="https://instagram.com/…" /></div>
-    <div class="field"><label>${icon("facebook")}Facebook</label><input name="facebook_url" type="url" value="${escapeHtml(profile.facebook_url)}" placeholder="https://facebook.com/…" /></div>
-    <div class="field"><label>${icon("music-2")}TikTok</label><input name="tiktok_url" type="url" value="${escapeHtml(profile.tiktok_url)}" placeholder="https://tiktok.com/@…" /></div>
-    <div class="field"><label>${icon("linkedin")}LinkedIn</label><input name="linkedin_url" type="url" value="${escapeHtml(profile.linkedin_url)}" placeholder="https://linkedin.com/in/…" /></div></div>
+    <div class="field"><label>${icon("instagram")}Instagram</label><input name="instagram_url" value="${escapeHtml(profile.instagram_url)}" placeholder="Link o nome utente" /></div>
+    <div class="field"><label>${icon("facebook")}Facebook</label><input name="facebook_url" value="${escapeHtml(profile.facebook_url)}" placeholder="Link o nome utente" /></div>
+    <div class="field"><label>${icon("music-2")}TikTok</label><input name="tiktok_url" value="${escapeHtml(profile.tiktok_url)}" placeholder="Link o @nomeutente" /></div>
+    <div class="field"><label>${icon("linkedin")}LinkedIn</label><input name="linkedin_url" value="${escapeHtml(profile.linkedin_url)}" placeholder="Link o nome profilo" /></div></div>
     <details class="secondary-role-picker"><summary><span><strong>Competenze secondarie</strong><small>Opzionali, massimo 5</small></span><span class="secondary-role-summary">${secondaryNames.length ? escapeHtml(secondaryNames.join(", ")) : "Nessuna selezionata"}</span>${icon("chevron-down")}</summary><div class="role-picker-popover"><input class="role-search" type="search" placeholder="Cerca un ruolo" data-role-search />
       <div class="role-check-grid">${state.roles.map((role) => `<label data-role-label="${escapeHtml(role.name.toLowerCase())}"><input type="checkbox" name="secondary_roles" value="${role.id}" ${selectedSecondary.has(role.id) ? "checked" : ""} ${role.id === profile.primary_role_id ? "disabled" : ""}/><span>${escapeHtml(role.name)}</span></label>`).join("")}</div></div></details>
     <label class="consent-line"><input name="availability_visible" type="checkbox" ${profile.availability_visible ? "checked" : ""}/><span>Mostra il mio profilo nelle ricerche quando risulto disponibile.</span></label>
@@ -511,8 +542,8 @@ async function saveProfile(event) {
       full_name: fullName, primary_role_id: primaryRoleId, bio: form.get("bio"), city,
       region: "Sardegna", travel_area: form.get("travel_area"), years_experience: form.get("years_experience"),
       portfolio_url: form.get("portfolio_url"), equipment: form.get("equipment"),
-      avatar_url: form.get("avatar_url"), instagram_url: form.get("instagram_url"), facebook_url: form.get("facebook_url"),
-      tiktok_url: form.get("tiktok_url"), linkedin_url: form.get("linkedin_url"),
+      avatar_url: form.get("avatar_url"), instagram_url: normalizeProfileUrl(form.get("instagram_url"), "instagram"), facebook_url: normalizeProfileUrl(form.get("facebook_url"), "facebook"),
+      tiktok_url: normalizeProfileUrl(form.get("tiktok_url"), "tiktok"), linkedin_url: normalizeProfileUrl(form.get("linkedin_url"), "linkedin"),
       brands: form.get("brands").split(",").map((item) => item.trim()).filter(Boolean),
       production_types: productions, phone: form.get("phone"),
       availability_visible: form.get("availability_visible") === "on",
@@ -549,7 +580,7 @@ function renderCommunity() {
   const active = state.profiles.length;
   const verified = state.profiles.filter((profile) => profile.verified).length;
   qs("#betaStats").innerHTML = `<div><strong>${active}</strong><span>profili attivi</span></div><div><strong>${verified}</strong><span>verificati</span></div><div><strong>${state.collaborations.filter((item) => item.status === "completed").length}</strong><span>collaborazioni concluse</span></div>`;
-  qs("#userDirectory").innerHTML = state.profiles.map((profile) => `<article class="community-card"><div class="avatar">${initials(profile.full_name)}</div><div><strong>${escapeHtml(profile.full_name)}</strong><span>${escapeHtml(profile.roles?.name || profile.primary_other_role_name || "Professionista")} · ${escapeHtml(profile.city)}</span></div>${profile.verified ? icon("badge-check") : ""}</article>`).join("") || `<div class="empty-state">La community iniziera a comparire qui.</div>`;
+  qs("#userDirectory").innerHTML = state.profiles.map((profile) => `<button class="community-card" type="button" data-open-profile="${profile.id}"><div class="avatar">${avatarContent(profile)}</div><div><strong>${escapeHtml(profile.full_name)}</strong><span>${escapeHtml(profile.roles?.name || profile.primary_other_role_name || "Professionista")} · ${escapeHtml(profile.city)}</span></div>${profile.verified ? icon("badge-check") : ""}</button>`).join("") || `<div class="empty-state">La community iniziera a comparire qui.</div>`;
 }
 
 function switchView(view) {
@@ -582,7 +613,9 @@ document.addEventListener("click", async (event) => {
   const go = event.target.closest("[data-go]");
   if (go) return switchView(go.dataset.go);
   const profile = event.target.closest("[data-profile]");
-  if (profile) { state.selectedProfileId = profile.dataset.profile; renderSearchResults(); return; }
+  if (profile) { state.selectedProfileId = profile.dataset.profile; await renderSelectedProfile(); return; }
+  const publicProfile = event.target.closest("[data-open-profile]");
+  if (publicProfile?.dataset.openProfile) return openPublicProfile(publicProfile.dataset.openProfile);
   const request = event.target.closest("[data-request]");
   if (request) return sendCollaborationRequest(request.dataset.request);
   const apply = event.target.closest("[data-apply]");
@@ -625,11 +658,42 @@ qs("#profileForm").addEventListener("submit", saveProfile);
 qs("#reviewForm").addEventListener("submit", submitReview);
 qs("#closeReview").addEventListener("click", closeReview);
 qs("#reviewBackdrop").addEventListener("click", (event) => { if (event.target === event.currentTarget) closeReview(); });
+qs("#closePublicProfile").addEventListener("click", closePublicProfile);
+qs("#publicProfileBackdrop").addEventListener("click", (event) => { if (event.target === event.currentTarget) closePublicProfile(); });
 qs("#togglePostForm").addEventListener("click", () => qs("#postForm").classList.toggle("hidden"));
 qs("#cancelPost").addEventListener("click", () => qs("#postForm").classList.add("hidden"));
 qs("#openBoard").addEventListener("click", () => { switchView("board"); qs("#postForm").classList.remove("hidden"); });
 qs("#openAvailability").addEventListener("click", () => switchView("calendar"));
 qs("#openProfile").addEventListener("click", () => switchView("profile"));
+qs("#openDeleteAccount").addEventListener("click", () => {
+  qs("#deleteAccountConfirmation").value = "";
+  qs("#confirmDeleteAccount").disabled = true;
+  qs("#deleteAccountBackdrop").classList.remove("hidden");
+  document.body.classList.add("modal-open");
+});
+qs("#closeDeleteAccount").addEventListener("click", () => {
+  qs("#deleteAccountBackdrop").classList.add("hidden");
+  document.body.classList.remove("modal-open");
+});
+qs("#deleteAccountConfirmation").addEventListener("input", (event) => {
+  qs("#confirmDeleteAccount").disabled = event.target.value.trim().toUpperCase() !== "CANCELLA";
+});
+qs("#confirmDeleteAccount").addEventListener("click", async () => {
+  const button = qs("#confirmDeleteAccount");
+  button.disabled = true;
+  try {
+    const result = await backend.deleteAccount();
+    state.session = null;
+    qs("#deleteAccountBackdrop").classList.add("hidden");
+    qs("#appShell").classList.add("hidden");
+    qs("#authScreen").classList.remove("hidden");
+    setAuthMode("signin");
+    qs("#authStatus").innerHTML = `<strong>Account cancellato</strong><span>${result.email_sent ? "Ti abbiamo inviato una conferma via email." : "La cancellazione è stata completata."}</span>`;
+  } catch (error) {
+    showToast(errorMessage(error), true);
+    button.disabled = false;
+  }
+});
 qs("#closeChat").addEventListener("click", closeChat);
 qs("#chatBackdrop").addEventListener("click", (event) => { if (event.target === event.currentTarget) closeChat(); });
 qs("#chatForm").addEventListener("submit", async (event) => {
@@ -642,7 +706,13 @@ qs("#chatForm").addEventListener("submit", async (event) => {
   catch (error) { showToast(errorMessage(error), true); }
   finally { input.disabled = false; input.focus(); }
 });
-document.addEventListener("keydown", (event) => { if (event.key === "Escape" && state.activeChatId) closeChat(); if (event.key === "Escape" && state.activeReviewId) closeReview(); });
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  if (state.activeChatId) closeChat();
+  if (state.activeReviewId) closeReview();
+  if (!qs("#publicProfileBackdrop").classList.contains("hidden")) closePublicProfile();
+  if (!qs("#deleteAccountBackdrop").classList.contains("hidden")) { qs("#deleteAccountBackdrop").classList.add("hidden"); document.body.classList.remove("modal-open"); }
+});
 
 qs("#logoutButton").addEventListener("click", async () => { await backend.signOut(); state.session = null; qs("#appShell").classList.add("hidden"); qs("#authScreen").classList.remove("hidden"); });
 qs("#profileForm").addEventListener("input", (event) => {

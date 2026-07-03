@@ -117,7 +117,7 @@
       availability_visible: Boolean(profile.availability_visible),
       profile_status: profile.profile_status || "draft",
     };
-    unwrap(await client.from("profiles").update(profilePayload).eq("id", id));
+    unwrap(await client.from("profiles").update(profilePayload).eq("id", id).select("id").single());
     unwrap(await client.from("private_contacts").upsert({ profile_id: id, phone: profile.phone || null }));
     unwrap(await client.from("secondary_roles").delete().eq("profile_id", id));
     if (secondaryRoleIds.length) {
@@ -305,6 +305,12 @@
     return dates.size;
   }
 
+  async function deleteAccount() {
+    const current = await session();
+    if (!current) throw new Error("Sessione scaduta");
+    return unwrap(await client.functions.invoke("delete-account", { body: { confirmation: "DELETE" } }));
+  }
+
   async function collaborationContact(collaborationId) {
     const result = unwrap(await client.rpc("collaboration_contact", { target_collaboration: collaborationId }));
     return result?.[0] || null;
@@ -357,6 +363,7 @@
     saveCalendarConnection,
     connectGoogleCalendar,
     syncGoogleCalendar,
+    deleteAccount,
     collaborationContact,
     recordConsent,
   };
