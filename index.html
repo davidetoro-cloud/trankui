@@ -88,10 +88,18 @@
         <div class="utility-links"><a href="./trankui.html">Trankui</a><a href="./faq.html">FAQ</a><a href="./blog.html">Blog</a></div>
 
         <div class="sidebar-note">
-          <button class="user-menu-button" type="button" id="openProfile" title="Apri il profilo">
-            <span class="user-avatar" id="sidebarAvatar">T</span>
-            <strong id="sidebarUser">-</strong>
-          </button>
+          <div class="sidebar-user-row">
+            <div class="notification-center sidebar-notification-center">
+              <button class="avatar-notification-button" type="button" id="notificationButton" title="Apri le notifiche" aria-label="Notifiche" aria-expanded="false">
+                <span class="user-avatar" id="sidebarAvatar">T</span><span class="notification-badge hidden" id="notificationBadge">0</span>
+              </button>
+              <section class="notification-panel hidden" id="notificationPanel" aria-label="Notifiche recenti">
+                <header><div><strong>Notifiche</strong><span id="notificationSummary">Nessun aggiornamento</span></div><button class="text-button" type="button" id="markNotificationsRead">Segna come lette</button></header>
+                <div class="notification-list" id="notificationList"></div>
+              </section>
+            </div>
+            <button class="user-name-button" type="button" id="openProfile" title="Apri il profilo"><strong id="sidebarUser">-</strong></button>
+          </div>
           <button class="tiny-button" type="button" id="logoutButton">Esci</button>
         </div>
       </aside>
@@ -258,7 +266,7 @@
           <label class="field">Recensione pubblica<textarea name="public_comment" maxlength="1200" required placeholder="Descrivi in modo utile e rispettoso com'è andata."></textarea></label>
           <label class="field">Nota privata per Trankui <textarea name="private_note" maxlength="1200" placeholder="Non sarà mostrata sul profilo."></textarea></label>
           <label class="consent-line"><input type="checkbox" name="recommend" checked /><span>Consiglierei questa persona a un'altra crew.</span></label>
-          <button class="primary-button" type="submit"><i data-lucide="send"></i>Invia feedback</button>
+          <button class="primary-button" type="submit" id="submitReviewButton"><i data-lucide="send"></i><span>Invia feedback</span></button>
         </form>
       </section>
     </div>
