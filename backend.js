@@ -219,6 +219,14 @@
       .eq("collaboration_id", collaborationId).order("created_at"));
   }
 
+  async function incomingMessages() {
+    const current = await session();
+    if (!current) return [];
+    return unwrap(await client.from("messages")
+      .select("id,collaboration_id,sender_id,body,created_at,sender:sender_id(id,full_name,avatar_url)")
+      .neq("sender_id", current.user.id).order("created_at", { ascending: false }).limit(100));
+  }
+
   async function sendMessage(collaborationId, body) {
     const current = await session();
     if (!current) throw new Error("Sessione scaduta");
@@ -243,7 +251,13 @@
   async function submitReview(payload) {
     const current = await session();
     if (!current) throw new Error("Sessione scaduta");
-    return unwrap(await client.from("reviews").insert({ ...payload, author_id: current.user.id }).select().single());
+    const existing = unwrap(await client.from("reviews")
+      .select("id").eq("collaboration_id", payload.collaboration_id)
+      .eq("author_id", current.user.id).maybeSingle());
+    if (existing) return existing;
+    const review = { ...payload, author_id: current.user.id };
+    unwrap(await client.from("reviews").insert(review));
+    return review;
   }
 
   async function publishedReviews(profileId) {
@@ -354,6 +368,7 @@
     transitionCollaboration,
     confirmComplete,
     messages,
+    incomingMessages,
     sendMessage,
     subscribeToMessages,
     submitReview,
