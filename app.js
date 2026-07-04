@@ -41,6 +41,8 @@ const state = {
   posts: [],
   collaborations: [],
   reviews: [],
+  receivedReviews: [],
+  incomingMessages: [],
   calendarConnections: [],
   selectedProfileId: null,
   search: { roleId: "", date: isoDate(new Date()), region: "Sardegna", zone: "Cagliari", production: "" },
@@ -49,6 +51,7 @@ const state = {
   activeChatId: null,
   chatSubscription: null,
   activeReviewId: null,
+  notificationTimer: null,
 };
 
 const qs = (selector, root = document) => root.querySelector(selector);
@@ -67,6 +70,14 @@ function isoDate(date) {
 
 function formatDate(value) {
   return new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long", year: "numeric" }).format(new Date(`${value}T12:00:00`));
+}
+
+function notificationStorageKey() {
+  return `trankui:notifications:${state.session?.user?.id || "guest"}`;
+}
+
+function lastNotificationsReadAt() {
+  return localStorage.getItem(notificationStorageKey()) || "1970-01-01T00:00:00.000Z";
 }
 
 function initials(name = "") {
@@ -116,6 +127,8 @@ function errorMessage(error) {
     "Invalid login credentials": "Email o password non corretti.",
     "Email not confirmed": "Conferma prima l'email ricevuta da Trankui.",
     "User already registered": "Questa email e gia registrata. Prova ad accedere.",
+    "new row violates row-level security policy for table \"reviews\"": "La collaborazione non risulta ancora conclusa per entrambi. Aggiorna la pagina e riprova.",
+    "duplicate key value violates unique constraint \"reviews_collaboration_id_author_id_key\"": "Hai già inviato il feedback per questa collaborazione.",
   };
   return translations[error?.message] || error?.message || "Qualcosa non ha funzionato. Riprova.";
 }
@@ -218,6 +231,26 @@ async function enterApp(session) {
   qs("#authScreen").classList.add("hidden");
   qs("#appShell").classList.remove("hidden");
   await loadAppData();
+  startNotificationPolling();
+}
+
+function startNotificationPolling() {
+  clearInterval(state.notificationTimer);
+  state.notificationTimer = setInterval(async () => {
+    if (!state.session || document.hidden) return;
+    try {
+      const [collaborations, reviews, receivedReviews, incomingMessages] = await Promise.all([
+        backend.collaborations(), backend.ownReviews(), backend.publishedReviews(state.session.user.id), backend.incomingMessages(),
+      ]);
+      state.collaborations = collaborations;
+      state.reviews = reviews;
+      state.receivedReviews = receivedReviews;
+      state.incomingMessages = incomingMessages;
+      renderActivity();
+      renderNotifications();
+      redrawIcons();
+    } catch (_) { /* The next interval retries silently. */ }
+  }, 30000);
 }
 
 async function loadAppData() {
@@ -226,12 +259,14 @@ async function loadAppData() {
     state.profile = await backend.ownProfile();
     const start = new Date(state.month.getFullYear(), state.month.getMonth(), 1);
     const end = new Date(state.month.getFullYear(), state.month.getMonth() + 1, 0);
-    const [profiles, availability, posts, collaborations, reviews, calendarConnections] = await Promise.all([
+    const [profiles, availability, posts, collaborations, reviews, receivedReviews, incomingMessages, calendarConnections] = await Promise.all([
       backend.publicProfiles(),
       backend.availabilityForRange(isoDate(start), isoDate(end)),
       backend.listPosts(),
       backend.collaborations(),
       backend.ownReviews(),
+      backend.publishedReviews(state.session.user.id),
+      backend.incomingMessages(),
       backend.calendarConnections(),
     ]);
     state.profiles = profiles.map((profile) => profile.id === state.profile?.id
@@ -241,6 +276,8 @@ async function loadAppData() {
     state.posts = posts;
     state.collaborations = collaborations;
     state.reviews = reviews;
+    state.receivedReviews = receivedReviews;
+    state.incomingMessages = incomingMessages;
     state.calendarConnections = calendarConnections;
     state.search.roleId ||= state.roles[0]?.id || "";
     renderApp();
@@ -260,6 +297,7 @@ function renderApp() {
   renderProfileForm();
   renderIntegrations();
   renderCommunity();
+  renderNotifications();
   redrawIcons();
 }
 
@@ -333,25 +371,28 @@ async function renderSelectedProfile() {
   const secondary = (profile.secondary_roles || []).map((item) => item.roles?.name || item.other_role_name).filter(Boolean);
   const expertise = (profile.production_types || []).filter((item) => specializations.includes(item));
   const socialLinks = [["instagram_url", "instagram", "Instagram"], ["facebook_url", "facebook", "Facebook"], ["tiktok_url", "tiktok", "TikTok"], ["linkedin_url", "linkedin", "LinkedIn"]].filter(([key]) => profile[key] && profile[key] !== "null");
-  qs("#profilePanel").innerHTML = `<div class="profile-hero"><div class="avatar large">${avatarContent(profile)}</div>
-    <div><p class="eyebrow">${profile.verified ? "Profilo verificato" : "Profilo professionale"}</p><h2>${escapeHtml(profile.full_name)}</h2><span>${escapeHtml(primary)} · ${escapeHtml(profile.city)}, ${escapeHtml(profile.region)}</span></div></div>
-    <div class="trust-row"><div><strong>${profile.years_experience}</strong><span>anni esperienza</span></div><div><strong>${profile.verified ? "Si" : "In verifica"}</strong><span>identita</span></div></div>
-    <p>${escapeHtml(profile.bio || "Bio professionale non ancora inserita.")}</p>
-    ${secondary.length ? `<div class="tag-row">${secondary.map((role) => `<span>${escapeHtml(role)}</span>`).join("")}</div>` : ""}
-    ${expertise.length ? `<div class="profile-expertise"><strong>Ambiti di specializzazione</strong><div class="tag-row">${expertise.map((item) => `<span>${escapeHtml(item)}</span>`).join("")}</div></div>` : ""}
-    <dl class="profile-facts"><div><dt>Trasferte</dt><dd>${escapeHtml(profile.travel_area || "Da concordare")}</dd></div><div><dt>Attrezzatura</dt><dd>${escapeHtml(profile.equipment || "Da chiedere")}</dd></div><div><dt>Brand</dt><dd>${escapeHtml((profile.brands || []).join(", ") || "Non indicati")}</dd></div></dl>
-    <div class="profile-links">${profile.portfolio_url ? `<a class="secondary-button" href="${escapeHtml(profile.portfolio_url)}" target="_blank" rel="noopener">${icon("external-link")}Portfolio</a>` : ""}${socialLinks.map(([key, network, label]) => `<a class="social-icon-button" href="${escapeHtml(profile[key])}" target="_blank" rel="noopener" title="${label}" aria-label="${label}">${socialIcon(network)}</a>`).join("")}</div>
-    <button class="primary-button full-button" type="button" data-request="${profile.id}">${icon("send")}Invia richiesta di collaborazione</button>
-    <div id="publicReviews"><span>Caricamento reputazione...</span></div>`;
+  qs("#profilePanel").innerHTML = `<article class="professional-profile">
+    <header class="profile-hero"><div class="avatar large">${avatarContent(profile)}</div>
+      <div class="profile-identity"><p class="eyebrow">${profile.verified ? "Profilo verificato" : "Profilo professionale"}</p><h2>${escapeHtml(profile.full_name)}</h2><span>${escapeHtml(primary)}</span><small>${icon("map-pin")}${escapeHtml(profile.city)}, ${escapeHtml(profile.region)}</small></div></header>
+    <div class="trust-row"><div class="profile-stat">${icon("briefcase")}<span><strong>${profile.years_experience}</strong><small>anni di esperienza</small></span></div><div class="profile-stat">${icon(profile.verified ? "badge-check" : "clock-3")}<span><strong>${profile.verified ? "Verificato" : "In verifica"}</strong><small>identità professionale</small></span></div></div>
+    <section class="profile-section"><h3>Profilo</h3><p class="profile-bio">${escapeHtml(profile.bio || "Bio professionale non ancora inserita.")}</p></section>
+    ${secondary.length ? `<section class="profile-section"><h3>Competenze secondarie</h3><div class="tag-row">${secondary.map((role) => `<span>${escapeHtml(role)}</span>`).join("")}</div></section>` : ""}
+    ${expertise.length ? `<section class="profile-section"><h3>Ambiti di specializzazione</h3><div class="tag-row">${expertise.map((item) => `<span>${escapeHtml(item)}</span>`).join("")}</div></section>` : ""}
+    <section class="profile-section"><h3>Dettagli operativi</h3><dl class="profile-facts"><div>${icon("plane")}<span><dt>Trasferte</dt><dd>${escapeHtml(profile.travel_area || "Da concordare")}</dd></span></div><div>${icon("camera")}<span><dt>Attrezzatura</dt><dd>${escapeHtml(profile.equipment || "Da chiedere")}</dd></span></div><div>${icon("tags")}<span><dt>Brand utilizzati</dt><dd>${escapeHtml((profile.brands || []).join(", ") || "Non indicati")}</dd></span></div></dl></section>
+    ${(profile.portfolio_url || socialLinks.length) ? `<div class="profile-links">${profile.portfolio_url ? `<a class="secondary-button" href="${escapeHtml(profile.portfolio_url)}" target="_blank" rel="noopener">${icon("external-link")}Portfolio</a>` : ""}${socialLinks.map(([key, network, label]) => `<a class="social-icon-button" href="${escapeHtml(profile[key])}" target="_blank" rel="noopener" title="${label}" aria-label="${label}">${socialIcon(network)}</a>`).join("")}</div>` : ""}
+    <button class="primary-button full-button profile-contact-button" type="button" data-request="${profile.id}">${icon("message-circle")}Contatta in chat</button>
+    <section class="profile-section profile-reputation" id="publicReviews"><span>Caricamento reputazione...</span></section>
+  </article>`;
   redrawIcons();
   try {
     const reviews = await backend.publishedReviews(profile.id);
     const host = qs("#publicReviews");
     if (!host || state.selectedProfileId !== profile.id) return;
-    host.innerHTML = reviews.length ? `<div class="review-summary"><div><strong>${(reviews.reduce((sum, review) => sum + review.reliability, 0) / reviews.length).toFixed(1)}</strong><span>${icon("star")} ${reviews.length} recensioni blind</span></div><p>Feedback pubblicati solo dopo la recensione reciproca.</p></div><div class="public-review-grid">${reviews.slice(0, 6).map((review) => {
+    const overallRating = reviews.length ? reviews.reduce((sum, review) => sum + (review.punctuality + review.communication + review.reliability + review.organization + review.problem_solving) / 5, 0) / reviews.length : 0;
+    host.innerHTML = reviews.length ? `<div class="review-summary"><div><p class="eyebrow">Reputazione</p><span class="review-score"><strong>${overallRating.toFixed(1)}</strong>${icon("star")}</span><small>${reviews.length} ${reviews.length === 1 ? "recensione" : "recensioni"} blind</small></div><p>${icon("eye-off")}I feedback diventano pubblici solo dopo la recensione reciproca.</p></div><div class="public-review-grid">${reviews.slice(0, 6).map((review) => {
       const average = (review.punctuality + review.communication + review.reliability + review.organization + review.problem_solving) / 5;
       return `<blockquote><div><strong>${average.toFixed(1)}</strong>${icon("star")}</div><p>${escapeHtml(review.public_comment || "Collaborazione consigliata")}</p><footer>${escapeHtml(review.author_name)} · ${new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" }).format(new Date(review.created_at))}</footer></blockquote>`;
-    }).join("")}</div>` : `<span>Nessuna recensione pubblicata.</span>`;
+    }).join("")}</div>` : `<div class="review-empty">${icon("star")}<div><strong>Nessuna recensione pubblicata</strong><span>I feedback compariranno dopo una collaborazione recensita da entrambe le persone.</span></div></div>`;
   } catch (_) {
     const host = qs("#publicReviews");
     if (host) host.innerHTML = "";
@@ -375,20 +416,24 @@ function closePublicProfile() {
 }
 
 async function sendCollaborationRequest(profileId) {
-  const note = window.prompt("Aggiungi una nota breve per il professionista", "Ciao, vorrei coinvolgerti in questa produzione.");
-  if (note === null) return;
   try {
-    await backend.requestCollaboration({
-      professional_id: profileId,
-      role_id: state.search.roleId,
-      work_date: state.search.date,
-      zone: state.search.zone,
-      production_type: state.search.production,
-      note,
-    });
-    showToast("Richiesta inviata");
-    await loadAppData();
-    switchView("requests");
+    let collaboration = state.collaborations.find((item) =>
+      otherParticipant(item)?.id === profileId && ["pending", "accepted"].includes(item.status)
+    );
+    if (!collaboration) {
+      collaboration = await backend.requestCollaboration({
+        professional_id: profileId,
+        role_id: state.search.roleId,
+        work_date: state.search.date,
+        zone: state.search.zone,
+        production_type: state.search.production,
+        note: "Contatto avviato dalla ricerca professionisti.",
+      });
+      await loadAppData();
+      collaboration = state.collaborations.find((item) => item.id === collaboration.id);
+    }
+    closePublicProfile();
+    await openChat(collaboration.id);
   } catch (error) {
     showToast(errorMessage(error), true);
   }
@@ -452,9 +497,48 @@ function renderActivity() {
   }).join("") : `<div class="empty-state">${icon("inbox")}<strong>Nessuna attivita</strong><span>Le richieste di collaborazione compariranno qui.</span></div>`;
 }
 
+function notificationItems() {
+  const lastRead = lastNotificationsReadAt();
+  const messages = state.incomingMessages.filter((item) => item.created_at > lastRead).map((item) => ({
+    type: "message", date: item.created_at, collaborationId: item.collaboration_id,
+    title: `Nuovo messaggio da ${item.sender?.full_name || "un professionista"}`,
+    detail: item.body,
+  }));
+  const requests = state.collaborations.filter((item) =>
+    item.status === "pending" && item.professional_id === state.session?.user?.id && item.created_at > lastRead
+  ).map((item) => ({
+    type: "request", date: item.created_at,
+    title: `Nuova richiesta da ${item.requester?.full_name || "un professionista"}`,
+    detail: `${item.role?.name || "Collaborazione"} · ${formatDate(item.work_date)}`,
+  }));
+  const feedback = state.receivedReviews.filter((item) => item.created_at > lastRead).map((item) => ({
+    type: "feedback", date: item.created_at,
+    title: `Nuovo feedback da ${item.author_name || "un collaboratore"}`,
+    detail: item.public_comment || "La recensione reciproca è ora visibile.",
+  }));
+  const reviewedIds = new Set(state.reviews.map((review) => review.collaboration_id));
+  const reminders = state.collaborations.filter((item) => item.status === "completed" && !reviewedIds.has(item.id) && (item.completed_at || item.updated_at) > lastRead).map((item) => ({
+    type: "review", date: item.completed_at || item.updated_at, collaborationId: item.id,
+    title: `Lascia un feedback a ${otherParticipant(item)?.full_name || "un collaboratore"}`,
+    detail: "La collaborazione risulta conclusa.",
+  }));
+  return [...messages, ...requests, ...feedback, ...reminders].sort((a, b) => new Date(b.date) - new Date(a.date));
+}
+
+function renderNotifications() {
+  const items = notificationItems();
+  const badge = qs("#notificationBadge");
+  badge.textContent = items.length > 99 ? "99+" : String(items.length);
+  badge.classList.toggle("hidden", !items.length);
+  qs("#notificationSummary").textContent = items.length ? `${items.length} ${items.length === 1 ? "aggiornamento" : "aggiornamenti"}` : "Tutto aggiornato";
+  qs("#notificationList").innerHTML = items.length ? items.map((item) => `<button class="notification-item" type="button" data-notification-type="${item.type}" ${item.collaborationId ? `data-notification-collaboration="${item.collaborationId}"` : ""}>${icon(item.type === "message" ? "message-circle" : item.type === "feedback" || item.type === "review" ? "star" : "user-plus")}<span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.detail)}</small></span></button>`).join("") : `<div class="notification-empty">${icon("bell-check")}<span>Nessuna nuova notifica.</span></div>`;
+  redrawIcons();
+}
+
 async function openChat(collaborationId) {
   try {
     const collaboration = state.collaborations.find((item) => item.id === collaborationId);
+    if (!collaboration) throw new Error("Conversazione non disponibile. Aggiorna la pagina e riprova.");
     const other = otherParticipant(collaboration);
     state.activeChatId = collaborationId;
     qs("#chatTitle").textContent = other?.full_name || "Conversazione";
@@ -496,7 +580,9 @@ function closeChat() {
 
 function openReview(collaborationId) {
   const collaboration = state.collaborations.find((item) => item.id === collaborationId);
+  if (!collaboration) return showToast("Collaborazione non disponibile. Aggiorna la pagina e riprova.", true);
   const recipient = otherParticipant(collaboration);
+  if (!recipient?.id) return showToast("Non riesco a identificare il collaboratore.", true);
   state.activeReviewId = collaborationId;
   qs("#reviewTitle").textContent = `Com'è andata con ${recipient?.full_name || "il collaboratore"}?`;
   qs("#reviewContext").textContent = `${collaboration?.role?.name || "Collaborazione"} · ${formatDate(collaboration.work_date)}`;
@@ -514,8 +600,13 @@ function closeReview() {
 async function submitReview(event) {
   event.preventDefault();
   const collaboration = state.collaborations.find((item) => item.id === state.activeReviewId);
+  if (!collaboration) return showToast("Collaborazione non disponibile. Riapri il feedback e riprova.", true);
   const recipient = otherParticipant(collaboration);
+  if (!recipient?.id) return showToast("Collaboratore non disponibile.", true);
   const form = new FormData(event.currentTarget);
+  const button = qs("#submitReviewButton");
+  button.disabled = true;
+  button.querySelector("span").textContent = "Invio in corso...";
   try {
     await backend.submitReview({
       collaboration_id: collaboration.id, recipient_id: recipient.id, recommend: form.get("recommend") === "on",
@@ -529,6 +620,9 @@ async function submitReview(event) {
     await loadAppData();
   } catch (error) {
     showToast(errorMessage(error), true);
+  } finally {
+    button.disabled = false;
+    button.querySelector("span").textContent = "Invia feedback";
   }
 }
 
@@ -707,6 +801,14 @@ document.addEventListener("click", async (event) => {
   if (chat) return openChat(chat.dataset.chat);
   const review = event.target.closest("[data-review]");
   if (review) return openReview(review.dataset.review);
+  const notification = event.target.closest("[data-notification-type]");
+  if (notification) {
+    qs("#notificationPanel").classList.add("hidden");
+    qs("#notificationButton").setAttribute("aria-expanded", "false");
+    if (notification.dataset.notificationType === "message") return openChat(notification.dataset.notificationCollaboration);
+    if (notification.dataset.notificationType === "review") return openReview(notification.dataset.notificationCollaboration);
+    return switchView("requests");
+  }
   const googleCalendar = event.target.closest("[data-connect-google]");
   if (googleCalendar) { try { await backend.connectGoogleCalendar(); } catch (error) { showToast(errorMessage(error), true); } return; }
   const syncGoogle = event.target.closest("[data-sync-google]");
@@ -743,6 +845,15 @@ qs("#togglePostForm").addEventListener("click", () => qs("#postForm").classList.
 qs("#cancelPost").addEventListener("click", () => qs("#postForm").classList.add("hidden"));
 qs("#openBoard").addEventListener("click", () => { switchView("board"); qs("#postForm").classList.remove("hidden"); });
 qs("#openAvailability").addEventListener("click", () => switchView("calendar"));
+qs("#notificationButton").addEventListener("click", () => {
+  const panel = qs("#notificationPanel");
+  panel.classList.toggle("hidden");
+  qs("#notificationButton").setAttribute("aria-expanded", String(!panel.classList.contains("hidden")));
+});
+qs("#markNotificationsRead").addEventListener("click", () => {
+  localStorage.setItem(notificationStorageKey(), new Date().toISOString());
+  renderNotifications();
+});
 qs("#openProfile").addEventListener("click", () => switchView("profile"));
 qs("#openDeleteAccount").addEventListener("click", () => {
   qs("#deleteAccountConfirmation").value = "";
@@ -793,7 +904,7 @@ document.addEventListener("keydown", (event) => {
   if (!qs("#deleteAccountBackdrop").classList.contains("hidden")) { qs("#deleteAccountBackdrop").classList.add("hidden"); document.body.classList.remove("modal-open"); }
 });
 
-qs("#logoutButton").addEventListener("click", async () => { await backend.signOut(); state.session = null; qs("#appShell").classList.add("hidden"); qs("#authScreen").classList.remove("hidden"); });
+qs("#logoutButton").addEventListener("click", async () => { clearInterval(state.notificationTimer); await backend.signOut(); state.session = null; qs("#appShell").classList.add("hidden"); qs("#authScreen").classList.remove("hidden"); });
 qs("#profileForm").addEventListener("input", (event) => {
   if (event.target.matches("[data-role-search]")) qsa("[data-role-label]").forEach((label) => label.classList.toggle("hidden", !label.dataset.roleLabel.includes(event.target.value.toLowerCase())));
   if (event.target.matches("[data-specialization-search]")) qsa("[data-specialization-label]").forEach((label) => label.classList.toggle("hidden", !label.dataset.specializationLabel.includes(event.target.value.toLowerCase())));
