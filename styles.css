@@ -93,7 +93,7 @@ html.theme-night {
 .theme-night .secondary-button,
 .theme-night .tiny-button,
 .theme-night .icon-button,
-.theme-night .user-menu-button,
+.theme-night .user-name-button,
 .theme-night .auth-text-button {
   color: var(--ink);
 }
@@ -218,7 +218,7 @@ html.theme-night {
 .community-card strong, .community-card span { display: block; }
 .community-card span { margin-top: 4px; color: var(--muted); font-size: 13px; }
 .community-card:hover { border-color: var(--green); }
-.public-profile-dialog, .delete-account-dialog { position: relative; width: min(720px, calc(100vw - 32px)); max-height: min(860px, calc(100vh - 32px)); overflow: auto; background: var(--surface); border-radius: 8px; padding: 32px; box-shadow: 0 24px 80px rgba(0,0,0,.28); }
+.public-profile-dialog, .delete-account-dialog { position: relative; width: min(820px, calc(100vw - 32px)); max-height: min(900px, calc(100vh - 32px)); overflow: auto; background: var(--surface); border-radius: 8px; padding: 40px; box-shadow: 0 24px 80px rgba(0,0,0,.28); }
 .public-profile-close { position: absolute; top: 16px; right: 16px; z-index: 2; }
 .delete-account-dialog { width: min(520px, calc(100vw - 32px)); }
 .delete-account-dialog header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
@@ -354,19 +354,27 @@ html.theme-night {
 .review-head h2 { margin: 3px 0 5px; }
 .review-head span { color: var(--muted); }
 .review-form { display: grid; gap: 18px; padding: 22px; }
+.review-form > .primary-button { width: 100%; }
 .review-scores { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
 .review-scores label { display: grid; gap: 7px; color: var(--muted); font-size: 11px; font-weight: 700; }
 .review-scores select { min-width: 0; }
 .public-review-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.public-review-grid blockquote { margin: 0; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius); }
+.public-review-grid blockquote { margin: 0; padding: 18px; border: 1px solid var(--line); border-radius: 8px; }
 .public-review-grid blockquote > div { display: flex; gap: 5px; align-items: center; }
 .public-review-grid blockquote svg { width: 15px; color: var(--green); }
+.public-review-grid blockquote p { min-height: 3em; line-height: 1.5; }
 .public-review-grid footer { color: var(--muted); font-size: 11px; }
-.review-summary { display: flex; justify-content: space-between; align-items: end; gap: 20px; margin-bottom: 14px; }
-.review-summary > div { display: grid; }
-.review-summary strong { font-size: 30px; }
-.review-summary span { display: flex; align-items: center; gap: 5px; font-size: 12px; }
-.review-summary svg { width: 14px; color: var(--green); }
+.review-summary { display: grid; grid-template-columns: auto 1fr; align-items: end; gap: 28px; margin-bottom: 18px; }
+.review-summary > div { display: grid; gap: 3px; }
+.review-summary > p { max-width: 420px; margin: 0 0 3px; display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+.review-score { display: flex; align-items: center; gap: 6px; }
+.review-score strong { font-size: 34px; line-height: 1; }
+.review-summary small { color: var(--muted); font-size: 11px; }
+.review-summary svg { width: 17px; color: var(--blue); }
+.review-empty { display: flex; align-items: center; gap: 12px; padding: 18px; border: 1px dashed var(--line); border-radius: 8px; color: var(--muted); }
+.review-empty svg { width: 22px; color: var(--blue); }
+.review-empty div { display: grid; gap: 3px; }
+.review-empty strong { color: var(--ink); }
 .completion-wait { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 11px; }
 .completion-wait svg { width: 15px; }
 
@@ -375,6 +383,11 @@ html.theme-night {
   .multiselect-summary { grid-column: 1 / -1; grid-row: 2; }
   .review-scores { grid-template-columns: 1fr 1fr; }
   .public-review-grid { grid-template-columns: 1fr; }
+  .public-profile-dialog { width: calc(100vw - 20px); max-height: calc(100vh - 20px); padding: 54px 20px 24px; }
+  .profile-hero { padding-right: 34px; }
+  .trust-row, .profile-facts, .review-summary { grid-template-columns: 1fr; }
+  .profile-bio { font-size: 14px; line-height: 1.6; }
+  .public-review-grid blockquote p { min-height: 0; }
 }
 
 @font-face {
@@ -742,19 +755,33 @@ button {
   background: var(--surface);
 }
 
-.user-menu-button {
+.sidebar-user-row {
   min-width: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--ink);
   display: inline-flex;
   align-items: center;
   gap: 9px;
 }
 
-.user-menu-button:hover strong {
+.user-name-button {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.user-name-button:hover strong {
   text-decoration: underline;
+}
+
+.avatar-notification-button {
+  position: relative;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
 }
 
 .user-avatar {
@@ -1442,17 +1469,41 @@ textarea {
   top: 96px;
 }
 
+.professional-profile { display: grid; gap: 0; color: var(--ink); }
+
 .profile-hero {
   display: flex;
-  gap: 14px;
-  align-items: flex-start;
-  padding-bottom: 16px;
+  gap: 18px;
+  align-items: center;
+  padding: 0 0 22px;
   border-bottom: 1px solid var(--line);
 }
 
-.profile-hero h2 {
-  margin-bottom: 4px;
-}
+.profile-hero h2 { margin: 3px 0 5px; font-size: clamp(27px, 4vw, 40px); line-height: 1.05; }
+.profile-identity { min-width: 0; display: grid; }
+.profile-identity > span { font-size: 16px; font-weight: 600; }
+.profile-identity > small { margin-top: 6px; display: inline-flex; align-items: center; gap: 5px; color: var(--muted); font-size: 13px; }
+.profile-identity > small svg { width: 15px; }
+.trust-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 18px 0; border-bottom: 1px solid var(--line); }
+.profile-stat { min-width: 0; display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 8px; background: var(--surface-soft); }
+.profile-stat > svg { width: 20px; color: var(--blue); }
+.profile-stat > span { min-width: 0; display: grid; }
+.profile-stat strong { font-size: 16px; }
+.profile-stat small { color: var(--muted); font-size: 11px; }
+.profile-section { padding: 22px 0; border-bottom: 1px solid var(--line); }
+.profile-section h3 { margin: 0 0 10px; font-size: 15px; }
+.profile-bio { max-width: 68ch; margin: 0; color: #3d424a; font-size: 15px; line-height: 1.7; }
+.profile-facts { margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.profile-facts > div { min-width: 0; display: flex; align-items: flex-start; gap: 9px; padding: 13px; border: 1px solid var(--line); border-radius: 8px; }
+.profile-facts svg { width: 18px; flex: 0 0 18px; color: var(--blue); }
+.profile-facts span { min-width: 0; display: grid; gap: 3px; }
+.profile-facts dt { color: var(--muted); font-size: 10px; font-weight: 700; text-transform: uppercase; }
+.profile-facts dd { margin: 0; overflow-wrap: anywhere; font-size: 12px; font-weight: 600; line-height: 1.45; }
+.professional-profile .tag-row { gap: 6px; }
+.professional-profile .tag-row > span { padding: 7px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface-soft); font-size: 11px; font-weight: 600; }
+.professional-profile .profile-links { padding: 18px 0 10px; align-items: center; }
+.profile-contact-button { margin-top: 10px; min-height: 52px; }
+.profile-reputation { margin-top: 24px; border-top: 1px solid var(--line); border-bottom: 0; }
 
 .profile-actions {
   display: grid;
@@ -2799,6 +2850,24 @@ textarea {
   font-size: 12px;
 }
 
+.notification-center { position: relative; }
+.notification-badge { position: absolute; bottom: -5px; left: -5px; min-width: 20px; height: 20px; padding: 0 5px; display: grid; place-items: center; border: 2px solid var(--surface); border-radius: 999px; background: #e22d3d; color: #fff; font-size: 10px; font-weight: 800; }
+.sidebar-note .notification-badge { color: #fff; font-size: 10px; line-height: 1; letter-spacing: 0; }
+.notification-panel { position: absolute; z-index: 80; top: calc(100% + 10px); right: 0; width: min(390px, calc(100vw - 28px)); max-height: min(560px, 75vh); overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: 0 18px 50px rgba(18, 28, 45, .18); }
+.notification-panel header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px; border-bottom: 1px solid var(--line); }
+.notification-panel header > div { display: grid; gap: 2px; }
+.notification-panel header span { color: var(--muted); font-size: 11px; }
+.notification-panel .text-button { border: 0; background: transparent; color: var(--blue); font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
+.notification-list { max-height: 460px; overflow-y: auto; }
+.notification-item { width: 100%; display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: start; padding: 14px 16px; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--ink); text-align: left; cursor: pointer; }
+.notification-item:hover { background: var(--surface-soft); }
+.notification-item > svg { width: 20px; color: var(--blue); }
+.notification-item span { min-width: 0; display: grid; gap: 3px; }
+.notification-item strong, .notification-item small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.notification-item small { color: var(--muted); }
+.notification-empty { min-height: 150px; display: grid; place-content: center; justify-items: center; gap: 8px; color: var(--muted); }
+.notification-empty svg { color: var(--green); }
+
 @media (max-width: 1080px) {
   .app-shell {
     grid-template-columns: 1fr;
@@ -2826,7 +2895,7 @@ textarea {
   .sidebar-note > span,
   .sidebar-note .tiny-button { display: none; }
 
-  .user-menu-button strong { display: none; }
+  .user-name-button strong { display: none; }
 
   .app-footer { grid-template-columns: 1fr auto; }
   .app-footer nav { grid-column: 1 / -1; grid-row: 2; }
@@ -2880,6 +2949,7 @@ textarea {
 }
 
 @media (max-width: 720px) {
+  .sidebar-notification-center .notification-panel { position: fixed; top: 72px; right: 14px; left: 14px; width: auto; max-height: calc(100vh - 92px); }
   .auth-screen {
     padding: 10px;
   }
