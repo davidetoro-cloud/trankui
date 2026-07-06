@@ -454,7 +454,8 @@ function renderBoard() {
 
 async function createPost(event) {
   event.preventDefault();
-  const form = new FormData(event.currentTarget);
+  const formElement = event.currentTarget;
+  const form = new FormData(formElement);
   const descriptionInput = qs("#postDescription");
   const description = String(form.get("description") || "").trim();
   if (description.length < 10) {
@@ -470,8 +471,9 @@ async function createPost(event) {
       production_type: form.get("production"), budget: form.get("budget") || null,
       description,
     });
-    event.currentTarget.reset();
-    event.currentTarget.classList.add("hidden");
+    formElement.reset();
+    formElement.classList.add("hidden");
+    qs("#postDescriptionCount").textContent = "0/2000";
     showToast("Richiesta pubblicata");
     await loadAppData();
   } catch (error) {
@@ -609,11 +611,12 @@ function closeReview() {
 
 async function submitReview(event) {
   event.preventDefault();
+  const formElement = event.currentTarget;
   const collaboration = state.collaborations.find((item) => item.id === state.activeReviewId);
   if (!collaboration) return showToast("Collaborazione non disponibile. Riapri il feedback e riprova.", true);
   const recipient = otherParticipant(collaboration);
   if (!recipient?.id) return showToast("Collaboratore non disponibile.", true);
-  const form = new FormData(event.currentTarget);
+  const form = new FormData(formElement);
   const button = qs("#submitReviewButton");
   button.disabled = true;
   button.querySelector("span").textContent = "Invio in corso...";
@@ -625,7 +628,7 @@ async function submitReview(event) {
       problem_solving: Number(form.get("problem_solving")), public_comment: form.get("public_comment").trim(), private_note: form.get("private_note").trim(),
     });
     closeReview();
-    event.currentTarget.reset();
+    formElement.reset();
     showToast("Feedback salvato. Sarà visibile dopo la recensione reciproca.");
     await loadAppData();
   } catch (error) {
