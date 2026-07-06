@@ -9,7 +9,7 @@
         document.documentElement.classList.add("theme-night");
       }
     </script>
-    <link rel="stylesheet" href="./styles.css?v=20260706-delete-posts" />
+    <link rel="stylesheet" href="./styles.css?v=20260706-delete-modal" />
   </head>
   <body>
     <section class="auth-screen" id="authScreen">
@@ -324,6 +324,21 @@
       </section>
     </div>
 
+    <div class="modal-backdrop hidden" id="deletePostBackdrop">
+      <section class="delete-post-dialog" role="dialog" aria-modal="true" aria-labelledby="deletePostTitle" aria-describedby="deletePostCopy">
+        <button class="close-button delete-post-close" type="button" id="closeDeletePost" title="Chiudi"><i data-lucide="x"></i></button>
+        <div class="delete-post-icon"><i data-lucide="trash-2" aria-hidden="true"></i></div>
+        <p class="eyebrow">Rimuovi annuncio</p>
+        <h2 id="deletePostTitle">Vuoi togliere questa richiesta dalla bacheca?</h2>
+        <p id="deletePostCopy">L'annuncio non sara piu visibile nella community. Le candidature collegate verranno rimosse insieme alla richiesta.</p>
+        <div class="delete-post-summary" id="deletePostSummary"></div>
+        <div class="delete-post-actions">
+          <button class="secondary-button" type="button" id="cancelDeletePost">Annulla</button>
+          <button class="danger-button" type="button" id="confirmDeletePost"><i data-lucide="trash-2" aria-hidden="true"></i>Rimuovi annuncio</button>
+        </div>
+      </section>
+    </div>
+
     <div class="modal-backdrop hidden" id="deleteAccountBackdrop">
       <section class="delete-account-dialog" role="dialog" aria-modal="true" aria-labelledby="deleteAccountTitle">
         <header><div><p class="eyebrow">Azione definitiva</p><h2 id="deleteAccountTitle">Cancellare l'account?</h2></div><button class="close-button" type="button" id="closeDeleteAccount" title="Chiudi"><i data-lucide="x"></i></button></header>
@@ -344,6 +359,6 @@
     <script src="./backend.js?v=20260706-delete-posts"></script>
     <script src="./lucide.min.js"></script>
     <script src="./cookie-consent.js"></script>
-    <script src="./app.js?v=20260706-delete-posts"></script>
+    <script src="./app.js?v=20260706-delete-modal"></script>
   </body>
 </html>
