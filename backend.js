@@ -52,6 +52,15 @@
     return unwrap(await client.auth.signInWithPassword({ email, password }));
   }
 
+  async function signInWithGoogle() {
+    return unwrap(await client.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: authRedirectUrl(),
+      },
+    }));
+  }
+
   async function resendConfirmation(email) {
     return unwrap(await client.auth.resend({
       type: "signup",
@@ -389,6 +398,7 @@
     session,
     signUp,
     signIn,
+    signInWithGoogle,
     resendConfirmation,
     requestPasswordReset,
     updatePassword,
