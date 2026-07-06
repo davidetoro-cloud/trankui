@@ -922,6 +922,9 @@ document.addEventListener("click", async (event) => {
 });
 
 qs("#authForm").addEventListener("submit", handleAuth);
+qs("#authForm").addEventListener("change", (event) => {
+  if (event.target.matches("input[name='account_type']")) syncAuthAccountType();
+});
 qs("#searchForm").addEventListener("submit", (event) => {
   event.preventDefault(); const form = new FormData(event.currentTarget);
   state.search = { roleId: form.get("role"), date: form.get("date"), region: form.get("region"), zone: form.get("zone"), production: form.get("production") };
@@ -939,6 +942,12 @@ qs("#postDescription").addEventListener("input", (event) => {
   qs("#postDescriptionCount").textContent = `${event.target.value.length}/2000`;
 });
 qs("#profileForm").addEventListener("submit", saveProfile);
+qs("#profileForm").addEventListener("change", (event) => {
+  if (!event.target.matches("input[name='account_type']")) return;
+  state.profile = { ...(state.profile || {}), account_type: event.target.value };
+  renderProfileForm();
+  redrawIcons();
+});
 qs("#communitySearch").addEventListener("input", (event) => { renderCommunity(event.target.value); redrawIcons(); });
 qs("#reviewForm").addEventListener("submit", submitReview);
 qs("#closeReview").addEventListener("click", closeReview);
