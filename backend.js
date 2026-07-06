@@ -175,6 +175,13 @@
     return unwrap(await client.from("posts").insert({ ...payload, owner_id: current.user.id }).select().single());
   }
 
+  async function updatePost(postId, payload) {
+    const current = await session();
+    if (!current) throw new Error("Sessione scaduta");
+    return unwrap(await client.from("posts").update(payload)
+      .eq("id", postId).eq("owner_id", current.user.id).select().single());
+  }
+
   async function applyToPost(postId, message) {
     const current = await session();
     if (!current) throw new Error("Sessione scaduta");
@@ -360,7 +367,7 @@
     availabilityForRange,
     setAvailability,
     listPosts,
-    createPost,
+    createPost, updatePost,
     applyToPost,
     selectApplicant,
     collaborations,
