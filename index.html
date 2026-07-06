@@ -41,9 +41,40 @@
             <h2 id="authTitle">Crea il tuo profilo</h2>
             <p class="auth-copy" id="authCopy">Inizia a farti trovare per ruolo, zona e disponibilità.</p>
             <form class="auth-form" id="authForm">
+              <fieldset class="account-type-selector" id="accountTypeSelector">
+                <legend>Che tipo di account vuoi creare?</legend>
+                <label>
+                  <input type="radio" name="account_type" value="freelance" checked />
+                  <span><strong>Freelance</strong><small>Se lavori come professionista e vuoi essere trovato o collaborare.</small></span>
+                </label>
+                <label>
+                  <input type="radio" name="account_type" value="company" />
+                  <span><strong>Agenzia / casa di produzione</strong><small>Se cerchi collaboratori e costruisci crew per produzioni.</small></span>
+                </label>
+              </fieldset>
               <div class="field">
                 <label for="authName">Nome e cognome</label>
                 <input id="authName" name="name" placeholder="Es. Davide Toro" required />
+              </div>
+              <div class="field hidden" id="authCompanyNameField">
+                <label for="authCompanyName">Nome agenzia / casa di produzione</label>
+                <input id="authCompanyName" name="company_name" placeholder="Es. Trankui Studio" />
+              </div>
+              <div class="field hidden" id="authContactNameField">
+                <label for="authContactName">Referente</label>
+                <input id="authContactName" name="contact_name" placeholder="Es. Davide Toro" />
+              </div>
+              <div class="field hidden" id="authCompanyTypeField">
+                <label for="authCompanyType">Tipo realtà</label>
+                <select id="authCompanyType" name="company_type">
+                  <option value="">Scegli</option>
+                  <option>Agenzia creativa</option>
+                  <option>Casa di produzione</option>
+                  <option>Studio video</option>
+                  <option>Brand / azienda</option>
+                  <option>Organizzatore eventi</option>
+                  <option>Altro</option>
+                </select>
               </div>
               <div class="field">
                 <label for="authEmail">Email</label>
