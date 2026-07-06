@@ -146,6 +146,15 @@ function redrawIcons() {
   window.lucide?.createIcons();
 }
 
+function setAuthStatus(title = "", copy = "", actionHtml = "") {
+  const status = qs("#authStatus");
+  if (!title && !copy && !actionHtml) {
+    status.innerHTML = "";
+    return;
+  }
+  status.innerHTML = `<strong>${escapeHtml(title)}</strong>${copy ? `<span>${escapeHtml(copy)}</span>` : ""}${actionHtml}`;
+}
+
 function errorMessage(error) {
   const translations = {
     "Invalid login credentials": "Email o password non corretti.",
@@ -155,7 +164,9 @@ function errorMessage(error) {
     "duplicate key value violates unique constraint \"reviews_collaboration_id_author_id_key\"": "Hai già inviato il feedback per questa collaborazione.",
   };
   if (error?.message?.includes("posts_description_check")) return "I dettagli devono contenere almeno 10 caratteri.";
-  return translations[error?.message] || error?.message || "Qualcosa non ha funzionato. Riprova.";
+  if (error?.message) return translations[error.message] || error.message;
+  if (typeof error === "string" && error.trim()) return translations[error] || error;
+  return "Qualcosa non ha funzionato. Riprova tra poco.";
 }
 
 function roleById(id) {
@@ -230,7 +241,9 @@ function setAuthMode(mode) {
   qs("#authPassword").required = !recovery;
   qs("#privacyConsent").required = signup;
   qs("#authPassword").autocomplete = signup || newPassword ? "new-password" : "current-password";
-  qs("#authStatus").textContent = "";
+  qs("#googleAuthButton").classList.toggle("hidden", recovery || newPassword);
+  qs("#googleAuthLabel").textContent = signup ? "Registrati con Google" : "Accedi con Google";
+  setAuthStatus();
   syncAuthAccountType();
   redrawIcons();
 }
@@ -240,7 +253,7 @@ async function handleAuth(event) {
   const form = new FormData(event.currentTarget);
   const submit = qs("#authSubmit");
   submit.disabled = true;
-  qs("#authStatus").textContent = "";
+  setAuthStatus("Operazione in corso", "Stiamo creando il profilo. Rimani su questa pagina per qualche secondo.");
   try {
     if (state.authMode === "signup") {
       const accountType = form.get("account_type") || "freelance";
@@ -255,18 +268,22 @@ async function handleAuth(event) {
         contact_name: company ? form.get("contact_name").trim() : "",
       });
       if (result.session) {
-        await backend.recordConsent("privacy_terms", "2026-06-30", true);
-        await backend.recordConsent("availability_search", "2026-06-30", form.get("calendarConsent") === "on");
+        try {
+          await backend.recordConsent("privacy_terms", "2026-06-30", true);
+          await backend.recordConsent("availability_search", "2026-06-30", form.get("calendarConsent") === "on");
+        } catch (consentError) {
+          console.warn("Consent record failed", consentError);
+        }
         await enterApp(result.session);
       } else {
-        qs("#authStatus").innerHTML = `<strong>Controlla la tua email</strong><span>Abbiamo inviato il link di conferma. Controlla anche Spam e Promozioni.</span><button class="auth-text-button" type="button" id="resendConfirmation">Reinvia email di verifica</button>`;
+        setAuthStatus("Controlla la tua email", "Ti abbiamo inviato il link di conferma. Aprilo per attivare l'account. Controlla anche Spam e Promozioni.", `<button class="auth-text-button" type="button" id="resendConfirmation">Reinvia email di verifica</button>`);
       }
     } else if (state.authMode === "signin") {
       const result = await backend.signIn({ email: form.get("email").trim(), password: form.get("password") });
       await enterApp(result.session);
     } else if (state.authMode === "recovery") {
       await backend.requestPasswordReset(form.get("email").trim());
-      qs("#authStatus").innerHTML = `<strong>Email inviata</strong><span>Apri il link ricevuto per scegliere una nuova password.</span>`;
+      setAuthStatus("Email inviata", "Apri il link ricevuto per scegliere una nuova password.");
     } else {
       await backend.updatePassword(form.get("password"));
       showToast("Password aggiornata");
@@ -274,9 +291,21 @@ async function handleAuth(event) {
       await enterApp(session);
     }
   } catch (error) {
-    qs("#authStatus").textContent = errorMessage(error);
+    setAuthStatus("Non siamo riusciti a completare l'operazione", errorMessage(error));
   } finally {
     submit.disabled = false;
+  }
+}
+
+async function handleGoogleAuth() {
+  const button = qs("#googleAuthButton");
+  button.disabled = true;
+  setAuthStatus("Apro Google", "Tra poco verrai reindirizzato alla schermata di accesso Google.");
+  try {
+    await backend.signInWithGoogle();
+  } catch (error) {
+    setAuthStatus("Accesso Google non disponibile", errorMessage(error));
+    button.disabled = false;
   }
 }
 
@@ -1109,6 +1138,7 @@ document.addEventListener("click", async (event) => {
 });
 
 qs("#authForm").addEventListener("submit", handleAuth);
+qs("#googleAuthButton").addEventListener("click", handleGoogleAuth);
 qs("#authForm").addEventListener("change", (event) => {
   if (event.target.matches("input[name='account_type']")) syncAuthAccountType();
 });
@@ -1260,8 +1290,9 @@ async function init() {
   redrawIcons();
   setAuthMode("signup");
   if (!backend?.configured) {
-    qs("#authStatus").textContent = backend?.error || "Backend non configurato";
+    setAuthStatus("Backend non configurato", backend?.error || "Il backend Trankui non e ancora configurato.");
     qs("#authSubmit").disabled = true;
+    qs("#googleAuthButton").disabled = true;
     return;
   }
   const session = await backend.session();
