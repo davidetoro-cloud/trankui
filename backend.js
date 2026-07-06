@@ -37,12 +37,12 @@
     return data.session;
   }
 
-  async function signUp({ name, email, password }) {
+  async function signUp({ name, email, password, account_type = "freelance", company_name = "", company_type = "", contact_name = "" }) {
     return unwrap(await client.auth.signUp({
       email,
       password,
       options: {
-        data: { full_name: name },
+        data: { full_name: name, account_type, company_name, company_type, contact_name },
         emailRedirectTo: authRedirectUrl(),
       },
     }));
@@ -98,6 +98,12 @@
     const id = current.user.id;
     const profilePayload = {
       full_name: profile.full_name,
+      account_type: profile.account_type || "freelance",
+      company_name: profile.company_name || null,
+      company_type: profile.company_type || null,
+      vat_number: profile.vat_number || null,
+      contact_name: profile.contact_name || null,
+      company_website: profile.company_website || null,
       primary_role_id: profile.primary_role_id,
       primary_other_role_name: profile.primary_other_role_name || null,
       bio: profile.bio || "",
@@ -143,7 +149,7 @@
 
   async function publicProfiles() {
     return unwrap(await client.from("profiles")
-      .select("id,full_name,primary_role_id,primary_other_role_name,bio,city,region,travel_area,years_experience,portfolio_url,equipment,brands,production_types,avatar_url,instagram_url,facebook_url,tiktok_url,linkedin_url,verified,created_at,roles:primary_role_id(id,name,category,slug),secondary_roles(role_id,other_role_name,position,roles(id,name,category,slug))")
+      .select("id,full_name,account_type,company_name,company_type,vat_number,contact_name,company_website,primary_role_id,primary_other_role_name,bio,city,region,travel_area,years_experience,portfolio_url,equipment,brands,production_types,avatar_url,instagram_url,facebook_url,tiktok_url,linkedin_url,verified,created_at,roles:primary_role_id(id,name,category,slug),secondary_roles(role_id,other_role_name,position,roles(id,name,category,slug))")
       .eq("profile_status", "active"));
   }
 
