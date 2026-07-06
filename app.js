@@ -44,6 +44,10 @@ const state = {
   receivedReviews: [],
   incomingMessages: [],
   calendarConnections: [],
+  supportTickets: [],
+  supportMessages: [
+    { role: "assistant", body: "Ciao, sono l'assistente Trankui. Posso spiegarti come usare profilo, ricerca, bacheca, chat, calendario e recensioni. Se invece hai trovato un'anomalia, puoi aprire un ticket qui accanto." }
+  ],
   editingPostId: null,
   pendingDeletePostId: null,
   selectedProfileId: null,
@@ -78,8 +82,26 @@ function notificationStorageKey() {
   return `trankui:notifications:${state.session?.user?.id || "guest"}`;
 }
 
+function supportTicketStorageKey() {
+  return `trankui:support-tickets:${state.session?.user?.id || "guest"}`;
+}
+
 function lastNotificationsReadAt() {
   return localStorage.getItem(notificationStorageKey()) || "1970-01-01T00:00:00.000Z";
+}
+
+function localSupportTickets() {
+  try {
+    return JSON.parse(localStorage.getItem(supportTicketStorageKey()) || "[]");
+  } catch (_) {
+    return [];
+  }
+}
+
+function saveLocalSupportTicket(ticket) {
+  const tickets = [ticket, ...localSupportTickets()].slice(0, 30);
+  localStorage.setItem(supportTicketStorageKey(), JSON.stringify(tickets));
+  return ticket;
 }
 
 function initials(name = "") {
@@ -291,7 +313,7 @@ async function loadAppData() {
     state.profile = await backend.ownProfile();
     const start = new Date(state.month.getFullYear(), state.month.getMonth(), 1);
     const end = new Date(state.month.getFullYear(), state.month.getMonth() + 1, 0);
-    const [profiles, availability, posts, collaborations, reviews, receivedReviews, incomingMessages, calendarConnections] = await Promise.all([
+    const [profiles, availability, posts, collaborations, reviews, receivedReviews, incomingMessages, calendarConnections, supportTickets] = await Promise.all([
       backend.publicProfiles(),
       backend.availabilityForRange(isoDate(start), isoDate(end)),
       backend.listPosts(),
@@ -300,6 +322,7 @@ async function loadAppData() {
       backend.publishedReviews(state.session.user.id),
       backend.incomingMessages(),
       backend.calendarConnections(),
+      backend.supportTickets ? backend.supportTickets().catch(() => localSupportTickets()) : Promise.resolve(localSupportTickets()),
     ]);
     state.profiles = profiles.map((profile) => profile.id === state.profile?.id
       ? { ...profile, ...state.profile, secondary_roles: profile.secondary_roles }
@@ -311,6 +334,7 @@ async function loadAppData() {
     state.receivedReviews = receivedReviews;
     state.incomingMessages = incomingMessages;
     state.calendarConnections = calendarConnections;
+    state.supportTickets = supportTickets;
     state.search.roleId ||= state.roles[0]?.id || "";
     renderApp();
   } catch (error) {
@@ -329,6 +353,7 @@ function renderApp() {
   renderProfileForm();
   renderIntegrations();
   renderCommunity();
+  renderSupport();
   renderNotifications();
   redrawIcons();
 }
@@ -867,6 +892,109 @@ function renderCommunity(query = qs("#communitySearch")?.value || "") {
   qs("#userDirectory").innerHTML = visibleProfiles.map((profile) => `<button class="community-card" type="button" data-open-profile="${profile.id}"><div class="avatar">${avatarContent(profile)}</div><div><strong>${escapeHtml(profile.full_name)}</strong><span>${escapeHtml(profile.roles?.name || profile.primary_other_role_name || (profile.account_type === "company" ? "Agenzia / casa di produzione" : "Professionista"))} · ${escapeHtml(profile.city)}</span></div>${profile.verified ? icon("badge-check") : ""}</button>`).join("") || `<div class="empty-state">${needle ? "Nessun professionista corrisponde alla ricerca." : "La community iniziera a comparire qui."}</div>`;
 }
 
+function supportStatusLabel(status) {
+  return ({ open: "Aperto", in_review: "In analisi", resolved: "Risolto", closed: "Chiuso" })[status] || status || "Aperto";
+}
+
+function supportAnswer(question) {
+  const text = question.toLowerCase();
+  if (/(cos.?è|come funziona|a cosa serve|trankui|piattaforma)/i.test(text)) {
+    return "Trankui serve a costruire crew audiovisive in modo più rapido e affidabile. Cerchi per ruolo, data e zona; apri il profilo; contatti il professionista in chat; quando la collaborazione viene accettata, la piattaforma ha completato il match. Dopo il lavoro entra in gioco la recensione reciproca.";
+  }
+  if (/(profilo|foto|ruolo|competenze|social|portfolio|attrezzatura)/i.test(text)) {
+    return "Nel profilo inserisci ruolo principale, competenze secondarie, ambiti di specializzazione, portfolio, attrezzatura, brand, social e foto. Il ruolo principale definisce il tuo posizionamento; le competenze secondarie aumentano le ricerche in cui puoi comparire.";
+  }
+  if (/(ricerca|trova|professionista|crew|zona|provincia|disponibile)/i.test(text)) {
+    return "La ricerca usa ruolo, data, regione, provincia e ambiti di specializzazione. Prima compaiono i professionisti con quel ruolo come principale, poi quelli che lo hanno tra le competenze secondarie. La disponibilità del calendario aiuta a evitare contatti inutili.";
+  }
+  if (/(bacheca|richiesta|annuncio|candidatura|pubblica)/i.test(text)) {
+    return "La bacheca serve quando vuoi pubblicare una richiesta aperta alla community. Le richieste create da te sono riconoscibili, modificabili e rimovibili solo dal tuo account. Gli altri professionisti possono candidarsi.";
+  }
+  if (/(chat|messaggio|contattare|contatto)/i.test(text)) {
+    return "Quando contatti un professionista si apre una chat interna. Usala per chiarire disponibilità, data, ruolo, dettagli operativi e prossimi passi. I contatti diretti vengono condivisi solo quando la collaborazione è accettata.";
+  }
+  if (/(calendario|google|apple|disponibilità|occupato|sync|sincronizza)/i.test(text)) {
+    return "Nel calendario indichi i giorni disponibili, forse disponibili o occupati. Google Calendar e Apple Calendar servono a sincronizzare lo stato libero/occupato: Trankui non deve leggere titoli, clienti o dettagli privati degli eventi.";
+  }
+  if (/(recensione|feedback|blind|rating|reputazione)/i.test(text)) {
+    return "Le recensioni sono blind: diventano pubbliche solo quando entrambi avete lasciato il feedback. Questo riduce pressioni e rende più credibile la reputazione. Si valutano puntualità, comunicazione, affidabilità, organizzazione e problem solving.";
+  }
+  if (/(agenzia|casa di produzione|azienda|freelance|account)/i.test(text)) {
+    return "In registrazione puoi scegliere freelance oppure agenzia/casa di produzione. Il freelance si posiziona come professionista; l'agenzia usa Trankui per cercare collaboratori e costruire crew per produzioni già confermate.";
+  }
+  if (/(bug|errore|anomalia|non funziona|problema|ticket|segnalare)/i.test(text)) {
+    return "Se hai trovato un'anomalia, apri un ticket dal modulo a destra. Indica area, priorità, oggetto e cosa è successo. Se puoi, scrivi anche da quale sezione eri partito e cosa ti aspettavi.";
+  }
+  return "Posso aiutarti su profilo, ricerca crew, bacheca, chat, calendario, recensioni blind e account agenzia/freelance. Se invece hai trovato un errore tecnico, apri un ticket con i dettagli del problema.";
+}
+
+function renderSupportChat() {
+  qs("#supportChatLog").innerHTML = state.supportMessages.map((message) => `<div class="support-message ${message.role}"><span>${message.role === "assistant" ? "Trankui" : "Tu"}</span><p>${escapeHtml(message.body)}</p></div>`).join("");
+  qs("#supportChatLog").scrollTop = qs("#supportChatLog").scrollHeight;
+}
+
+function renderSupportTickets() {
+  const tickets = state.supportTickets || [];
+  qs("#supportTicketList").innerHTML = tickets.length ? tickets.map((ticket) => `<article class="support-ticket-card">
+    <div><span class="status-chip">${escapeHtml(supportStatusLabel(ticket.status))}</span><span class="support-priority">${escapeHtml(ticket.priority || "Normale")}</span></div>
+    <h3>${escapeHtml(ticket.subject)}</h3>
+    <p>${escapeHtml(ticket.description)}</p>
+    <footer><span>${escapeHtml(ticket.category)}</span><time>${new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(ticket.created_at))}</time></footer>
+  </article>`).join("") : `<div class="empty-state">${icon("ticket")}<strong>Nessun ticket aperto</strong><span>Se trovi un'anomalia, invia una segnalazione dal modulo qui sopra.</span></div>`;
+}
+
+function renderSupport() {
+  if (!qs("#supportChatLog")) return;
+  renderSupportChat();
+  renderSupportTickets();
+}
+
+function askSupportAssistant(question) {
+  const clean = String(question || "").trim();
+  if (!clean) return;
+  state.supportMessages.push({ role: "user", body: clean });
+  state.supportMessages.push({ role: "assistant", body: supportAnswer(clean) });
+  renderSupportChat();
+  redrawIcons();
+}
+
+async function createSupportTicket(event) {
+  event.preventDefault();
+  const formElement = event.currentTarget;
+  const form = new FormData(formElement);
+  const payload = {
+    category: form.get("category"),
+    priority: form.get("priority"),
+    subject: String(form.get("subject") || "").trim(),
+    description: String(form.get("description") || "").trim(),
+  };
+  if (payload.subject.length < 3 || payload.description.length < 10) return showToast("Inserisci un oggetto e una descrizione più dettagliata.", true);
+  const button = qs("#submitTicketButton");
+  button.disabled = true;
+  try {
+    let ticket;
+    try {
+      ticket = await backend.createSupportTicket(payload);
+    } catch (_) {
+      ticket = saveLocalSupportTicket({
+        id: `local-${Date.now()}`,
+        reporter_id: state.session?.user?.id || "local",
+        ...payload,
+        status: "open",
+        created_at: new Date().toISOString(),
+      });
+    }
+    state.supportTickets = [ticket, ...state.supportTickets.filter((item) => item.id !== ticket.id)];
+    formElement.reset();
+    renderSupportTickets();
+    showToast("Ticket inviato. Ti terremo aggiornato.");
+  } catch (error) {
+    showToast(errorMessage(error), true);
+  } finally {
+    button.disabled = false;
+  }
+}
+
 function switchView(view) {
   qsa(".nav-item").forEach((item) => item.classList.toggle("active", item.dataset.view === view));
   qsa(".view").forEach((item) => item.classList.toggle("active-view", item.id === `view-${view}`));
@@ -874,6 +1002,7 @@ function switchView(view) {
     search: ["Crew finder", "Trova un collaboratore affidabile in pochi minuti"], board: ["Bacheca", "Richieste aperte della community"],
     requests: ["Attivita", "Gestisci richieste, match e feedback"], calendar: ["Disponibilita", "Aggiorna quando puoi lavorare"],
     profile: ["Profilo", "Racconta come lavori, senza rumore"], admin: ["Community", "La rete professionale Trankui"],
+    support: ["Assistenza", "Risposte rapide e ticket per anomalie"],
   };
   qs("#pageEyebrow").textContent = titles[view][0];
   qs("#pageTitle").textContent = titles[view][1];
@@ -905,6 +1034,11 @@ document.addEventListener("click", async (event) => {
   if (nav) return switchView(nav.dataset.view);
   const go = event.target.closest("[data-go]");
   if (go) return switchView(go.dataset.go);
+  const supportQuestion = event.target.closest("[data-support-question]");
+  if (supportQuestion) {
+    askSupportAssistant(supportQuestion.dataset.supportQuestion);
+    return;
+  }
   const profile = event.target.closest("[data-profile]");
   if (profile) { state.selectedProfileId = profile.dataset.profile; await renderSelectedProfile(); return; }
   const publicProfile = event.target.closest("[data-open-profile]");
@@ -1002,6 +1136,14 @@ qs("#profileForm").addEventListener("change", (event) => {
   redrawIcons();
 });
 qs("#communitySearch").addEventListener("input", (event) => { renderCommunity(event.target.value); redrawIcons(); });
+qs("#supportChatForm").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const input = qs("#supportQuestion");
+  askSupportAssistant(input.value);
+  input.value = "";
+  input.focus();
+});
+qs("#supportTicketForm").addEventListener("submit", createSupportTicket);
 qs("#reviewForm").addEventListener("submit", submitReview);
 qs("#closeReview").addEventListener("click", closeReview);
 qs("#reviewBackdrop").addEventListener("click", (event) => { if (event.target === event.currentTarget) closeReview(); });
