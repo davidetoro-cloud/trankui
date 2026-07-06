@@ -9,7 +9,7 @@
         document.documentElement.classList.add("theme-night");
       }
     </script>
-    <link rel="stylesheet" href="./styles.css?v=20260706-delete-modal" />
+    <link rel="stylesheet" href="./styles.css?v=20260706-support" />
   </head>
   <body>
     <section class="auth-screen" id="authScreen">
@@ -114,6 +114,7 @@
           <button class="nav-item" type="button" data-view="requests"><i data-lucide="activity" aria-hidden="true"></i>Attività</button>
           <button class="nav-item" type="button" data-view="calendar"><i data-lucide="calendar-days" aria-hidden="true"></i>Disponibilità</button>
           <button class="nav-item" type="button" data-view="admin"><i data-lucide="users-round" aria-hidden="true"></i>Community</button>
+          <button class="nav-item" type="button" data-view="support"><i data-lucide="life-buoy" aria-hidden="true"></i>Assistenza</button>
         </nav>
 
         <div class="utility-links"><a href="./trankui.html">Trankui</a><a href="./faq.html">FAQ</a><a href="./blog.html">Blog</a></div>
@@ -274,6 +275,55 @@
           </div>
           <div class="admin-grid" id="userDirectory"></div>
         </section>
+
+        <section class="view" id="view-support">
+          <div class="section-head support-head">
+            <div>
+              <h2>Assistenza Trankui</h2>
+              <span>Chiedi come funziona la piattaforma o apri un ticket se trovi un'anomalia.</span>
+            </div>
+            <div class="support-state-pill"><i data-lucide="sparkles" aria-hidden="true"></i>AI guida prodotto</div>
+          </div>
+          <div class="support-layout">
+            <section class="support-assistant" aria-label="Chat assistenza Trankui">
+              <header>
+                <div class="support-ai-avatar"><i data-lucide="bot" aria-hidden="true"></i></div>
+                <div><p class="eyebrow">Assistente Trankui</p><h3>Come posso aiutarti?</h3></div>
+              </header>
+              <div class="support-suggestions" aria-label="Domande rapide">
+                <button type="button" data-support-question="Come funziona Trankui?">Come funziona?</button>
+                <button type="button" data-support-question="Come apro una richiesta in bacheca?">Bacheca</button>
+                <button type="button" data-support-question="Come funzionano le recensioni blind?">Recensioni blind</button>
+                <button type="button" data-support-question="Come collego il calendario?">Calendario</button>
+              </div>
+              <div class="support-chat-log" id="supportChatLog" aria-live="polite"></div>
+              <form class="support-chat-form" id="supportChatForm">
+                <input id="supportQuestion" name="question" autocomplete="off" placeholder="Scrivi una domanda su Trankui" aria-label="Domanda per l'assistente" />
+                <button class="primary-button" type="submit" title="Invia domanda"><i data-lucide="send" aria-hidden="true"></i><span>Invia</span></button>
+              </form>
+            </section>
+            <aside class="support-ticket-panel">
+              <div class="support-ticket-intro">
+                <i data-lucide="ticket-plus" aria-hidden="true"></i>
+                <div><h3>Apri un ticket</h3><p>Usalo per bug, errori, problemi di accesso, profilo, chat, calendario o feedback.</p></div>
+              </div>
+              <form class="support-ticket-form" id="supportTicketForm">
+                <div class="field"><label for="ticketCategory">Area</label><select id="ticketCategory" name="category" required><option value="">Scegli</option><option>Accesso e registrazione</option><option>Profilo</option><option>Ricerca professionisti</option><option>Bacheca</option><option>Chat</option><option>Calendario</option><option>Recensioni</option><option>Pagamenti o dominio</option><option>Altro</option></select></div>
+                <div class="field"><label for="ticketPriority">Priorità</label><select id="ticketPriority" name="priority" required><option>Normale</option><option>Alta</option><option>Bloccante</option></select></div>
+                <div class="field wide"><label for="ticketSubject">Oggetto</label><input id="ticketSubject" name="subject" maxlength="120" placeholder="Es. Non riesco a inviare una recensione" required /></div>
+                <div class="field wide"><label for="ticketDescription">Descrizione</label><textarea id="ticketDescription" name="description" minlength="10" maxlength="2000" placeholder="Spiega cosa è successo, da quale sezione e cosa ti aspettavi." required></textarea><small class="field-help">Più dettagli inserisci, più velocemente possiamo capire il problema.</small></div>
+                <button class="primary-button full-button" type="submit" id="submitTicketButton"><i data-lucide="send" aria-hidden="true"></i>Invia ticket</button>
+              </form>
+            </aside>
+          </div>
+          <section class="support-ticket-history">
+            <div class="section-head">
+              <h2>I tuoi ticket</h2>
+              <span>Qui trovi le segnalazioni aperte da questo account.</span>
+            </div>
+            <div class="support-ticket-list" id="supportTicketList"></div>
+          </section>
+        </section>
       </main>
       <footer class="app-footer">
         <div><img src="./logo.png" alt="Trankui" /><span>Il modo semplice per costruire crew affidabili.</span></div>
@@ -356,9 +406,9 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="./config.js"></script>
-    <script src="./backend.js?v=20260706-delete-posts"></script>
+    <script src="./backend.js?v=20260706-support"></script>
     <script src="./lucide.min.js"></script>
     <script src="./cookie-consent.js"></script>
-    <script src="./app.js?v=20260706-delete-modal"></script>
+    <script src="./app.js?v=20260706-support"></script>
   </body>
 </html>
