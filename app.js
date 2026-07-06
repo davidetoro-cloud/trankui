@@ -44,6 +44,7 @@ const state = {
   receivedReviews: [],
   incomingMessages: [],
   calendarConnections: [],
+  editingPostId: null,
   selectedProfileId: null,
   search: { roleId: "", date: isoDate(new Date()), region: "Sardegna", zone: "Cagliari", production: "" },
   availabilityMode: "available",
@@ -441,15 +442,18 @@ async function sendCollaborationRequest(profileId) {
 }
 
 function renderBoard() {
-  qs("#boardList").innerHTML = state.posts.length ? state.posts.map((post) => {
+  const postCard = (post) => {
     const own = post.owner_id === state.session?.user?.id;
     const applied = (post.post_applications || []).some((item) => item.applicant_id === state.session?.user?.id);
-    return `<article class="board-card"><div class="board-card-head"><div><p class="eyebrow">${escapeHtml(post.production_type)}</p><h3>${escapeHtml(post.role?.name || post.other_role_name || "Ruolo")}</h3></div><span class="status-chip">${escapeHtml(post.status)}</span></div>
+    return `<article class="board-card ${own ? "board-card-own" : ""}"><div class="board-card-head"><div><p class="eyebrow">${escapeHtml(post.production_type)}</p><h3>${escapeHtml(post.role?.name || post.other_role_name || "Ruolo")}</h3></div><div class="board-card-status">${own ? `<span class="owner-chip">Pubblicata da te</span>` : ""}<span class="status-chip">${escapeHtml(statusLabel(post.status))}</span></div></div>
       <p>${escapeHtml(post.description)}</p><div class="board-meta"><span>${icon("calendar")}${formatDate(post.work_date)}</span><span>${icon("map-pin")}${escapeHtml(post.zone)}</span>${post.budget ? `<span>${icon("euro")}${escapeHtml(post.budget)}</span>` : ""}</div>
       <small>Pubblicata da ${escapeHtml(post.owner?.full_name || "Professionista Trankui")}</small>
-      ${own ? `<div class="application-list"><strong>${post.post_applications?.length || 0} candidature</strong>${(post.post_applications || []).map((application) => `<div><span>${escapeHtml(application.applicant?.full_name || "Candidato")}</span>${application.status === "pending" ? `<button class="tiny-button" data-select-applicant="${application.id}">Seleziona</button>` : `<span>${escapeHtml(application.status)}</span>`}</div>`).join("")}</div>` : `<button class="secondary-button" ${applied || post.status !== "open" ? "disabled" : ""} data-apply="${post.id}">${applied ? "Candidatura inviata" : "Candidati"}</button>`}
+      ${own ? `<div class="owner-post-actions"><div class="application-list"><strong>${post.post_applications?.length || 0} candidature</strong>${(post.post_applications || []).map((application) => `<div><span>${escapeHtml(application.applicant?.full_name || "Candidato")}</span>${application.status === "pending" ? `<button class="tiny-button" data-select-applicant="${application.id}">Seleziona</button>` : `<span>${escapeHtml(application.status)}</span>`}</div>`).join("")}</div><button class="secondary-button" type="button" data-edit-post="${post.id}">${icon("pencil")}Modifica</button></div>` : `<button class="secondary-button" ${applied || post.status !== "open" ? "disabled" : ""} data-apply="${post.id}">${applied ? "Candidatura inviata" : "Candidati"}</button>`}
     </article>`;
-  }).join("") : `<div class="empty-state">${icon("clipboard-list")}<strong>Nessuna richiesta aperta</strong><span>Pubblica la prima esigenza della community.</span></div>`;
+  };
+  const ownPosts = state.posts.filter((post) => post.owner_id === state.session?.user?.id);
+  const communityPosts = state.posts.filter((post) => post.owner_id !== state.session?.user?.id);
+  qs("#boardList").innerHTML = state.posts.length ? `<section class="board-group"><div class="board-group-title"><div><p class="eyebrow">GESTIONE</p><h3>Le tue richieste</h3></div><span>${ownPosts.length}</span></div>${ownPosts.length ? `<div class="board-group-grid">${ownPosts.map(postCard).join("")}</div>` : `<div class="empty-state compact">${icon("clipboard-list")}<strong>Non hai richieste aperte</strong></div>`}</section><section class="board-group"><div class="board-group-title"><div><p class="eyebrow">COMMUNITY</p><h3>Richieste degli altri professionisti</h3></div><span>${communityPosts.length}</span></div>${communityPosts.length ? `<div class="board-group-grid">${communityPosts.map(postCard).join("")}</div>` : `<div class="empty-state compact">${icon("users")}<strong>Nessuna richiesta della community</strong></div>`}</section>` : `<div class="empty-state">${icon("clipboard-list")}<strong>Nessuna richiesta aperta</strong><span>Pubblica la prima esigenza della community.</span></div>`;
 }
 
 async function createPost(event) {
@@ -466,15 +470,21 @@ async function createPost(event) {
   }
   descriptionInput.setCustomValidity("");
   try {
-    await backend.createPost({
+    const payload = {
       role_id: form.get("role"), work_date: form.get("date"), zone: form.get("zone"),
       production_type: form.get("production"), budget: form.get("budget") || null,
       description,
-    });
+    };
+    if (state.editingPostId) await backend.updatePost(state.editingPostId, payload);
+    else await backend.createPost(payload);
+    const wasEditing = Boolean(state.editingPostId);
+    state.editingPostId = null;
     formElement.reset();
     formElement.classList.add("hidden");
     qs("#postDescriptionCount").textContent = "0/2000";
-    showToast("Richiesta pubblicata");
+    qs("#postFormSubmitLabel").textContent = "Pubblica";
+    qs("#cancelPost").textContent = "Annulla";
+    showToast(wasEditing ? "Richiesta aggiornata" : "Richiesta pubblicata");
     await loadAppData();
   } catch (error) {
     showToast(errorMessage(error), true);
@@ -486,7 +496,7 @@ function otherParticipant(collaboration) {
 }
 
 function statusLabel(status) {
-  return ({ pending: "In attesa", accepted: "Accettata", rejected: "Rifiutata", cancelled: "Annullata", completed: "Conclusa" })[status] || status;
+  return ({ open: "Aperta", closed: "Chiusa", pending: "In attesa", accepted: "Accettata", rejected: "Rifiutata", cancelled: "Annullata", completed: "Conclusa" })[status] || status;
 }
 
 function renderActivity() {
@@ -804,6 +814,25 @@ document.addEventListener("click", async (event) => {
     try { await backend.applyToPost(apply.dataset.apply, message); showToast("Candidatura inviata"); await loadAppData(); } catch (error) { showToast(errorMessage(error), true); }
     return;
   }
+  const editPost = event.target.closest("[data-edit-post]");
+  if (editPost) {
+    const post = state.posts.find((item) => item.id === editPost.dataset.editPost && item.owner_id === state.session?.user?.id);
+    if (!post) return showToast("Puoi modificare solo le richieste che hai pubblicato.", true);
+    state.editingPostId = post.id;
+    qs("#postRole").value = post.role_id;
+    qs("#postDate").value = post.work_date;
+    qs("#postZone").value = post.zone;
+    qs("#postProduction").value = post.production_type;
+    qs("#postBudget").value = post.budget || "";
+    qs("#postDescription").value = post.description;
+    qs("#postDescriptionCount").textContent = `${post.description.length}/2000`;
+    qs("#postFormSubmitLabel").textContent = "Salva modifiche";
+    qs("#cancelPost").textContent = "Annulla modifica";
+    qs("#postForm").classList.remove("hidden");
+    qs("#postForm").scrollIntoView({ behavior: "smooth", block: "start" });
+    redrawIcons();
+    return;
+  }
   const select = event.target.closest("[data-select-applicant]");
   if (select) { try { await backend.selectApplicant(select.dataset.selectApplicant); showToast("Collaboratore selezionato"); await loadAppData(); } catch (error) { showToast(errorMessage(error), true); } return; }
   const transition = event.target.closest("[data-transition]");
@@ -859,7 +888,14 @@ qs("#reviewBackdrop").addEventListener("click", (event) => { if (event.target ==
 qs("#closePublicProfile").addEventListener("click", closePublicProfile);
 qs("#publicProfileBackdrop").addEventListener("click", (event) => { if (event.target === event.currentTarget) closePublicProfile(); });
 qs("#togglePostForm").addEventListener("click", () => qs("#postForm").classList.toggle("hidden"));
-qs("#cancelPost").addEventListener("click", () => qs("#postForm").classList.add("hidden"));
+qs("#cancelPost").addEventListener("click", () => {
+  state.editingPostId = null;
+  qs("#postForm").reset();
+  qs("#postForm").classList.add("hidden");
+  qs("#postFormSubmitLabel").textContent = "Pubblica";
+  qs("#cancelPost").textContent = "Annulla";
+  qs("#postDescriptionCount").textContent = "0/2000";
+});
 qs("#openBoard").addEventListener("click", () => { switchView("board"); qs("#postForm").classList.remove("hidden"); });
 qs("#openAvailability").addEventListener("click", () => switchView("calendar"));
 qs("#notificationButton").addEventListener("click", () => {
