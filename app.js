@@ -45,6 +45,7 @@ const state = {
   incomingMessages: [],
   calendarConnections: [],
   editingPostId: null,
+  pendingDeletePostId: null,
   selectedProfileId: null,
   search: { roleId: "", date: isoDate(new Date()), region: "Sardegna", zone: "Cagliari", production: "" },
   availabilityMode: "available",
@@ -487,6 +488,51 @@ function renderBoard() {
   qs("#boardList").innerHTML = state.posts.length ? `<section class="board-group"><div class="board-group-title"><div><p class="eyebrow">GESTIONE</p><h3>Le tue richieste</h3></div><span>${ownPosts.length}</span></div>${ownPosts.length ? `<div class="board-group-grid">${ownPosts.map(postCard).join("")}</div>` : `<div class="empty-state compact">${icon("clipboard-list")}<strong>Non hai richieste aperte</strong></div>`}</section><section class="board-group"><div class="board-group-title"><div><p class="eyebrow">COMMUNITY</p><h3>Richieste degli altri professionisti</h3></div><span>${communityPosts.length}</span></div>${communityPosts.length ? `<div class="board-group-grid">${communityPosts.map(postCard).join("")}</div>` : `<div class="empty-state compact">${icon("users")}<strong>Nessuna richiesta della community</strong></div>`}</section>` : `<div class="empty-state">${icon("clipboard-list")}<strong>Nessuna richiesta aperta</strong><span>Pubblica la prima esigenza della community.</span></div>`;
 }
 
+function resetPostForm() {
+  state.editingPostId = null;
+  qs("#postForm").reset();
+  qs("#postForm").classList.add("hidden");
+  qs("#postFormSubmitLabel").textContent = "Pubblica";
+  qs("#cancelPost").textContent = "Annulla";
+  qs("#postDescriptionCount").textContent = "0/2000";
+}
+
+function openDeletePostModal(post) {
+  state.pendingDeletePostId = post.id;
+  qs("#deletePostSummary").innerHTML = `<strong>${escapeHtml(post.role?.name || post.other_role_name || "Ruolo da coprire")}</strong><span>${formatDate(post.work_date)} · ${escapeHtml(post.zone || "Zona non indicata")}${post.budget ? ` · ${escapeHtml(post.budget)} euro` : ""}</span>`;
+  qs("#confirmDeletePost").disabled = false;
+  qs("#deletePostBackdrop").classList.remove("hidden");
+  document.body.classList.add("modal-open");
+  redrawIcons();
+}
+
+function closeDeletePostModal() {
+  state.pendingDeletePostId = null;
+  qs("#deletePostBackdrop").classList.add("hidden");
+  if (qsa(".modal-backdrop:not(.hidden), .chat-backdrop:not(.hidden)").length === 0) document.body.classList.remove("modal-open");
+}
+
+async function confirmDeletePost() {
+  const postId = state.pendingDeletePostId;
+  const post = state.posts.find((item) => item.id === postId && item.owner_id === state.session?.user?.id);
+  if (!post) {
+    closeDeletePostModal();
+    return showToast("Puoi rimuovere solo le richieste che hai pubblicato.", true);
+  }
+  const button = qs("#confirmDeletePost");
+  button.disabled = true;
+  try {
+    await backend.deletePost(post.id);
+    if (state.editingPostId === post.id) resetPostForm();
+    closeDeletePostModal();
+    showToast("Annuncio rimosso dalla bacheca");
+    await loadAppData();
+  } catch (error) {
+    button.disabled = false;
+    showToast(errorMessage(error), true);
+  }
+}
+
 async function createPost(event) {
   event.preventDefault();
   const formElement = event.currentTarget;
@@ -895,23 +941,7 @@ document.addEventListener("click", async (event) => {
   if (deletePost) {
     const post = state.posts.find((item) => item.id === deletePost.dataset.deletePost && item.owner_id === state.session?.user?.id);
     if (!post) return showToast("Puoi rimuovere solo le richieste che hai pubblicato.", true);
-    const confirmed = window.confirm("Vuoi rimuovere questo annuncio? Le candidature collegate non saranno più visibili.");
-    if (!confirmed) return;
-    try {
-      await backend.deletePost(post.id);
-      if (state.editingPostId === post.id) {
-        state.editingPostId = null;
-        qs("#postForm").reset();
-        qs("#postForm").classList.add("hidden");
-        qs("#postFormSubmitLabel").textContent = "Pubblica";
-        qs("#cancelPost").textContent = "Annulla";
-        qs("#postDescriptionCount").textContent = "0/2000";
-      }
-      showToast("Annuncio rimosso");
-      await loadAppData();
-    } catch (error) {
-      showToast(errorMessage(error), true);
-    }
+    openDeletePostModal(post);
     return;
   }
   const select = event.target.closest("[data-select-applicant]");
@@ -977,14 +1007,13 @@ qs("#closeReview").addEventListener("click", closeReview);
 qs("#reviewBackdrop").addEventListener("click", (event) => { if (event.target === event.currentTarget) closeReview(); });
 qs("#closePublicProfile").addEventListener("click", closePublicProfile);
 qs("#publicProfileBackdrop").addEventListener("click", (event) => { if (event.target === event.currentTarget) closePublicProfile(); });
+qs("#closeDeletePost").addEventListener("click", closeDeletePostModal);
+qs("#cancelDeletePost").addEventListener("click", closeDeletePostModal);
+qs("#deletePostBackdrop").addEventListener("click", (event) => { if (event.target === event.currentTarget) closeDeletePostModal(); });
+qs("#confirmDeletePost").addEventListener("click", confirmDeletePost);
 qs("#togglePostForm").addEventListener("click", () => qs("#postForm").classList.toggle("hidden"));
 qs("#cancelPost").addEventListener("click", () => {
-  state.editingPostId = null;
-  qs("#postForm").reset();
-  qs("#postForm").classList.add("hidden");
-  qs("#postFormSubmitLabel").textContent = "Pubblica";
-  qs("#cancelPost").textContent = "Annulla";
-  qs("#postDescriptionCount").textContent = "0/2000";
+  resetPostForm();
 });
 qs("#openBoard").addEventListener("click", () => { switchView("board"); qs("#postForm").classList.remove("hidden"); });
 qs("#openAvailability").addEventListener("click", () => switchView("calendar"));
@@ -1044,6 +1073,7 @@ document.addEventListener("keydown", (event) => {
   if (state.activeChatId) closeChat();
   if (state.activeReviewId) closeReview();
   if (!qs("#publicProfileBackdrop").classList.contains("hidden")) closePublicProfile();
+  if (!qs("#deletePostBackdrop").classList.contains("hidden")) closeDeletePostModal();
   if (!qs("#deleteAccountBackdrop").classList.contains("hidden")) { qs("#deleteAccountBackdrop").classList.add("hidden"); document.body.classList.remove("modal-open"); }
 });
 
