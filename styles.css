@@ -53,6 +53,9 @@ html.theme-night {
 .theme-night .review-card,
 .theme-night .board-card,
 .theme-night .request-card,
+.theme-night .support-assistant,
+.theme-night .support-ticket-panel,
+.theme-night .support-ticket-card,
 .theme-night .admin-card,
 .theme-night .stat-card {
   background: var(--surface);
@@ -77,6 +80,8 @@ html.theme-night {
 .theme-night .chat-composer,
 .theme-night .profile-section,
 .theme-night .metric,
+.theme-night .support-suggestions button,
+.theme-night .support-chat-form,
 .theme-night .tag,
 .theme-night .chip {
   background: var(--surface-soft);
@@ -333,6 +338,241 @@ html.theme-night {
 .community-search:focus-within { border-color: var(--green); box-shadow: 0 0 0 3px rgba(0, 104, 255, .1); }
 .community-search svg { width: 18px; color: var(--muted); }
 .community-search input { min-height: 46px; padding: 0; border: 0; outline: 0; background: transparent; }
+
+.support-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.support-state-pill {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  border: 1px solid #d5e6ff;
+  border-radius: 999px;
+  background: #f4f8ff;
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.support-state-pill svg {
+  width: 16px;
+  height: 16px;
+}
+
+.support-layout {
+  display: grid;
+  grid-template-columns: minmax(420px, 1.1fr) minmax(340px, .9fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.support-assistant,
+.support-ticket-panel,
+.support-ticket-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.support-assistant {
+  min-height: 620px;
+  display: grid;
+  grid-template-rows: auto auto minmax(260px, 1fr) auto;
+  overflow: hidden;
+}
+
+.support-assistant > header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.support-assistant h3,
+.support-ticket-panel h3,
+.support-ticket-card h3 {
+  margin: 2px 0 0;
+}
+
+.support-ai-avatar {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--green);
+  color: #fff;
+}
+
+.support-ai-avatar svg {
+  width: 22px;
+  height: 22px;
+}
+
+.support-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.support-suggestions button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.support-suggestions button:hover {
+  border-color: var(--green);
+  color: var(--green);
+}
+
+.support-chat-log {
+  max-height: 430px;
+  overflow: auto;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 18px;
+}
+
+.support-message {
+  width: min(86%, 620px);
+  display: grid;
+  gap: 5px;
+}
+
+.support-message.user {
+  justify-self: end;
+}
+
+.support-message span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.support-message p {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--surface-soft);
+  line-height: 1.55;
+}
+
+.support-message.user p {
+  background: var(--green);
+  color: #fff;
+}
+
+.support-chat-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  padding: 14px;
+  border-top: 1px solid var(--line);
+  background: var(--surface-soft);
+}
+
+.support-chat-form input {
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.support-ticket-panel {
+  padding: 18px;
+}
+
+.support-ticket-intro {
+  display: flex;
+  gap: 12px;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.support-ticket-intro > svg {
+  width: 28px;
+  height: 28px;
+  color: var(--green);
+  flex: 0 0 auto;
+}
+
+.support-ticket-intro p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.support-ticket-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.support-ticket-form .wide {
+  grid-column: 1 / -1;
+}
+
+.support-ticket-history {
+  margin-top: 30px;
+}
+
+.support-ticket-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.support-ticket-card {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+}
+
+.support-ticket-card > div,
+.support-ticket-card footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.support-ticket-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.support-ticket-card footer {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.support-priority {
+  min-height: 26px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
 
 .modal-backdrop {
   position: fixed;
@@ -3014,14 +3254,16 @@ textarea {
 
   .auth-form,
   .search-panel,
-  .post-form,
-  .board-list,
-  .content-grid,
-  .mission-strip,
-  .admin-grid,
-  .integrations-grid {
-    grid-template-columns: 1fr;
-  }
+	  .post-form,
+	  .board-list,
+	  .content-grid,
+	  .mission-strip,
+	  .support-layout,
+	  .support-ticket-list,
+	  .admin-grid,
+	  .integrations-grid {
+	    grid-template-columns: 1fr;
+	  }
 
   .mission-metric {
     border-left: 0;
@@ -3165,12 +3407,13 @@ textarea {
     padding: 18px 14px;
   }
 
-  .topbar,
-  .topbar-actions,
-  .board-head,
-  .status-row,
-  .profile-hero,
-  .my-profile,
+	  .topbar,
+	  .topbar-actions,
+	  .board-head,
+	  .support-head,
+	  .status-row,
+	  .profile-hero,
+	  .my-profile,
   .alert-panel {
     align-items: stretch;
     flex-direction: column;
@@ -3182,10 +3425,24 @@ textarea {
     border-radius: 18px;
   }
 
-  .search-more-grid,
-  .role-picker {
-    grid-template-columns: 1fr;
-  }
+	  .search-more-grid,
+	  .role-picker,
+	  .support-ticket-form,
+	  .support-chat-form {
+	    grid-template-columns: 1fr;
+	  }
+
+	  .support-assistant {
+	    min-height: auto;
+	  }
+
+	  .support-chat-log {
+	    max-height: 420px;
+	  }
+
+	  .support-message {
+	    width: 100%;
+	  }
 
   .pro-card,
   .request-card {
