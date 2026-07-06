@@ -163,6 +163,30 @@ function groupedOptions(groups, selected = "", emptyLabel = "Tutti") {
 
 function provincesFor(region) { return italianAreas[region] || []; }
 
+function selectedAccountType() {
+  return qs("input[name='account_type']:checked")?.value || "freelance";
+}
+
+function syncAuthAccountType() {
+  const signup = state.authMode === "signup";
+  const company = signup && selectedAccountType() === "company";
+  qs("#authName").closest(".field").classList.toggle("hidden", !signup || company);
+  qs("#accountTypeSelector").classList.toggle("hidden", !signup);
+  qs("#authCompanyNameField").classList.toggle("hidden", !company);
+  qs("#authContactNameField").classList.toggle("hidden", !company);
+  qs("#authCompanyTypeField").classList.toggle("hidden", !company);
+  qs("#authName").required = signup && !company;
+  qs("#authCompanyName").required = company;
+  qs("#authContactName").required = company;
+  qs("#authCompanyType").required = company;
+  if (signup) {
+    qs("#authTitle").textContent = company ? "Crea il profilo della tua realtà" : "Crea il tuo profilo";
+    qs("#authCopy").textContent = company
+      ? "Entra come agenzia, studio o casa di produzione e costruisci crew affidabili per i tuoi progetti."
+      : "Inizia a farti trovare per ruolo, zona e disponibilita.";
+  }
+}
+
 function setAuthMode(mode) {
   state.authMode = mode;
   const signup = mode === "signup";
@@ -173,19 +197,18 @@ function setAuthMode(mode) {
   qs("#authTitle").textContent = signup ? "Crea il tuo profilo" : signin ? "Bentornato" : recovery ? "Recupera la password" : "Scegli una nuova password";
   qs("#authCopy").textContent = signup ? "Inizia a farti trovare per ruolo, zona e disponibilita." : signin ? "Accedi al tuo spazio professionale." : recovery ? "Ti invieremo un link sicuro via email." : "Inserisci una nuova password di almeno 8 caratteri.";
   qs("#authSubmit").innerHTML = signup ? `${icon("user-plus")}Crea profilo` : signin ? `${icon("log-in")}Accedi` : recovery ? `${icon("mail")}Invia link` : `${icon("key-round")}Aggiorna password`;
-  qs("#authName").closest(".field").classList.toggle("hidden", !signup);
   qs("#authEmail").closest(".field").classList.toggle("hidden", newPassword);
   qs("#authPassword").closest(".field").classList.toggle("hidden", recovery);
   qs("#privacyConsentLine").classList.toggle("hidden", !signup);
   qs("#calendarConsentLine").classList.toggle("hidden", !signup);
   qs("#forgotPassword").classList.toggle("hidden", !signin);
   qs("#backToLogin").classList.toggle("hidden", !(recovery || newPassword));
-  qs("#authName").required = signup;
   qs("#authEmail").required = !newPassword;
   qs("#authPassword").required = !recovery;
   qs("#privacyConsent").required = signup;
   qs("#authPassword").autocomplete = signup || newPassword ? "new-password" : "current-password";
   qs("#authStatus").textContent = "";
+  syncAuthAccountType();
   redrawIcons();
 }
 
@@ -197,10 +220,16 @@ async function handleAuth(event) {
   qs("#authStatus").textContent = "";
   try {
     if (state.authMode === "signup") {
+      const accountType = form.get("account_type") || "freelance";
+      const company = accountType === "company";
       const result = await backend.signUp({
-        name: form.get("name").trim(),
+        name: company ? form.get("company_name").trim() : form.get("name").trim(),
         email: form.get("email").trim(),
         password: form.get("password"),
+        account_type: accountType,
+        company_name: company ? form.get("company_name").trim() : "",
+        company_type: company ? form.get("company_type") : "",
+        contact_name: company ? form.get("contact_name").trim() : "",
       });
       if (result.session) {
         await backend.recordConsent("privacy_terms", "2026-06-30", true);
@@ -348,12 +377,12 @@ function renderSearchResults() {
     : `${icon("calendar-x")}<div><strong>Il tuo profilo non compare ancora per disponibilita</strong><span>Completa il profilo e abilita la visibilita del calendario.</span></div><button class="tiny-button" type="button" data-go="profile">Completa profilo</button>`;
 
   qs("#resultsList").innerHTML = results.length ? results.map((profile) => {
-    const primary = profile.roles?.name || profile.primary_other_role_name || "Professionista";
+    const primary = profile.roles?.name || profile.primary_other_role_name || (profile.account_type === "company" ? "Agenzia / casa di produzione" : "Professionista");
     return `<article class="result-card ${profile.id === state.selectedProfileId ? "selected" : ""}" data-profile="${profile.id}">
       <div class="avatar">${avatarContent(profile)}</div>
       <div class="result-main"><div class="result-title"><strong>${escapeHtml(profile.full_name)}</strong>${profile.verified ? icon("badge-check") : ""}</div>
       <span>${escapeHtml(primary)} · ${escapeHtml(profile.city)}</span>
-      <small>${profile.matchRank === 0 ? "Ruolo principale" : "Competenza secondaria"} · ${profile.years_experience} anni di esperienza</small></div>
+      <small>${profile.matchRank === 0 ? "Ruolo principale" : "Competenza secondaria"} · ${profile.years_experience} ${profile.account_type === "company" ? "anni di attività" : "anni di esperienza"}</small></div>
       <span class="availability-pill">Disponibile</span>
     </article>`;
   }).join("") : `<div class="empty-state">${icon("search-x")}<strong>Nessun risultato esatto</strong><span>Prova un'altra data o pubblica una richiesta in bacheca.</span><button class="secondary-button" data-go="board">Apri bacheca</button></div>`;
@@ -369,19 +398,21 @@ async function renderSelectedProfile() {
     redrawIcons();
     return;
   }
-  const primary = profile.roles?.name || profile.primary_other_role_name || "Professionista";
+  const isCompany = profile.account_type === "company";
+  const primary = profile.roles?.name || profile.primary_other_role_name || (isCompany ? "Agenzia / casa di produzione" : "Professionista");
   const secondary = (profile.secondary_roles || []).map((item) => item.roles?.name || item.other_role_name).filter(Boolean);
   const expertise = (profile.production_types || []).filter((item) => specializations.includes(item));
   const socialLinks = [["instagram_url", "instagram", "Instagram"], ["facebook_url", "facebook", "Facebook"], ["tiktok_url", "tiktok", "TikTok"], ["linkedin_url", "linkedin", "LinkedIn"]].filter(([key]) => profile[key] && profile[key] !== "null");
   qs("#profilePanel").innerHTML = `<article class="professional-profile">
     <header class="profile-hero"><div class="avatar large">${avatarContent(profile)}</div>
-      <div class="profile-identity"><p class="eyebrow">${profile.verified ? "Profilo verificato" : "Profilo professionale"}</p><h2>${escapeHtml(profile.full_name)}</h2><span>${escapeHtml(primary)}</span><small>${icon("map-pin")}${escapeHtml(profile.city)}, ${escapeHtml(profile.region)}</small></div></header>
-    <div class="trust-row"><div class="profile-stat">${icon("briefcase")}<span><strong>${profile.years_experience}</strong><small>anni di esperienza</small></span></div><div class="profile-stat">${icon(profile.verified ? "badge-check" : "clock-3")}<span><strong>${profile.verified ? "Verificato" : "In verifica"}</strong><small>identità professionale</small></span></div></div>
+      <div class="profile-identity"><p class="eyebrow">${isCompany ? "Profilo aziendale" : (profile.verified ? "Profilo verificato" : "Profilo professionale")}</p><h2>${escapeHtml(profile.full_name)}</h2><span>${escapeHtml(primary)}</span><small>${icon("map-pin")}${escapeHtml(profile.city)}, ${escapeHtml(profile.region)}</small></div></header>
+    <div class="trust-row"><div class="profile-stat">${icon(isCompany ? "building-2" : "briefcase")}<span><strong>${profile.years_experience}</strong><small>${isCompany ? "anni di attività" : "anni di esperienza"}</small></span></div><div class="profile-stat">${icon(profile.verified ? "badge-check" : "clock-3")}<span><strong>${profile.verified ? "Verificato" : "In verifica"}</strong><small>${isCompany ? "realtà produttiva" : "identità professionale"}</small></span></div></div>
     <section class="profile-section"><h3>Profilo</h3><p class="profile-bio">${escapeHtml(profile.bio || "Bio professionale non ancora inserita.")}</p></section>
+    ${isCompany ? `<section class="profile-section"><h3>Dati realtà</h3><dl class="profile-facts"><div>${icon("building-2")}<span><dt>Tipo realtà</dt><dd>${escapeHtml(profile.company_type || "Non indicato")}</dd></span></div><div>${icon("user-round")}<span><dt>Referente</dt><dd>${escapeHtml(profile.contact_name || "Da definire")}</dd></span></div><div>${icon("globe")}<span><dt>Sito</dt><dd>${profile.company_website ? `<a href="${escapeHtml(profile.company_website)}" target="_blank" rel="noopener">Apri sito</a>` : "Non indicato"}</dd></span></div></dl></section>` : ""}
     ${secondary.length ? `<section class="profile-section"><h3>Competenze secondarie</h3><div class="tag-row">${secondary.map((role) => `<span>${escapeHtml(role)}</span>`).join("")}</div></section>` : ""}
     ${expertise.length ? `<section class="profile-section"><h3>Ambiti di specializzazione</h3><div class="tag-row">${expertise.map((item) => `<span>${escapeHtml(item)}</span>`).join("")}</div></section>` : ""}
     <section class="profile-section"><h3>Dettagli operativi</h3><dl class="profile-facts"><div>${icon("plane")}<span><dt>Trasferte</dt><dd>${escapeHtml(profile.travel_area || "Da concordare")}</dd></span></div><div>${icon("camera")}<span><dt>Attrezzatura</dt><dd>${escapeHtml(profile.equipment || "Da chiedere")}</dd></span></div><div>${icon("tags")}<span><dt>Brand utilizzati</dt><dd>${escapeHtml((profile.brands || []).join(", ") || "Non indicati")}</dd></span></div></dl></section>
-    ${(profile.portfolio_url || socialLinks.length) ? `<div class="profile-links">${profile.portfolio_url ? `<a class="secondary-button" href="${escapeHtml(profile.portfolio_url)}" target="_blank" rel="noopener">${icon("external-link")}Portfolio</a>` : ""}${socialLinks.map(([key, network, label]) => `<a class="social-icon-button" href="${escapeHtml(profile[key])}" target="_blank" rel="noopener" title="${label}" aria-label="${label}">${socialIcon(network)}</a>`).join("")}</div>` : ""}
+    ${(profile.portfolio_url || socialLinks.length) ? `<div class="profile-links">${profile.portfolio_url ? `<a class="secondary-button" href="${escapeHtml(profile.portfolio_url)}" target="_blank" rel="noopener">${icon("external-link")}${isCompany ? "Showreel" : "Portfolio"}</a>` : ""}${socialLinks.map(([key, network, label]) => `<a class="social-icon-button" href="${escapeHtml(profile[key])}" target="_blank" rel="noopener" title="${label}" aria-label="${label}">${socialIcon(network)}</a>`).join("")}</div>` : ""}
     <button class="primary-button full-button profile-contact-button" type="button" data-request="${profile.id}">${icon("message-circle")}Contatta in chat</button>
     <section class="profile-section profile-reputation" id="publicReviews"><span>Caricamento reputazione...</span></section>
   </article>`;
@@ -682,20 +713,33 @@ async function setDayAvailability(date) {
 
 function renderProfileForm() {
   const profile = state.profile || {};
+  const accountType = profile.account_type || "freelance";
+  const isCompany = accountType === "company";
+  const displayName = isCompany ? (profile.company_name || profile.full_name || "") : (profile.full_name || "");
   const selectedSecondary = new Set((profile.secondaryRoles || []).map((item) => item.role_id));
   const secondaryNames = (profile.secondaryRoles || []).map((item) => item.roles?.name || item.other_role_name).filter(Boolean);
   const selectedSpecializations = new Set(profile.production_types || []);
   const profileRegion = profile.region && italianAreas[profile.region] ? profile.region : "Sardegna";
-  qs("#profileForm").innerHTML = `<div class="profile-photo-editor"><div class="avatar profile-photo-preview">${profile.avatar_url ? `<img src="${escapeHtml(profile.avatar_url)}" alt="Foto profilo" />` : initials(profile.full_name)}</div><div><strong>Foto profilo</strong><span>JPG, PNG o WebP, massimo 5 MB.</span><label class="secondary-button" for="avatarFile">${icon("camera")}Carica foto</label><input class="visually-hidden" id="avatarFile" type="file" accept="image/jpeg,image/png,image/webp" data-avatar-file /><input type="hidden" name="avatar_url" value="${escapeHtml(profile.avatar_url)}" /></div></div>
-    <div class="form-section"><div class="field"><label>Nome e cognome *</label><input name="full_name" value="${escapeHtml(profile.full_name)}" required /></div>
-    <div class="field"><label>Ruolo principale *</label><select name="primary_role_id" required>${groupedRoleOptions(profile.primary_role_id)}</select></div>
+  qs("#profileForm").innerHTML = `<div class="profile-photo-editor"><div class="avatar profile-photo-preview">${profile.avatar_url ? `<img src="${escapeHtml(profile.avatar_url)}" alt="Foto profilo" />` : initials(displayName)}</div><div><strong>${isCompany ? "Logo o immagine aziendale" : "Foto profilo"}</strong><span>JPG, PNG o WebP, massimo 5 MB.</span><label class="secondary-button" for="avatarFile">${icon("camera")}Carica foto</label><input class="visually-hidden" id="avatarFile" type="file" accept="image/jpeg,image/png,image/webp" data-avatar-file /><input type="hidden" name="avatar_url" value="${escapeHtml(profile.avatar_url)}" /></div></div>
+    <fieldset class="account-type-selector profile-account-type">
+      <legend>Tipo account</legend>
+      <label><input type="radio" name="account_type" value="freelance" ${!isCompany ? "checked" : ""} /><span><strong>Freelance</strong><small>Profilo personale ricercabile per ruolo e disponibilità.</small></span></label>
+      <label><input type="radio" name="account_type" value="company" ${isCompany ? "checked" : ""} /><span><strong>Agenzia / casa di produzione</strong><small>Account B2B per cercare collaboratori e costruire crew.</small></span></label>
+    </fieldset>
+    <div class="form-section"><div class="field ${isCompany ? "hidden" : ""}" data-freelance-field><label>Nome e cognome *</label><input name="full_name" value="${escapeHtml(profile.full_name)}" ${!isCompany ? "required" : ""} /></div>
+    <div class="field ${!isCompany ? "hidden" : ""}" data-company-field><label>Nome agenzia / casa di produzione *</label><input name="company_name" value="${escapeHtml(profile.company_name || profile.full_name)}" ${isCompany ? "required" : ""} /></div>
+    <div class="field ${!isCompany ? "hidden" : ""}" data-company-field><label>Referente *</label><input name="contact_name" value="${escapeHtml(profile.contact_name)}" placeholder="Nome e cognome" ${isCompany ? "required" : ""} /></div>
+    <div class="field ${!isCompany ? "hidden" : ""}" data-company-field><label>Tipo realtà *</label><select name="company_type" ${isCompany ? "required" : ""}><option value="">Scegli</option>${optionList(["Agenzia creativa", "Casa di produzione", "Studio video", "Brand / azienda", "Organizzatore eventi", "Altro"], profile.company_type)}</select></div>
+    <div class="field ${!isCompany ? "hidden" : ""}" data-company-field><label>Partita IVA</label><input name="vat_number" value="${escapeHtml(profile.vat_number)}" placeholder="IT..." /></div>
+    <div class="field ${!isCompany ? "hidden" : ""}" data-company-field><label>Sito aziendale</label><input name="company_website" type="url" value="${escapeHtml(profile.company_website)}" placeholder="https://" /></div>
+    <div class="field"><label>${isCompany ? "Ruolo che cerchi più spesso" : "Ruolo principale *"}</label><select name="primary_role_id" ${isCompany ? "" : "required"}>${isCompany ? `<option value="">Opzionale</option>${groupedRoleOptions(profile.primary_role_id, false)}` : groupedRoleOptions(profile.primary_role_id)}</select></div>
     <div class="field"><label>Regione *</label><select name="region" data-profile-region required>${optionList(Object.keys(italianAreas), profileRegion)}</select></div>
     <div class="field"><label>Provincia *</label><select name="city" data-profile-province required><option value="">Scegli</option>${optionList(provincesFor(profileRegion), profile.city)}</select></div>
-    <div class="field"><label>Anni di esperienza</label><input name="years_experience" type="number" min="0" max="80" value="${profile.years_experience || 0}" /></div>
-    <div class="field full"><label>Bio</label><textarea name="bio" maxlength="1200">${escapeHtml(profile.bio)}</textarea></div>
-    <div class="field"><label>Disponibilita a trasferte</label><input name="travel_area" value="${escapeHtml(profile.travel_area)}" placeholder="Es. Tutta la Sardegna" /></div>
-    <div class="field"><label>Telefono privato</label><input name="phone" value="${escapeHtml(profile.phone)}" placeholder="Visibile solo dopo un match" /></div>
-    <div class="field"><label>Portfolio</label><input name="portfolio_url" type="url" value="${escapeHtml(profile.portfolio_url)}" placeholder="https://" /></div>
+    <div class="field"><label>${isCompany ? "Anni di attività" : "Anni di esperienza"}</label><input name="years_experience" type="number" min="0" max="80" value="${profile.years_experience || 0}" /></div>
+    <div class="field full"><label>${isCompany ? "Descrizione realtà" : "Bio"}</label><textarea name="bio" maxlength="1200">${escapeHtml(profile.bio)}</textarea></div>
+    <div class="field"><label>${isCompany ? "Area in cui lavori" : "Disponibilita a trasferte"}</label><input name="travel_area" value="${escapeHtml(profile.travel_area)}" placeholder="${isCompany ? "Es. Sardegna, Italia, Europa" : "Es. Tutta la Sardegna"}" /></div>
+    <div class="field"><label>${isCompany ? "Telefono referente" : "Telefono privato"}</label><input name="phone" value="${escapeHtml(profile.phone)}" placeholder="Visibile solo dopo un match" /></div>
+    <div class="field"><label>${isCompany ? "Portfolio / showreel aziendale" : "Portfolio"}</label><input name="portfolio_url" type="url" value="${escapeHtml(profile.portfolio_url)}" placeholder="https://" /></div>
     <div class="field"><label>Brand utilizzati</label><input name="brands" value="${escapeHtml((profile.brands || []).join(", "))}" placeholder="Sony, ARRI, Aputure" /></div>
     <div class="field full"><label>Attrezzatura principale</label><textarea name="equipment">${escapeHtml(profile.equipment)}</textarea></div>
     <div class="field social-field"><label>${socialIcon("instagram")}Instagram</label><input name="instagram_url" value="${escapeHtml(profile.instagram_url)}" placeholder="Link o nome utente" /></div>
@@ -713,16 +757,21 @@ function renderProfileForm() {
 async function saveProfile(event) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
+  const accountType = form.get("account_type") || "freelance";
+  const isCompany = accountType === "company";
   const selected = form.getAll("secondary_roles");
   const selectedSpecializations = form.getAll("specializations");
   if (selected.length > 5) return showToast("Puoi scegliere al massimo 5 competenze secondarie", true);
   if (selectedSpecializations.length > 5) return showToast("Puoi scegliere al massimo 5 ambiti di specializzazione", true);
-  const fullName = form.get("full_name").trim();
+  const fullName = isCompany ? form.get("company_name").trim() : form.get("full_name").trim();
   const primaryRoleId = form.get("primary_role_id");
   const city = form.get("city");
+  const companyReady = fullName && form.get("contact_name").trim() && form.get("company_type") && city;
   try {
     state.profile = await backend.saveProfile({
-      full_name: fullName, primary_role_id: primaryRoleId, bio: form.get("bio"), city,
+      account_type: accountType, full_name: fullName, company_name: isCompany ? fullName : "", company_type: isCompany ? form.get("company_type") : "",
+      vat_number: isCompany ? form.get("vat_number").trim() : "", contact_name: isCompany ? form.get("contact_name").trim() : "", company_website: isCompany ? form.get("company_website") : "",
+      primary_role_id: primaryRoleId || null, bio: form.get("bio"), city,
       region: form.get("region"), travel_area: form.get("travel_area"), years_experience: form.get("years_experience"),
       portfolio_url: form.get("portfolio_url"), equipment: form.get("equipment"),
       avatar_url: form.get("avatar_url"), instagram_url: normalizeProfileUrl(form.get("instagram_url"), "instagram"), facebook_url: normalizeProfileUrl(form.get("facebook_url"), "facebook"),
@@ -730,7 +779,7 @@ async function saveProfile(event) {
       brands: form.get("brands").split(",").map((item) => item.trim()).filter(Boolean),
       production_types: selectedSpecializations, phone: form.get("phone"),
       availability_visible: form.get("availability_visible") === "on",
-      profile_status: fullName && primaryRoleId && city ? "active" : "draft",
+      profile_status: isCompany ? (companyReady ? "active" : "draft") : (fullName && primaryRoleId && city ? "active" : "draft"),
     }, selected.map((roleId, position) => ({ role_id: roleId, position })));
     showToast("Profilo aggiornato");
     await loadAppData();
@@ -769,7 +818,7 @@ function renderCommunity(query = qs("#communitySearch")?.value || "") {
     return !needle || searchable.includes(needle);
   });
   qs("#betaStats").innerHTML = `<div><strong>${active}</strong><span>profili attivi</span></div><div><strong>${verified}</strong><span>verificati</span></div><div><strong>${state.collaborations.filter((item) => item.status === "completed").length}</strong><span>collaborazioni concluse</span></div>`;
-  qs("#userDirectory").innerHTML = visibleProfiles.map((profile) => `<button class="community-card" type="button" data-open-profile="${profile.id}"><div class="avatar">${avatarContent(profile)}</div><div><strong>${escapeHtml(profile.full_name)}</strong><span>${escapeHtml(profile.roles?.name || profile.primary_other_role_name || "Professionista")} · ${escapeHtml(profile.city)}</span></div>${profile.verified ? icon("badge-check") : ""}</button>`).join("") || `<div class="empty-state">${needle ? "Nessun professionista corrisponde alla ricerca." : "La community iniziera a comparire qui."}</div>`;
+  qs("#userDirectory").innerHTML = visibleProfiles.map((profile) => `<button class="community-card" type="button" data-open-profile="${profile.id}"><div class="avatar">${avatarContent(profile)}</div><div><strong>${escapeHtml(profile.full_name)}</strong><span>${escapeHtml(profile.roles?.name || profile.primary_other_role_name || (profile.account_type === "company" ? "Agenzia / casa di produzione" : "Professionista"))} · ${escapeHtml(profile.city)}</span></div>${profile.verified ? icon("badge-check") : ""}</button>`).join("") || `<div class="empty-state">${needle ? "Nessun professionista corrisponde alla ricerca." : "La community iniziera a comparire qui."}</div>`;
 }
 
 function switchView(view) {
@@ -788,6 +837,15 @@ function switchView(view) {
 document.addEventListener("click", async (event) => {
   const authMode = event.target.closest("[data-auth-mode]");
   if (authMode) return setAuthMode(authMode.dataset.authMode);
+  if (event.target.closest("input[name='account_type']")) {
+    if (event.target.closest("#authForm")) return syncAuthAccountType();
+    if (event.target.closest("#profileForm")) {
+      state.profile = { ...(state.profile || {}), account_type: event.target.value };
+      renderProfileForm();
+      redrawIcons();
+      return;
+    }
+  }
   if (event.target.closest("#forgotPassword")) return setAuthMode("recovery");
   if (event.target.closest("#backToLogin")) return setAuthMode("signin");
   if (event.target.closest("#resendConfirmation")) {
