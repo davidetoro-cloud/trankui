@@ -160,6 +160,8 @@ function errorMessage(error) {
     "Invalid login credentials": "Email o password non corretti.",
     "Email not confirmed": "Conferma prima l'email ricevuta da Trankui.",
     "User already registered": "Questa email e gia registrata. Prova ad accedere.",
+    "A user with this email address has already been registered": "Questa email e gia registrata. Prova ad accedere oppure recupera la password.",
+    "Signup requires a valid password": "Inserisci una password valida di almeno 8 caratteri.",
     "new row violates row-level security policy for table \"reviews\"": "La collaborazione non risulta ancora conclusa per entrambi. Aggiorna la pagina e riprova.",
     "duplicate key value violates unique constraint \"reviews_collaboration_id_author_id_key\"": "Hai già inviato il feedback per questa collaborazione.",
   };
@@ -167,6 +169,11 @@ function errorMessage(error) {
   if (error?.message) return translations[error.message] || error.message;
   if (typeof error === "string" && error.trim()) return translations[error] || error;
   return "Qualcosa non ha funzionato. Riprova tra poco.";
+}
+
+function signupConfirmationMessage(email = "") {
+  const target = email ? ` all'indirizzo ${email}` : "";
+  return `Ti abbiamo inviato il link di conferma${target}. Aprilo per attivare l'account. Controlla anche Spam e Promozioni.`;
 }
 
 function roleById(id) {
@@ -253,6 +260,7 @@ async function handleAuth(event) {
   const form = new FormData(event.currentTarget);
   const submit = qs("#authSubmit");
   submit.disabled = true;
+  const email = String(form.get("email") || "").trim();
   setAuthStatus("Operazione in corso", "Stiamo creando il profilo. Rimani su questa pagina per qualche secondo.");
   try {
     if (state.authMode === "signup") {
@@ -260,7 +268,7 @@ async function handleAuth(event) {
       const company = accountType === "company";
       const result = await backend.signUp({
         name: company ? form.get("company_name").trim() : form.get("name").trim(),
-        email: form.get("email").trim(),
+        email,
         password: form.get("password"),
         account_type: accountType,
         company_name: company ? form.get("company_name").trim() : "",
@@ -276,13 +284,13 @@ async function handleAuth(event) {
         }
         await enterApp(result.session);
       } else {
-        setAuthStatus("Controlla la tua email", "Ti abbiamo inviato il link di conferma. Aprilo per attivare l'account. Controlla anche Spam e Promozioni.", `<button class="auth-text-button" type="button" id="resendConfirmation">Reinvia email di verifica</button>`);
+        setAuthStatus("Controlla la tua email", signupConfirmationMessage(email), `<button class="auth-text-button" type="button" id="resendConfirmation">Reinvia email di verifica</button>`);
       }
     } else if (state.authMode === "signin") {
-      const result = await backend.signIn({ email: form.get("email").trim(), password: form.get("password") });
+      const result = await backend.signIn({ email, password: form.get("password") });
       await enterApp(result.session);
     } else if (state.authMode === "recovery") {
-      await backend.requestPasswordReset(form.get("email").trim());
+      await backend.requestPasswordReset(email);
       setAuthStatus("Email inviata", "Apri il link ricevuto per scegliere una nuova password.");
     } else {
       await backend.updatePassword(form.get("password"));
@@ -1055,8 +1063,12 @@ document.addEventListener("click", async (event) => {
   if (event.target.closest("#resendConfirmation")) {
     const email = qs("#authEmail").value.trim();
     if (!email) return showToast("Inserisci prima la tua email", true);
-    try { await backend.resendConfirmation(email); qs("#authStatus").innerHTML = `<strong>Email reinviata</strong><span>Controlla anche Spam e Promozioni.</span>`; }
-    catch (error) { showToast(errorMessage(error), true); }
+    try {
+      await backend.resendConfirmation(email);
+      setAuthStatus("Email reinviata", signupConfirmationMessage(email), `<button class="auth-text-button" type="button" id="resendConfirmation">Reinvia email di verifica</button>`);
+    } catch (error) {
+      setAuthStatus("Email non reinviata", errorMessage(error));
+    }
     return;
   }
   const nav = event.target.closest("[data-view]");
