@@ -996,44 +996,45 @@ button {
 
 .google-auth-button {
   grid-column: 1 / -1;
-  min-height: 56px;
-  border: 1px solid var(--line-strong);
-  border-radius: 999px;
+  min-height: 52px;
+  border: 1px solid #dadce0;
+  border-radius: 26px;
   background: #fff;
-  color: var(--ink);
+  color: #3c4043;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  font: inherit;
-  font-weight: 850;
+  gap: 10px;
+  font-family: "Montserrat", Arial, sans-serif;
+  font-size: 16px;
+  font-weight: 750;
   cursor: pointer;
-  transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+  transition: background .18s ease, border-color .18s ease, box-shadow .18s ease;
 }
 
 .google-auth-button:hover {
-  border-color: var(--ink);
-  box-shadow: 0 10px 24px rgba(10, 20, 40, 0.08);
-  transform: translateY(-1px);
+  border-color: #c6c9ce;
+  background: #f8fafd;
+  box-shadow: 0 1px 2px rgba(60, 64, 67, 0.14);
 }
 
 .google-auth-button:disabled {
   cursor: progress;
   opacity: .65;
-  transform: none;
   box-shadow: none;
 }
 
 .google-mark {
-  width: 24px;
-  height: 24px;
-  border-radius: 999px;
-  display: inline-grid;
-  place-items: center;
-  font-weight: 900;
-  color: #4285f4;
-  background: #fff;
-  border: 1px solid var(--line);
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.google-mark svg {
+  display: block;
+  width: 20px;
+  height: 20px;
 }
 
 .auth-text-button {
