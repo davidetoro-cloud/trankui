@@ -188,6 +188,13 @@
       .eq("id", postId).eq("owner_id", current.user.id).select().single());
   }
 
+  async function deletePost(postId) {
+    const current = await session();
+    if (!current) throw new Error("Sessione scaduta");
+    return unwrap(await client.from("posts").delete()
+      .eq("id", postId).eq("owner_id", current.user.id).select("id").single());
+  }
+
   async function applyToPost(postId, message) {
     const current = await session();
     if (!current) throw new Error("Sessione scaduta");
@@ -373,7 +380,7 @@
     availabilityForRange,
     setAvailability,
     listPosts,
-    createPost, updatePost,
+    createPost, updatePost, deletePost,
     applyToPost,
     selectApplicant,
     collaborations,
