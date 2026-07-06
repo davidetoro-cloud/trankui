@@ -168,11 +168,13 @@ function errorMessage(error) {
     "User already registered": "Questa email e gia registrata. Prova ad accedere.",
     "A user with this email address has already been registered": "Questa email e gia registrata. Prova ad accedere oppure recupera la password.",
     "Signup requires a valid password": "Inserisci una password valida di almeno 8 caratteri.",
+    "email rate limit exceeded": "Abbiamo raggiunto il limite temporaneo di invio email. Riprova piu tardi o accedi con Google.",
     "{}": "Non siamo riusciti a inviare la mail di conferma. Riprova tra poco o usa Google.",
     "new row violates row-level security policy for table \"reviews\"": "La collaborazione non risulta ancora conclusa per entrambi. Aggiorna la pagina e riprova.",
     "duplicate key value violates unique constraint \"reviews_collaboration_id_author_id_key\"": "Hai già inviato il feedback per questa collaborazione.",
   };
   if (rawMessage.includes("posts_description_check")) return "I dettagli devono contenere almeno 10 caratteri.";
+  if (/^Email address ".+" is invalid$/.test(rawMessage)) return "Inserisci un indirizzo email reale e attivo per ricevere la conferma.";
   if (rawMessage && !emptyProviderError) return translations[rawMessage] || rawMessage;
   if (rawMessage === "{}") return translations[rawMessage];
   if (rawString) return translations[rawString] || rawString;
