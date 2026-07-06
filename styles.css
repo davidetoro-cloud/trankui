@@ -46,6 +46,7 @@ html.theme-night {
 .theme-night .card,
 .theme-night .modal,
 .theme-night .chat-dialog,
+.theme-night .delete-post-dialog,
 .theme-night .cookie-banner,
 .theme-night .calendar-shell,
 .theme-night .calendar-card,
@@ -218,10 +219,20 @@ html.theme-night {
 .community-card strong, .community-card span { display: block; }
 .community-card span { margin-top: 4px; color: var(--muted); font-size: 13px; }
 .community-card:hover { border-color: var(--green); }
-.public-profile-dialog, .delete-account-dialog { position: relative; width: min(820px, calc(100vw - 32px)); max-height: min(900px, calc(100vh - 32px)); overflow: auto; background: var(--surface); border-radius: 8px; padding: 40px; box-shadow: 0 24px 80px rgba(0,0,0,.28); }
+.public-profile-dialog, .delete-account-dialog, .delete-post-dialog { position: relative; width: min(820px, calc(100vw - 32px)); max-height: min(900px, calc(100vh - 32px)); overflow: auto; background: var(--surface); border-radius: 8px; padding: 40px; box-shadow: 0 24px 80px rgba(0,0,0,.28); }
 .public-profile-close { position: absolute; top: 16px; right: 16px; z-index: 2; }
 .delete-account-dialog { width: min(520px, calc(100vw - 32px)); }
 .delete-account-dialog header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.delete-post-dialog { width: min(560px, calc(100vw - 32px)); padding: 34px; }
+.delete-post-close { position: absolute; top: 14px; right: 14px; }
+.delete-post-icon { width: 54px; height: 54px; display: grid; place-items: center; margin-bottom: 16px; border-radius: 999px; background: #fff0f2; color: #b4232f; }
+.delete-post-icon svg { width: 24px; height: 24px; }
+.delete-post-dialog h2 { max-width: 420px; margin: 6px 0 10px; font-size: clamp(24px, 4vw, 32px); line-height: 1.12; letter-spacing: 0; }
+.delete-post-dialog p:not(.eyebrow) { margin: 0; color: var(--muted); line-height: 1.55; }
+.delete-post-summary { display: grid; gap: 4px; margin: 20px 0; padding: 14px 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-soft); }
+.delete-post-summary strong { font-size: 14px; }
+.delete-post-summary span { color: var(--muted); font-size: 13px; line-height: 1.45; }
+.delete-post-actions { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
 .account-danger-zone { margin-top: 32px; padding: 24px 0; border-top: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 24px; }
 .account-danger-zone h2 { margin: 4px 0; font-size: 20px; }
 .account-danger-zone span { color: var(--muted); }
@@ -384,6 +395,8 @@ html.theme-night {
   .review-scores { grid-template-columns: 1fr 1fr; }
   .public-review-grid { grid-template-columns: 1fr; }
   .public-profile-dialog { width: calc(100vw - 20px); max-height: calc(100vh - 20px); padding: 54px 20px 24px; }
+  .delete-post-dialog { padding: 30px 20px 22px; }
+  .delete-post-actions { display: grid; grid-template-columns: 1fr; }
   .profile-hero { padding-right: 34px; }
   .trust-row, .profile-facts, .review-summary { grid-template-columns: 1fr; }
   .profile-bio { font-size: 14px; line-height: 1.6; }
