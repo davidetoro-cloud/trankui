@@ -130,6 +130,7 @@ function errorMessage(error) {
     "new row violates row-level security policy for table \"reviews\"": "La collaborazione non risulta ancora conclusa per entrambi. Aggiorna la pagina e riprova.",
     "duplicate key value violates unique constraint \"reviews_collaboration_id_author_id_key\"": "Hai già inviato il feedback per questa collaborazione.",
   };
+  if (error?.message?.includes("posts_description_check")) return "I dettagli devono contenere almeno 10 caratteri.";
   return translations[error?.message] || error?.message || "Qualcosa non ha funzionato. Riprova.";
 }
 
@@ -454,11 +455,20 @@ function renderBoard() {
 async function createPost(event) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
+  const descriptionInput = qs("#postDescription");
+  const description = String(form.get("description") || "").trim();
+  if (description.length < 10) {
+    descriptionInput.setCustomValidity("Inserisci almeno 10 caratteri nei dettagli essenziali.");
+    descriptionInput.reportValidity();
+    descriptionInput.focus();
+    return;
+  }
+  descriptionInput.setCustomValidity("");
   try {
     await backend.createPost({
       role_id: form.get("role"), work_date: form.get("date"), zone: form.get("zone"),
       production_type: form.get("production"), budget: form.get("budget") || null,
-      description: form.get("description"),
+      description,
     });
     event.currentTarget.reset();
     event.currentTarget.classList.add("hidden");
@@ -834,6 +844,10 @@ qs("#postRegion").addEventListener("change", (event) => {
   qs("#postZone").innerHTML = optionList(provincesFor(event.target.value));
 });
 qs("#postForm").addEventListener("submit", createPost);
+qs("#postDescription").addEventListener("input", (event) => {
+  event.target.setCustomValidity("");
+  qs("#postDescriptionCount").textContent = `${event.target.value.length}/2000`;
+});
 qs("#profileForm").addEventListener("submit", saveProfile);
 qs("#communitySearch").addEventListener("input", (event) => { renderCommunity(event.target.value); redrawIcons(); });
 qs("#reviewForm").addEventListener("submit", submitReview);
