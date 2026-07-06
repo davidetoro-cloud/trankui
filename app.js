@@ -645,6 +645,42 @@ function otherParticipant(collaboration) {
   return collaboration.requester_id === state.session?.user?.id ? collaboration.professional : collaboration.requester;
 }
 
+function otherParticipantId(collaboration) {
+  if (!collaboration) return "";
+  return collaboration.requester_id === state.session?.user?.id ? collaboration.professional_id : collaboration.requester_id;
+}
+
+function profileById(id) {
+  if (!id) return null;
+  if (state.profile?.id === id) return state.profile;
+  return state.profiles.find((profile) => profile.id === id) || null;
+}
+
+function resolvedOtherParticipant(collaboration, messages = []) {
+  const currentUserId = state.session?.user?.id;
+  const known = otherParticipant(collaboration);
+  const otherId = otherParticipantId(collaboration);
+  const fromProfiles = profileById(otherId);
+  const fromMessages = messages.find((message) => message.sender_id === otherId)?.sender
+    || messages.find((message) => message.sender_id !== currentUserId)?.sender;
+  const resolved = {
+    id: otherId || known?.id || fromProfiles?.id || fromMessages?.id,
+    ...(known || {}),
+    ...(fromProfiles || {}),
+    ...(fromMessages || {}),
+  };
+  return resolved.full_name || resolved.avatar_url || resolved.id ? resolved : null;
+}
+
+function updateChatHeader(collaboration, messages = []) {
+  const other = resolvedOtherParticipant(collaboration, messages);
+  const title = other?.full_name || "Collaboratore Trankui";
+  qs("#chatTitle").textContent = title;
+  qs("#chatAvatar").innerHTML = avatarContent(other || { full_name: title });
+  const context = [collaboration?.role?.name || "Collaborazione", collaboration?.zone, collaboration?.work_date ? formatDate(collaboration.work_date) : ""].filter(Boolean);
+  qs("#chatContext").textContent = context.join(" · ");
+}
+
 function statusLabel(status) {
   return ({ open: "Aperta", closed: "Chiusa", pending: "In attesa", accepted: "Accettata", rejected: "Rifiutata", cancelled: "Annullata", completed: "Conclusa" })[status] || status;
 }
@@ -711,11 +747,8 @@ async function openChat(collaborationId) {
   try {
     const collaboration = state.collaborations.find((item) => item.id === collaborationId);
     if (!collaboration) throw new Error("Conversazione non disponibile. Aggiorna la pagina e riprova.");
-    const other = otherParticipant(collaboration);
     state.activeChatId = collaborationId;
-    qs("#chatTitle").textContent = other?.full_name || "Conversazione";
-    qs("#chatAvatar").innerHTML = avatarContent(other);
-    qs("#chatContext").textContent = `${collaboration?.role?.name || "Collaborazione"} · ${formatDate(collaboration?.work_date)}`;
+    updateChatHeader(collaboration);
     qs("#chatBackdrop").classList.remove("hidden");
     document.body.classList.add("modal-open");
     await refreshChat();
@@ -731,6 +764,8 @@ async function openChat(collaborationId) {
 async function refreshChat() {
   if (!state.activeChatId) return;
   const messages = await backend.messages(state.activeChatId);
+  const collaboration = state.collaborations.find((item) => item.id === state.activeChatId);
+  if (collaboration) updateChatHeader(collaboration, messages);
   const currentUserId = state.session?.user?.id;
   qs("#chatMessages").innerHTML = messages.length ? messages.map((message) => {
     const mine = message.sender_id === currentUserId;
