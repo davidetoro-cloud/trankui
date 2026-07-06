@@ -9,7 +9,7 @@
         document.documentElement.classList.add("theme-night");
       }
     </script>
-    <link rel="stylesheet" href="./styles.css?v=20260706-support" />
+    <link rel="stylesheet" href="./styles.css?v=20260706-auth-google" />
   </head>
   <body>
     <section class="auth-screen" id="authScreen">
@@ -85,6 +85,11 @@
                 <input id="authPassword" name="password" type="password" minlength="8" autocomplete="new-password" required />
               </div>
               <button class="primary-button" type="submit" id="authSubmit"><i data-lucide="user-plus" aria-hidden="true"></i>Crea profilo</button>
+              <div class="auth-divider"><span>oppure</span></div>
+              <button class="google-auth-button" type="button" id="googleAuthButton" aria-label="Continua con Google">
+                <span class="google-mark" aria-hidden="true">G</span>
+                <span id="googleAuthLabel">Continua con Google</span>
+              </button>
               <button class="auth-text-button hidden" type="button" id="forgotPassword">Password dimenticata?</button>
               <button class="auth-text-button hidden" type="button" id="backToLogin">Torna all'accesso</button>
               <label class="consent-line" id="privacyConsentLine">
@@ -406,9 +411,9 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="./config.js"></script>
-    <script src="./backend.js?v=20260706-support"></script>
+    <script src="./backend.js?v=20260706-auth-google"></script>
     <script src="./lucide.min.js"></script>
     <script src="./cookie-consent.js"></script>
-    <script src="./app.js?v=20260706-support"></script>
+    <script src="./app.js?v=20260706-auth-google"></script>
   </body>
 </html>
