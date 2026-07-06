@@ -361,6 +361,28 @@
     }).select().single());
   }
 
+  async function supportTickets() {
+    const current = await session();
+    if (!current) return [];
+    return unwrap(await client.from("support_tickets")
+      .select("*")
+      .eq("reporter_id", current.user.id)
+      .order("created_at", { ascending: false }));
+  }
+
+  async function createSupportTicket(payload) {
+    const current = await session();
+    if (!current) throw new Error("Sessione scaduta");
+    return unwrap(await client.from("support_tickets").insert({
+      reporter_id: current.user.id,
+      category: payload.category,
+      priority: payload.priority,
+      subject: payload.subject,
+      description: payload.description,
+      status: "open",
+    }).select().single());
+  }
+
   window.trankuiBackend = {
     configured: true,
     client,
@@ -401,5 +423,7 @@
     deleteAccount,
     collaborationContact,
     recordConsent,
+    supportTickets,
+    createSupportTicket,
   };
 })();
