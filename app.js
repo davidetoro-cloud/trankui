@@ -479,7 +479,7 @@ function renderBoard() {
     return `<article class="board-card ${own ? "board-card-own" : ""}"><div class="board-card-head"><div><p class="eyebrow">${escapeHtml(post.production_type)}</p><h3>${escapeHtml(post.role?.name || post.other_role_name || "Ruolo")}</h3></div><div class="board-card-status">${own ? `<span class="owner-chip">Pubblicata da te</span>` : ""}<span class="status-chip">${escapeHtml(statusLabel(post.status))}</span></div></div>
       <p>${escapeHtml(post.description)}</p><div class="board-meta"><span>${icon("calendar")}${formatDate(post.work_date)}</span><span>${icon("map-pin")}${escapeHtml(post.zone)}</span>${post.budget ? `<span>${icon("euro")}${escapeHtml(post.budget)}</span>` : ""}</div>
       <small>Pubblicata da ${escapeHtml(post.owner?.full_name || "Professionista Trankui")}</small>
-      ${own ? `<div class="owner-post-actions"><div class="application-list"><strong>${post.post_applications?.length || 0} candidature</strong>${(post.post_applications || []).map((application) => `<div><span>${escapeHtml(application.applicant?.full_name || "Candidato")}</span>${application.status === "pending" ? `<button class="tiny-button" data-select-applicant="${application.id}">Seleziona</button>` : `<span>${escapeHtml(application.status)}</span>`}</div>`).join("")}</div><button class="secondary-button" type="button" data-edit-post="${post.id}">${icon("pencil")}Modifica</button></div>` : `<button class="secondary-button" ${applied || post.status !== "open" ? "disabled" : ""} data-apply="${post.id}">${applied ? "Candidatura inviata" : "Candidati"}</button>`}
+      ${own ? `<div class="owner-post-actions"><div class="application-list"><strong>${post.post_applications?.length || 0} candidature</strong>${(post.post_applications || []).map((application) => `<div><span>${escapeHtml(application.applicant?.full_name || "Candidato")}</span>${application.status === "pending" ? `<button class="tiny-button" data-select-applicant="${application.id}">Seleziona</button>` : `<span>${escapeHtml(application.status)}</span>`}</div>`).join("")}</div><div class="owner-post-buttons"><button class="secondary-button" type="button" data-edit-post="${post.id}">${icon("pencil")}Modifica</button><button class="icon-danger-button" type="button" data-delete-post="${post.id}" title="Rimuovi annuncio" aria-label="Rimuovi annuncio">${icon("trash-2")}</button></div></div>` : `<button class="secondary-button" ${applied || post.status !== "open" ? "disabled" : ""} data-apply="${post.id}">${applied ? "Candidatura inviata" : "Candidati"}</button>`}
     </article>`;
   };
   const ownPosts = state.posts.filter((post) => post.owner_id === state.session?.user?.id);
@@ -889,6 +889,29 @@ document.addEventListener("click", async (event) => {
     qs("#postForm").classList.remove("hidden");
     qs("#postForm").scrollIntoView({ behavior: "smooth", block: "start" });
     redrawIcons();
+    return;
+  }
+  const deletePost = event.target.closest("[data-delete-post]");
+  if (deletePost) {
+    const post = state.posts.find((item) => item.id === deletePost.dataset.deletePost && item.owner_id === state.session?.user?.id);
+    if (!post) return showToast("Puoi rimuovere solo le richieste che hai pubblicato.", true);
+    const confirmed = window.confirm("Vuoi rimuovere questo annuncio? Le candidature collegate non saranno più visibili.");
+    if (!confirmed) return;
+    try {
+      await backend.deletePost(post.id);
+      if (state.editingPostId === post.id) {
+        state.editingPostId = null;
+        qs("#postForm").reset();
+        qs("#postForm").classList.add("hidden");
+        qs("#postFormSubmitLabel").textContent = "Pubblica";
+        qs("#cancelPost").textContent = "Annulla";
+        qs("#postDescriptionCount").textContent = "0/2000";
+      }
+      showToast("Annuncio rimosso");
+      await loadAppData();
+    } catch (error) {
+      showToast(errorMessage(error), true);
+    }
     return;
   }
   const select = event.target.closest("[data-select-applicant]");
