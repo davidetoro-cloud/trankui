@@ -2935,8 +2935,22 @@ textarea {
 .application-list > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .owner-post-actions { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-top: 12px; }
 .owner-post-actions .application-list { flex: 1; }
+.owner-post-buttons { display: inline-flex; align-items: center; gap: 8px; }
+.icon-danger-button {
+  width: 44px;
+  height: 44px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid #ffd2d7;
+  border-radius: 999px;
+  color: #b4232f;
+  background: #fff7f8;
+  cursor: pointer;
+}
+.icon-danger-button svg { width: 19px; height: 19px; }
+.icon-danger-button:hover { border-color: #ff9daa; background: #fff0f2; }
 .empty-state.compact { min-height: 90px; }
-@media (max-width: 760px) { .board-group-grid { grid-template-columns: 1fr; } .board-card-head { flex-direction: column; } .board-card-status { justify-content: flex-start; } .owner-post-actions { align-items: stretch; flex-direction: column; } }
+@media (max-width: 760px) { .board-group-grid { grid-template-columns: 1fr; } .board-card-head { flex-direction: column; } .board-card-status { justify-content: flex-start; } .owner-post-actions { align-items: stretch; flex-direction: column; } .owner-post-buttons { justify-content: flex-end; } }
 .sidebar-note .notification-badge { color: #fff; font-size: 10px; line-height: 1; letter-spacing: 0; }
 .notification-panel { position: absolute; z-index: 80; top: calc(100% + 10px); right: 0; width: min(390px, calc(100vw - 28px)); max-height: min(560px, 75vh); overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: 0 18px 50px rgba(18, 28, 45, .18); }
 .notification-panel header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px; border-bottom: 1px solid var(--line); }
