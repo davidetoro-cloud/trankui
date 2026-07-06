@@ -156,18 +156,27 @@ function setAuthStatus(title = "", copy = "", actionHtml = "") {
 }
 
 function errorMessage(error) {
+  const rawString = typeof error === "string" ? error.trim() : "";
+  const rawMessage = typeof error?.message === "string" ? error.message.trim() : "";
+  const emptyProviderError = !rawMessage || rawMessage === "{}" || rawMessage === "[object Object]";
+  if (rawString === "{}" || rawString === "[object Object]") {
+    return "Non siamo riusciti a inviare la mail di conferma. Riprova tra poco o usa Google.";
+  }
   const translations = {
     "Invalid login credentials": "Email o password non corretti.",
     "Email not confirmed": "Conferma prima l'email ricevuta da Trankui.",
     "User already registered": "Questa email e gia registrata. Prova ad accedere.",
     "A user with this email address has already been registered": "Questa email e gia registrata. Prova ad accedere oppure recupera la password.",
     "Signup requires a valid password": "Inserisci una password valida di almeno 8 caratteri.",
+    "{}": "Non siamo riusciti a inviare la mail di conferma. Riprova tra poco o usa Google.",
     "new row violates row-level security policy for table \"reviews\"": "La collaborazione non risulta ancora conclusa per entrambi. Aggiorna la pagina e riprova.",
     "duplicate key value violates unique constraint \"reviews_collaboration_id_author_id_key\"": "Hai già inviato il feedback per questa collaborazione.",
   };
-  if (error?.message?.includes("posts_description_check")) return "I dettagli devono contenere almeno 10 caratteri.";
-  if (error?.message) return translations[error.message] || error.message;
-  if (typeof error === "string" && error.trim()) return translations[error] || error;
+  if (rawMessage.includes("posts_description_check")) return "I dettagli devono contenere almeno 10 caratteri.";
+  if (rawMessage && !emptyProviderError) return translations[rawMessage] || rawMessage;
+  if (rawMessage === "{}") return translations[rawMessage];
+  if (rawString) return translations[rawString] || rawString;
+  if (emptyProviderError && error) return "Non siamo riusciti a inviare la mail di conferma. Riprova tra poco o usa Google.";
   return "Qualcosa non ha funzionato. Riprova tra poco.";
 }
 
