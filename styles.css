@@ -2080,6 +2080,8 @@ textarea {
   line-height: 1.45;
 }
 
+.field-help-row { display: flex; justify-content: space-between; gap: 12px; }
+
 .field-label-row {
   display: flex;
   align-items: center;
