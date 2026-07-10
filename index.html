@@ -13,7 +13,7 @@
     <meta name="theme-color" content="#0068ff" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Trankui" />
-    <link rel="stylesheet" href="./styles.css?v=20260710-notifications-1" />
+    <link rel="stylesheet" href="./styles.css?v=20260711-mobile-profile-1" />
   </head>
   <body>
     <section class="auth-screen" id="authScreen">
@@ -129,7 +129,6 @@
           <button class="nav-item active" type="button" data-view="search"><i data-lucide="search" aria-hidden="true"></i>Trova crew</button>
           <button class="nav-item" type="button" data-view="board"><i data-lucide="clipboard-list" aria-hidden="true"></i>Bacheca</button>
           <button class="nav-item" type="button" data-view="requests"><i data-lucide="activity" aria-hidden="true"></i>Attività</button>
-          <button class="nav-item" type="button" data-view="calendar"><i data-lucide="calendar-days" aria-hidden="true"></i>Disponibilità</button>
           <button class="nav-item" type="button" data-view="admin"><i data-lucide="users-round" aria-hidden="true"></i>Community</button>
         </nav>
 
@@ -138,14 +137,14 @@
         <div class="sidebar-note">
           <div class="sidebar-user-row">
             <div class="notification-center sidebar-notification-center">
-              <button class="avatar-notification-button" type="button" id="notificationButton" title="Apri le notifiche" aria-label="Notifiche" aria-expanded="false">
+              <button class="avatar-notification-button" type="button" id="notificationButton" title="Apri profilo e notifiche" aria-label="Apri profilo e notifiche" aria-expanded="false">
                 <span class="user-avatar" id="sidebarAvatar">T</span><span class="notification-badge hidden" id="notificationBadge">0</span>
               </button>
               <section class="notification-panel hidden" id="notificationPanel" aria-label="Notifiche recenti">
-                <header><div><strong>Notifiche</strong><span id="notificationSummary">Nessun aggiornamento</span></div><button class="text-button" type="button" id="markNotificationsRead">Segna come lette</button></header>
+                <header><div><strong>Account</strong><span id="notificationSummary">Nessun aggiornamento</span></div><button class="text-button" type="button" id="markNotificationsRead">Segna come lette</button></header>
                 <div class="notification-account-actions">
                   <button class="secondary-button compact-button" type="button" data-go="profile"><i data-lucide="user-round" aria-hidden="true"></i>Il mio profilo</button>
-                  <button class="ghost-button compact-button" type="button" data-go="calendar"><i data-lucide="calendar-days" aria-hidden="true"></i>Disponibilità</button>
+                  <button class="ghost-button compact-button" type="button" data-go="profile-availability"><i data-lucide="calendar-days" aria-hidden="true"></i>Disponibilità</button>
                 </div>
                 <div class="notification-list" id="notificationList"></div>
               </section>
@@ -271,14 +270,6 @@
           <div class="chat-thread-list" id="chatThreadList"></div>
         </section>
 
-        <section class="view" id="view-calendar">
-          <div class="section-head">
-            <h2>Il tuo calendario</h2>
-            <span>Scegli uno stato e seleziona le date. Le collaborazioni confermate restano bloccate.</span>
-          </div>
-          <div class="availability-grid" id="availabilityGrid"></div>
-        </section>
-
         <section class="view" id="view-profile">
           <div class="section-head">
             <h2>Il mio profilo</h2>
@@ -287,6 +278,13 @@
           <section class="profile-onboarding hidden" id="profileOnboarding"></section>
           <section class="profile-overview" id="profileOverview"></section>
           <form class="profile-form profile-form-editor hidden" id="profileForm"></form>
+          <section class="profile-availability-settings" id="profileAvailabilitySection">
+            <div class="section-head">
+              <h2>Disponibilità</h2>
+              <span>Scegli uno stato e seleziona le date. Le collaborazioni confermate restano bloccate.</span>
+            </div>
+            <div class="availability-grid" id="availabilityGrid"></div>
+          </section>
           <div class="profile-calendar-settings">
             <div class="section-head">
               <h2>Calendari collegati</h2>
@@ -472,6 +470,6 @@
     <script src="./backend.js?v=20260710-notifications-1"></script>
     <script src="./lucide.min.js"></script>
     <script src="./cookie-consent.js?v=20260710-freeze-guard-1"></script>
-    <script src="./app.js?v=20260710-freeze-guard-1"></script>
+    <script src="./app.js?v=20260711-mobile-profile-1"></script>
   </body>
 </html>
