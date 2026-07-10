@@ -347,8 +347,19 @@ function showToast(message, isError = false) {
   window.setTimeout(() => toast.classList.remove("show"), 3200);
 }
 
+let pendingIconRedraw = false;
 function redrawIcons() {
-  window.lucide?.createIcons();
+  if (!window.lucide || pendingIconRedraw) return;
+  pendingIconRedraw = true;
+  window.requestAnimationFrame(() => {
+    pendingIconRedraw = false;
+    window.lucide?.createIcons();
+  });
+}
+
+function requestNotificationSettingsPanel() {
+  window.loadTrankuiNotificationsRuntime?.();
+  window.dispatchEvent(new CustomEvent("trankui:profile-rendered"));
 }
 
 function setAuthStatus(title = "", copy = "", actionHtml = "") {
@@ -1765,6 +1776,9 @@ function switchView(view) {
   };
   qs("#pageEyebrow").textContent = titles[view][0];
   qs("#pageTitle").textContent = titles[view][1];
+  if (view === "profile") {
+    window.setTimeout(requestNotificationSettingsPanel, 0);
+  }
   redrawIcons();
 }
 
