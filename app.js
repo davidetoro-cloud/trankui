@@ -43,6 +43,7 @@ const state = {
   reviews: [],
   receivedReviews: [],
   incomingMessages: [],
+  recentMessages: [],
   calendarConnections: [],
   supportTickets: [],
   supportMessages: [
@@ -50,14 +51,27 @@ const state = {
   ],
   editingPostId: null,
   pendingDeletePostId: null,
+  archivedCollaborationIds: new Set(),
+  activityFilter: "todo",
   selectedProfileId: null,
   search: { roleId: "", date: isoDate(new Date()), region: "Sardegna", zone: "Cagliari", production: "" },
+  searchDates: new Set([isoDate(new Date())]),
+  searchMonth: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+  searchSubmitted: false,
+  communityPage: 1,
+  onboardingStep: 0,
   availabilityMode: "available",
+  selectedAvailabilityDates: new Set(),
   month: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
   activeChatId: null,
-  chatSubscription: null,
+  activeChatIds: [],
+  activeChatPeerId: null,
+  chatSubscriptions: [],
   activeReviewId: null,
+  notificationPreferences: null,
   notificationTimer: null,
+  lastNotificationSignature: "",
+  profileEditing: false,
 };
 
 const qs = (selector, root = document) => root.querySelector(selector);
@@ -78,16 +92,165 @@ function formatDate(value) {
   return new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long", year: "numeric" }).format(new Date(`${value}T12:00:00`));
 }
 
+function selectedSearchDates() {
+  return [...state.searchDates].sort();
+}
+
+function searchDateLabel() {
+  const dates = selectedSearchDates();
+  if (!dates.length) return "Scegli date";
+  if (dates.length === 1) return formatDate(dates[0]);
+  return `${dates.length} date selezionate`;
+}
+
+function searchDateContext() {
+  const dates = selectedSearchDates();
+  if (!dates.length) return "Qualsiasi data";
+  if (dates.length === 1) return formatDate(dates[0]);
+  return `${dates.length} date · ${formatDate(dates[0])}`;
+}
+
+function syncSearchDateInput() {
+  const dates = selectedSearchDates();
+  const input = qs("#date");
+  if (input) input.value = dates.join(",");
+  const label = qs("#searchDateLabel");
+  if (label) label.textContent = searchDateLabel();
+  state.search.date = dates[0] || "";
+}
+
+function mergeAvailability(records = []) {
+  records.forEach((record) => {
+    const index = state.availability.findIndex((item) => item.profile_id === record.profile_id && item.work_date === record.work_date);
+    if (index >= 0) state.availability[index] = record;
+    else state.availability.push(record);
+  });
+}
+
+async function ensureAvailabilityForSearchDates() {
+  const dates = selectedSearchDates();
+  if (!dates.length) return;
+  const records = await backend.availabilityForRange(dates[0], dates[dates.length - 1]);
+  mergeAvailability(records);
+}
+
 function notificationStorageKey() {
   return `trankui:notifications:${state.session?.user?.id || "guest"}`;
+}
+
+function soundNotificationStorageKey() {
+  return `trankui:sound-notifications:${state.session?.user?.id || "guest"}`;
+}
+
+function notificationPreferenceStorageKey() {
+  return `trankui:notification-preferences:${state.session?.user?.id || "guest"}`;
 }
 
 function supportTicketStorageKey() {
   return `trankui:support-tickets:${state.session?.user?.id || "guest"}`;
 }
 
+function archivedCollaborationsStorageKey() {
+  return `trankui:archived-collaborations:${state.session?.user?.id || "guest"}`;
+}
+
+function localArchivedCollaborationIds() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(archivedCollaborationsStorageKey()) || "[]"));
+  } catch (_) {
+    return new Set();
+  }
+}
+
+function persistArchivedCollaborationIds() {
+  localStorage.setItem(archivedCollaborationsStorageKey(), JSON.stringify([...state.archivedCollaborationIds]));
+}
+
 function lastNotificationsReadAt() {
   return localStorage.getItem(notificationStorageKey()) || "1970-01-01T00:00:00.000Z";
+}
+
+function defaultNotificationPreferences() {
+  return {
+    channels: { push: false, sound: true, email: false },
+    topics: { messages: true, requests: true, matches: true, reviews: true, availability: true },
+  };
+}
+
+function notificationPreferences() {
+  const defaults = defaultNotificationPreferences();
+  try {
+    const stored = JSON.parse(localStorage.getItem(notificationPreferenceStorageKey()) || "{}");
+    const legacySound = localStorage.getItem(soundNotificationStorageKey());
+    return {
+      channels: { ...defaults.channels, ...(stored.channels || {}), ...(state.notificationPreferences?.channels || {}), ...(legacySound === "off" ? { sound: false } : {}) },
+      topics: { ...defaults.topics, ...(stored.topics || {}), ...(state.notificationPreferences?.topics || {}) },
+    };
+  } catch (_) {
+    return {
+      channels: { ...defaults.channels, ...(state.notificationPreferences?.channels || {}) },
+      topics: { ...defaults.topics, ...(state.notificationPreferences?.topics || {}) },
+    };
+  }
+}
+
+function saveNotificationPreferences(preferences) {
+  state.notificationPreferences = preferences;
+  localStorage.setItem(notificationPreferenceStorageKey(), JSON.stringify(preferences));
+  localStorage.setItem(soundNotificationStorageKey(), preferences.channels.sound ? "on" : "off");
+  if (backend?.saveNotificationPreferences && state.session) {
+    backend.saveNotificationPreferences(preferences).catch(() => {});
+  }
+}
+
+function updateNotificationPreference(group, key, value) {
+  const preferences = notificationPreferences();
+  preferences[group][key] = value;
+  saveNotificationPreferences(preferences);
+  return preferences;
+}
+
+function soundNotificationsEnabled() {
+  return notificationPreferences().channels.sound;
+}
+
+function urlBase64ToUint8Array(value) {
+  const padding = "=".repeat((4 - value.length % 4) % 4);
+  const base64 = `${value}${padding}`.replace(/-/g, "+").replace(/_/g, "/");
+  const raw = window.atob(base64);
+  return Uint8Array.from([...raw].map((char) => char.charCodeAt(0)));
+}
+
+function pushNotificationsSupported() {
+  return Boolean("Notification" in window && "serviceWorker" in navigator && "PushManager" in window && window.TRANKUI_CONFIG?.vapidPublicKey);
+}
+
+async function ensurePushSubscription() {
+  if (!pushNotificationsSupported()) throw new Error("Questo browser non supporta ancora le notifiche push mobile.");
+  const permission = await Notification.requestPermission();
+  if (permission !== "granted") throw new Error("Permesso notifiche non concesso.");
+  const registration = await navigator.serviceWorker.register("./sw.js?v=20260710-notifications-1");
+  const existing = await registration.pushManager.getSubscription();
+  const subscription = existing || await registration.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(window.TRANKUI_CONFIG.vapidPublicKey),
+  });
+  if (backend?.savePushSubscription) await backend.savePushSubscription(subscription);
+  return subscription;
+}
+
+async function disablePushSubscription() {
+  if (!("serviceWorker" in navigator)) return;
+  const registration = await navigator.serviceWorker.getRegistration("./");
+  const subscription = await registration?.pushManager?.getSubscription();
+  if (!subscription) return;
+  if (backend?.deletePushSubscription) await backend.deletePushSubscription(subscription.endpoint).catch(() => {});
+  await subscription.unsubscribe();
+}
+
+function notifyEvent(payload) {
+  if (!backend?.notifyEvent) return;
+  backend.notifyEvent(payload).catch(() => {});
 }
 
 function localSupportTickets() {
@@ -333,23 +496,29 @@ async function enterApp(session) {
   qs("#authScreen").classList.add("hidden");
   qs("#appShell").classList.remove("hidden");
   await loadAppData();
+  if (state.profile && state.profile.profile_status !== "active") switchView("profile");
+  rememberCurrentNotifications();
   startNotificationPolling();
 }
 
 function startNotificationPolling() {
   clearInterval(state.notificationTimer);
   state.notificationTimer = setInterval(async () => {
-    if (!state.session || document.hidden) return;
+    if (!state.session) return;
     try {
-      const [collaborations, reviews, receivedReviews, incomingMessages] = await Promise.all([
-        backend.collaborations(), backend.ownReviews(), backend.publishedReviews(state.session.user.id), backend.incomingMessages(),
+      const previousSignature = state.lastNotificationSignature;
+      const [collaborations, reviews, receivedReviews, incomingMessages, recentMessages] = await Promise.all([
+        backend.collaborations(), backend.ownReviews(), backend.publishedReviews(state.session.user.id), backend.incomingMessages(), backend.recentMessages ? backend.recentMessages() : Promise.resolve([]),
       ]);
       state.collaborations = collaborations;
       state.reviews = reviews;
       state.receivedReviews = receivedReviews;
       state.incomingMessages = incomingMessages;
+      state.recentMessages = recentMessages;
       renderActivity();
+      renderChatPage();
       renderNotifications();
+      announceNewNotifications(previousSignature);
       redrawIcons();
     } catch (_) { /* The next interval retries silently. */ }
   }, 30000);
@@ -361,7 +530,7 @@ async function loadAppData() {
     state.profile = await backend.ownProfile();
     const start = new Date(state.month.getFullYear(), state.month.getMonth(), 1);
     const end = new Date(state.month.getFullYear(), state.month.getMonth() + 1, 0);
-    const [profiles, availability, posts, collaborations, reviews, receivedReviews, incomingMessages, calendarConnections, supportTickets] = await Promise.all([
+    const [profiles, availability, posts, collaborations, reviews, receivedReviews, incomingMessages, recentMessages, calendarConnections, supportTickets, notificationPrefs] = await Promise.all([
       backend.publicProfiles(),
       backend.availabilityForRange(isoDate(start), isoDate(end)),
       backend.listPosts(),
@@ -369,8 +538,10 @@ async function loadAppData() {
       backend.ownReviews(),
       backend.publishedReviews(state.session.user.id),
       backend.incomingMessages(),
+      backend.recentMessages ? backend.recentMessages() : Promise.resolve([]),
       backend.calendarConnections(),
       backend.supportTickets ? backend.supportTickets().catch(() => localSupportTickets()) : Promise.resolve(localSupportTickets()),
+      backend.notificationPreferences ? backend.notificationPreferences().catch(() => notificationPreferences()) : Promise.resolve(notificationPreferences()),
     ]);
     state.profiles = profiles.map((profile) => profile.id === state.profile?.id
       ? { ...profile, ...state.profile, secondary_roles: profile.secondary_roles }
@@ -378,11 +549,14 @@ async function loadAppData() {
     state.availability = availability;
     state.posts = posts;
     state.collaborations = collaborations;
+    state.archivedCollaborationIds = localArchivedCollaborationIds();
     state.reviews = reviews;
     state.receivedReviews = receivedReviews;
     state.incomingMessages = incomingMessages;
+    state.recentMessages = recentMessages;
     state.calendarConnections = calendarConnections;
     state.supportTickets = supportTickets;
+    state.notificationPreferences = notificationPrefs;
     state.search.roleId ||= state.roles[0]?.id || "";
     renderApp();
   } catch (error) {
@@ -398,17 +572,20 @@ function renderApp() {
   renderBoard();
   renderActivity();
   renderCalendar();
+  renderProfileOnboarding();
   renderProfileForm();
   renderIntegrations();
   renderCommunity();
   renderSupport();
+  renderChatPage();
   renderNotifications();
   redrawIcons();
 }
 
 function renderSearchControls() {
   qs("#role").innerHTML = groupedRoleOptions(state.search.roleId, false);
-  qs("#date").value = state.search.date;
+  syncSearchDateInput();
+  renderSearchDatePicker();
   qs("#region").innerHTML = optionList(Object.keys(italianAreas), state.search.region);
   qs("#zone").innerHTML = `<option value="">Tutte le province</option>${optionList(provincesFor(state.search.region), state.search.zone)}`;
   qs("#production").innerHTML = groupedOptions(specializationGroups, state.search.production, "Tutti gli ambiti");
@@ -417,6 +594,27 @@ function renderSearchControls() {
   qs("#postRegion").innerHTML = optionList(Object.keys(italianAreas), state.search.region);
   qs("#postZone").innerHTML = optionList(provincesFor(state.search.region), state.search.zone);
   qs("#postProduction").innerHTML = groupedOptions(specializationGroups, state.search.production, "Scegli un ambito");
+}
+
+function monthDaysFor(monthDate) {
+  const year = monthDate.getFullYear();
+  const month = monthDate.getMonth();
+  const firstWeekday = (new Date(year, month, 1).getDay() + 6) % 7;
+  const total = new Date(year, month + 1, 0).getDate();
+  return [...Array(firstWeekday).fill(null), ...Array.from({ length: total }, (_, index) => new Date(year, month, index + 1))];
+}
+
+function renderSearchDatePicker() {
+  const host = qs("#searchDatePopover");
+  if (!host) return;
+  const dates = selectedSearchDates();
+  const selected = new Set(dates);
+  const monthName = new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" }).format(state.searchMonth);
+  host.innerHTML = `<div class="search-date-calendar"><div class="month-calendar-head"><button class="calendar-arrow" type="button" data-search-month="-1" title="Mese precedente">${icon("chevron-left")}</button><h3>${monthName}</h3><button class="calendar-arrow" type="button" data-search-month="1" title="Mese successivo">${icon("chevron-right")}</button></div>
+    <div class="calendar-weekdays">${["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"].map((day) => `<span>${day}</span>`).join("")}</div>
+    <div class="calendar-month-grid">${monthDaysFor(state.searchMonth).map((date) => date ? `<button class="calendar-day search-date-day ${selected.has(isoDate(date)) ? "pending" : ""} ${isoDate(date) === isoDate(new Date()) ? "today" : ""}" type="button" data-search-day="${isoDate(date)}"><span>${date.getDate()}</span></button>` : `<span class="calendar-empty"></span>`).join("")}</div>
+    <div class="calendar-selection-bar ${dates.length ? "" : "is-empty"}"><span>${dates.length ? `${dates.length} ${dates.length === 1 ? "giorno selezionato" : "giorni selezionati"}` : "Nessun giorno selezionato"}</span><div><button class="ghost-button" type="button" data-search-date-clear ${dates.length ? "" : "disabled"}>Annulla selezione</button><button class="primary-button" type="button" data-search-date-close>${icon("check")}Applica</button></div></div></div>`;
+  syncSearchDateInput();
 }
 
 function availabilityStatus(profileId, date) {
@@ -430,6 +628,7 @@ function profileRoleMatch(profile, roleId) {
 }
 
 function filteredProfiles() {
+  const dates = selectedSearchDates();
   return state.profiles
     .filter((profile) => profile.id !== state.session?.user?.id)
     .map((profile) => ({ ...profile, matchRank: profileRoleMatch(profile, state.search.roleId) }))
@@ -437,15 +636,16 @@ function filteredProfiles() {
     .filter((profile) => !state.search.region || profile.region === state.search.region || new RegExp(state.search.region, "i").test(profile.travel_area || ""))
     .filter((profile) => !state.search.zone || profile.city === state.search.zone)
     .filter((profile) => !state.search.production || (profile.production_types || []).includes(state.search.production))
-    .filter((profile) => !state.search.date || availabilityStatus(profile.id, state.search.date) === "available")
+    .filter((profile) => !dates.length || dates.every((date) => availabilityStatus(profile.id, date) === "available"))
     .sort((a, b) => a.matchRank - b.matchRank || Number(b.verified) - Number(a.verified) || b.years_experience - a.years_experience);
 }
 
 function renderSearchResults() {
-  const results = filteredProfiles();
+  const results = state.searchSubmitted ? filteredProfiles() : [];
   const role = roleById(state.search.roleId);
+  qs(".status-row").classList.toggle("hidden", !state.searchSubmitted);
   qs("#resultCount").textContent = `${results.length} ${results.length === 1 ? "professionista disponibile" : "professionisti disponibili"}`;
-  qs("#resultContext").textContent = `${role?.name || "Ruolo"} · ${formatDate(state.search.date)} · ${state.search.zone || state.search.region}${state.search.production ? ` · ${state.search.production}` : ""}`;
+  qs("#resultContext").textContent = `${role?.name || "Ruolo"} · ${searchDateContext()} · ${state.search.zone || state.search.region}${state.search.production ? ` · ${state.search.production}` : ""}`;
   qs("#availabilityAlert").innerHTML = state.profile?.availability_visible
     ? `${icon("calendar-check")}<div><strong>Il tuo calendario e visibile nelle ricerche</strong><span>Aggiorna le date quando cambia la tua agenda.</span></div>`
     : `${icon("calendar-x")}<div><strong>Il tuo profilo non compare ancora per disponibilita</strong><span>Completa il profilo e abilita la visibilita del calendario.</span></div><button class="tiny-button" type="button" data-go="profile">Completa profilo</button>`;
@@ -459,7 +659,9 @@ function renderSearchResults() {
       <small>${profile.matchRank === 0 ? "Ruolo principale" : "Competenza secondaria"} · ${profile.years_experience} ${profile.account_type === "company" ? "anni di attività" : "anni di esperienza"}</small></div>
       <span class="availability-pill">Disponibile</span>
     </article>`;
-  }).join("") : `<div class="empty-state">${icon("search-x")}<strong>Nessun risultato esatto</strong><span>Prova un'altra data o pubblica una richiesta in bacheca.</span><button class="secondary-button" data-go="board">Apri bacheca</button></div>`;
+  }).join("") : state.searchSubmitted
+    ? `<div class="empty-state search-empty-state">${icon("search-x")}<strong>Nessun risultato esatto</strong><span>Prova un'altra data o pubblica una richiesta in bacheca.</span><button class="secondary-button" type="button" data-open-board-request>Apri bacheca</button></div>`
+    : "";
 
   if (!results.some((item) => item.id === state.selectedProfileId)) state.selectedProfileId = results[0]?.id || null;
   renderSelectedProfile();
@@ -468,10 +670,12 @@ function renderSearchResults() {
 async function renderSelectedProfile() {
   const profile = state.profiles.find((item) => item.id === state.selectedProfileId);
   if (!profile) {
-    qs("#profilePanel").innerHTML = `<div class="empty-state">${icon("user-search")}<span>Seleziona un professionista per vedere il profilo.</span></div>`;
+    qs("#profilePanel").classList.add("hidden");
+    qs("#profilePanel").innerHTML = "";
     redrawIcons();
     return;
   }
+  qs("#profilePanel").classList.remove("hidden");
   const isCompany = profile.account_type === "company";
   const primary = profile.roles?.name || profile.primary_other_role_name || (isCompany ? "Agenzia / casa di produzione" : "Professionista");
   const secondary = (profile.secondary_roles || []).map((item) => item.roles?.name || item.other_role_name).filter(Boolean);
@@ -536,6 +740,7 @@ async function sendCollaborationRequest(profileId) {
         production_type: state.search.production,
         note: "Contatto avviato dalla ricerca professionisti.",
       });
+      notifyEvent({ type: "request", collaboration_id: collaboration.id });
       await loadAppData();
       collaboration = state.collaborations.find((item) => item.id === collaboration.id);
     }
@@ -672,13 +877,49 @@ function resolvedOtherParticipant(collaboration, messages = []) {
   return resolved.full_name || resolved.avatar_url || resolved.id ? resolved : null;
 }
 
-function updateChatHeader(collaboration, messages = []) {
+function updateChatHeader(collaboration, messages = [], related = []) {
   const other = resolvedOtherParticipant(collaboration, messages);
   const title = other?.full_name || "Collaboratore Trankui";
   qs("#chatTitle").textContent = title;
   qs("#chatAvatar").innerHTML = avatarContent(other || { full_name: title });
-  const context = [collaboration?.role?.name || "Collaborazione", collaboration?.zone, collaboration?.work_date ? formatDate(collaboration.work_date) : ""].filter(Boolean);
-  qs("#chatContext").textContent = context.join(" · ");
+  const context = related.length > 1
+    ? [`${related.length} collaborazioni`, collaboration?.zone, collaboration?.work_date ? `Ultima: ${formatDate(collaboration.work_date)}` : ""]
+    : [collaboration?.role?.name || "Collaborazione", collaboration?.zone, collaboration?.work_date ? formatDate(collaboration.work_date) : ""];
+  qs("#chatContext").textContent = context.filter(Boolean).join(" · ");
+  renderChatInfoPanel(collaboration, messages, related);
+}
+
+function renderChatInfoPanel(collaboration, messages = [], related = []) {
+  const panel = qs("#chatInfoPanel");
+  if (!panel) return;
+  const profile = resolvedOtherParticipant(collaboration, messages) || otherParticipant(collaboration) || {};
+  const displayName = profileDisplayName(profile) || profile.full_name || "Professionista Trankui";
+  const profileRole = profilePrimaryRole(profile);
+  const role = profileRole && profileRole !== "Professionista" ? profileRole : (collaboration?.role?.name || profileRole || "Collaborazione");
+  const location = [profile.city || collaboration?.zone, profile.region].filter(Boolean).join(", ") || "Zona da confermare";
+  const years = Number(profile.years_experience);
+  const experience = Number.isFinite(years) ? `${years} ${years === 1 ? "anno" : "anni"}` : "Da completare";
+  const rows = [
+    ["clapperboard", "Ruolo", role],
+    ["map-pin", "Base", location],
+    ["briefcase-business", "Esperienza", experience],
+    ["shield-check", "Verifica", profile.verified ? "Identità verificata" : "Non ancora verificato"],
+    ["messages-square", "Storico", `${Math.max(related.length, 1)} ${Math.max(related.length, 1) === 1 ? "collaborazione" : "collaborazioni"}`],
+  ];
+  panel.innerHTML = `<div class="chat-info-profile"><span class="avatar">${avatarContent({ ...profile, full_name: displayName })}</span><div><strong>${escapeHtml(displayName)}</strong><small>${escapeHtml(role)} · ${escapeHtml(location)}</small></div></div>
+    <div class="chat-info-rows">${rows.map(([iconName, label, value]) => `<div>${icon(iconName)}<span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join("")}</div>
+    ${profile.id ? `<button class="secondary-button compact-button" type="button" data-open-profile="${escapeHtml(profile.id)}">${icon("user-round")}Vedi profilo</button>` : ""}`;
+}
+
+function setChatInfoOpen(open) {
+  qs("#chatInfoPanel")?.classList.toggle("hidden", !open);
+  qs("#chatInfoButton")?.setAttribute("aria-expanded", String(open));
+}
+
+function toggleChatInfoPanel() {
+  const panel = qs("#chatInfoPanel");
+  if (!panel) return;
+  setChatInfoOpen(panel.classList.contains("hidden"));
 }
 
 function statusLabel(status) {
@@ -686,51 +927,159 @@ function statusLabel(status) {
 }
 
 function renderActivity() {
-  const pending = state.collaborations.filter((item) => item.status === "pending").length;
-  const accepted = state.collaborations.filter((item) => item.status === "accepted").length;
-  const completed = state.collaborations.filter((item) => item.status === "completed").length;
-  qs("#activitySummary").innerHTML = `<div><strong>${pending}</strong><span>in attesa</span></div><div><strong>${accepted}</strong><span>attive</span></div><div><strong>${completed}</strong><span>concluse</span></div>`;
   const reviewedIds = new Set(state.reviews.map((review) => review.collaboration_id));
-  const toReview = state.collaborations.filter((item) => item.status === "completed" && !reviewedIds.has(item.id));
-  qs("#feedbackQueue").innerHTML = toReview.map((item) => `<div class="feedback-callout">${icon("star")}<div><strong>Com'e andata con ${escapeHtml(otherParticipant(item)?.full_name || "il collaboratore")}?</strong><span>Il feedback reciproco costruisce la reputazione operativa.</span></div><button class="primary-button" data-review="${item.id}">Lascia feedback</button></div>`).join("");
-  qs("#requestList").innerHTML = state.collaborations.length ? state.collaborations.map((item) => {
+  const isArchived = (item) => state.archivedCollaborationIds.has(item.id);
+  const userConfirmedComplete = (item) =>
+    (item.requester_id === state.session?.user?.id && item.requester_completed) ||
+    (item.professional_id === state.session?.user?.id && item.professional_completed);
+  const needsReview = (item) => item.status === "completed" && !reviewedIds.has(item.id);
+  const visible = state.collaborations.filter((item) => !isArchived(item));
+  const archived = state.collaborations.filter(isArchived);
+  const todo = visible.filter((item) => needsReview(item) || item.status === "pending" || (item.status === "accepted" && !userConfirmedComplete(item)));
+  const active = visible.filter((item) => item.status === "accepted");
+  const completed = visible.filter((item) => item.status === "completed");
+  const filters = [
+    ["todo", "Da gestire", todo.length],
+    ["active", "In corso", active.length],
+    ["completed", "Concluse", completed.length],
+    ["archived", "Archiviate", archived.length],
+  ];
+  if (!filters.some(([key]) => key === state.activityFilter)) state.activityFilter = "todo";
+  const selectedItems = ({ todo, active, completed, archived })[state.activityFilter] || todo;
+
+  qs("#activitySummary").innerHTML = `<div class="activity-tabs" role="tablist" aria-label="Filtra attività">${filters.map(([key, label, count]) => `<button class="${state.activityFilter === key ? "active" : ""}" type="button" data-activity-filter="${key}" role="tab" aria-selected="${state.activityFilter === key}"><strong>${count}</strong><span>${label}</span></button>`).join("")}</div>`;
+
+  const toReview = visible.filter(needsReview);
+  qs("#feedbackQueue").innerHTML = toReview.length ? `<section class="activity-review-strip">${icon("star")}<div><strong>${toReview.length === 1 ? "Una collaborazione attende il tuo feedback" : `${toReview.length} collaborazioni attendono il tuo feedback`}</strong><span>Le recensioni restano blind finché anche l'altra persona non lascia il feedback.</span></div><button class="secondary-button" type="button" data-activity-filter="todo">Vai ai feedback</button></section>` : "";
+
+  const emptyCopy = {
+    todo: ["Tutto in ordine", "Non ci sono azioni aperte in questo momento."],
+    active: ["Nessuna collaborazione in corso", "Le richieste accettate compariranno qui."],
+    completed: ["Nessuna collaborazione conclusa", "Quando un lavoro viene chiuso, lo troverai qui prima di archiviarlo."],
+    archived: ["Archivio vuoto", "Le collaborazioni concluse che archivi resteranno consultabili qui."],
+  };
+  qs("#requestList").innerHTML = selectedItems.length ? selectedItems.map((item) => {
     const other = otherParticipant(item);
     const incoming = item.professional_id === state.session?.user?.id;
-    return `<article class="request-card"><div class="request-card-main"><button class="avatar avatar-button" type="button" data-open-profile="${other?.id || ""}">${avatarContent(other)}</button><div><h3><button class="profile-name-button" type="button" data-open-profile="${other?.id || ""}">${escapeHtml(other?.full_name || "Professionista")}</button></h3><span>${escapeHtml(item.role?.name || "Collaborazione")} · ${formatDate(item.work_date)} · ${escapeHtml(item.zone)}</span><p>${escapeHtml(item.note)}</p></div></div>
-      <div class="request-actions"><span class="status-chip">${statusLabel(item.status)}</span>
+    const archivedItem = isArchived(item);
+    const actionHint = item.status === "pending" && incoming ? "Richiede risposta" : needsReview(item) ? "Feedback da lasciare" : item.status === "accepted" ? "Collaborazione attiva" : archivedItem ? "Archiviata" : statusLabel(item.status);
+    return `<article class="request-card activity-card ${archivedItem ? "archived" : ""}"><div class="request-card-main"><button class="avatar avatar-button" type="button" data-open-profile="${other?.id || ""}">${avatarContent(other)}</button><div><div class="activity-card-title"><h3><button class="profile-name-button" type="button" data-open-profile="${other?.id || ""}">${escapeHtml(other?.full_name || "Professionista")}</button></h3><span class="status-chip">${escapeHtml(actionHint)}</span></div><span class="activity-meta">${escapeHtml(item.role?.name || "Collaborazione")} · ${formatDate(item.work_date)} · ${escapeHtml(item.zone)}</span><p>${escapeHtml(item.note || "Nessuna nota aggiunta.")}</p></div></div>
+      <div class="request-actions activity-actions">
       ${item.status === "pending" && incoming ? `<button class="primary-button" data-transition="accepted" data-collaboration="${item.id}">Accetta</button><button class="secondary-button" data-transition="rejected" data-collaboration="${item.id}">Rifiuta</button>` : ""}
-      ${item.status === "accepted" ? `<button class="secondary-button" data-chat="${item.id}">${icon("messages-square")}Chat</button>${((item.requester_id === state.session?.user?.id && item.requester_completed) || (item.professional_id === state.session?.user?.id && item.professional_completed)) ? `<span class="completion-wait">${icon("clock")}In attesa della conferma dell'altra persona</span>` : `<button class="primary-button" data-complete="${item.id}">Lavoro concluso</button>`}` : ""}
-      ${item.status === "completed" && !reviewedIds.has(item.id) ? `<button class="primary-button" data-review="${item.id}">${icon("star")}Lascia recensione</button>` : ""}
+      ${item.status === "pending" && !incoming ? `<span class="completion-wait">${icon("clock")}In attesa di risposta</span>` : ""}
+      ${item.status === "accepted" ? `<button class="secondary-button" data-chat="${item.id}">${icon("messages-square")}Chat</button>${userConfirmedComplete(item) ? `<span class="completion-wait">${icon("clock")}In attesa della conferma dell'altra persona</span>` : `<button class="primary-button" data-complete="${item.id}">Lavoro concluso</button>`}` : ""}
+      ${needsReview(item) ? `<button class="primary-button" data-review="${item.id}">${icon("star")}Lascia recensione</button>` : ""}
+      ${item.status === "completed" && !archivedItem ? `<button class="ghost-button icon-text-button" type="button" data-archive-collaboration="${item.id}">${icon("archive")}Archivia</button>` : ""}
+      ${archivedItem ? `<button class="ghost-button icon-text-button" type="button" data-unarchive-collaboration="${item.id}">${icon("rotate-ccw")}Ripristina</button>` : ""}
       </div></article>`;
-  }).join("") : `<div class="empty-state">${icon("inbox")}<strong>Nessuna attivita</strong><span>Le richieste di collaborazione compariranno qui.</span></div>`;
+  }).join("") : `<div class="empty-state activity-empty">${icon(state.activityFilter === "archived" ? "archive" : "check-circle-2")}<strong>${emptyCopy[state.activityFilter][0]}</strong><span>${emptyCopy[state.activityFilter][1]}</span></div>`;
 }
 
 function notificationItems() {
   const lastRead = lastNotificationsReadAt();
-  const messages = state.incomingMessages.filter((item) => item.created_at > lastRead).map((item) => ({
+  const topics = notificationPreferences().topics;
+  const messages = !topics.messages ? [] : state.incomingMessages.filter((item) => item.created_at > lastRead).map((item) => ({
     type: "message", date: item.created_at, collaborationId: item.collaboration_id,
     title: `Nuovo messaggio da ${item.sender?.full_name || "un professionista"}`,
     detail: item.body,
   }));
-  const requests = state.collaborations.filter((item) =>
+  const requests = !topics.requests ? [] : state.collaborations.filter((item) =>
     item.status === "pending" && item.professional_id === state.session?.user?.id && item.created_at > lastRead
   ).map((item) => ({
     type: "request", date: item.created_at,
     title: `Nuova richiesta da ${item.requester?.full_name || "un professionista"}`,
     detail: `${item.role?.name || "Collaborazione"} · ${formatDate(item.work_date)}`,
   }));
-  const feedback = state.receivedReviews.filter((item) => item.created_at > lastRead).map((item) => ({
+  const feedback = !topics.reviews ? [] : state.receivedReviews.filter((item) => item.created_at > lastRead).map((item) => ({
     type: "feedback", date: item.created_at,
     title: `Nuovo feedback da ${item.author_name || "un collaboratore"}`,
     detail: item.public_comment || "La recensione reciproca è ora visibile.",
   }));
   const reviewedIds = new Set(state.reviews.map((review) => review.collaboration_id));
-  const reminders = state.collaborations.filter((item) => item.status === "completed" && !reviewedIds.has(item.id) && (item.completed_at || item.updated_at) > lastRead).map((item) => ({
+  const reminders = !topics.reviews ? [] : state.collaborations.filter((item) => item.status === "completed" && !reviewedIds.has(item.id) && (item.completed_at || item.updated_at) > lastRead).map((item) => ({
     type: "review", date: item.completed_at || item.updated_at, collaborationId: item.id,
     title: `Lascia un feedback a ${otherParticipant(item)?.full_name || "un collaboratore"}`,
     detail: "La collaborazione risulta conclusa.",
   }));
-  return [...messages, ...requests, ...feedback, ...reminders].sort((a, b) => new Date(b.date) - new Date(a.date));
+  const matches = !topics.matches ? [] : state.collaborations.filter((item) =>
+    ["accepted", "rejected", "cancelled"].includes(item.status) && (item.updated_at || item.created_at) > lastRead
+  ).map((item) => ({
+    type: "match", date: item.updated_at || item.created_at, collaborationId: item.id,
+    title: `Match ${statusLabel(item.status).toLowerCase()} con ${otherParticipant(item)?.full_name || "un professionista"}`,
+    detail: `${item.role?.name || "Collaborazione"} · ${formatDate(item.work_date)}`,
+  }));
+  return [...messages, ...requests, ...matches, ...feedback, ...reminders].sort((a, b) => new Date(b.date) - new Date(a.date));
+}
+
+function notificationSignature(items = notificationItems()) {
+  return items.map((item) => `${item.type}:${item.collaborationId || ""}:${item.date}:${item.title}`).join("|");
+}
+
+function rememberCurrentNotifications() {
+  state.lastNotificationSignature = notificationSignature();
+}
+
+function playNotificationTone() {
+  if (!soundNotificationsEnabled()) return;
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const audio = new AudioContext();
+    const gain = audio.createGain();
+    const first = audio.createOscillator();
+    const second = audio.createOscillator();
+    gain.gain.setValueAtTime(0.0001, audio.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.08, audio.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + 0.32);
+    first.frequency.value = 740;
+    second.frequency.value = 980;
+    first.connect(gain);
+    second.connect(gain);
+    gain.connect(audio.destination);
+    first.start(audio.currentTime);
+    first.stop(audio.currentTime + 0.16);
+    second.start(audio.currentTime + 0.12);
+    second.stop(audio.currentTime + 0.34);
+  } catch (_) { /* Some browsers block audio until the user interacts. */ }
+}
+
+function showSystemNotification(item) {
+  if (!notificationPreferences().channels.push || !("Notification" in window) || Notification.permission !== "granted" || !document.hidden) return;
+  new Notification(item.title, { body: item.detail, icon: "./clipboard.png?v=20260706-official-logo", badge: "./clipboard.png?v=20260706-official-logo" });
+}
+
+function announceNewNotifications(previousSignature) {
+  const items = notificationItems();
+  const nextSignature = notificationSignature(items);
+  if (previousSignature && nextSignature && previousSignature !== nextSignature && items[0]) {
+    playNotificationTone();
+    showSystemNotification(items[0]);
+  }
+  state.lastNotificationSignature = nextSignature;
+}
+
+function notificationPermissionCopy() {
+  if (!("Notification" in window)) return "Questo browser non supporta notifiche native.";
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) return "Questo browser supporta solo gli avvisi quando Trankui è aperto.";
+  if (!window.TRANKUI_CONFIG?.vapidPublicKey) return "Notifiche mobile in configurazione.";
+  if (Notification.permission === "granted") return "Push mobile e browser attivi per questo dispositivo.";
+  if (Notification.permission === "denied") return "Notifiche bloccate dal browser. Puoi riattivarle dalle impostazioni del sito.";
+  return "Attiva le notifiche per ricevere avvisi quando arrivano richieste o risposte.";
+}
+
+function renderNotificationSettings() {
+  const preferences = notificationPreferences();
+  const push = qs("#pushNotifications");
+  if (push) push.checked = Boolean(preferences.channels.push && "Notification" in window && Notification.permission === "granted");
+  const sound = qs("#soundNotifications");
+  if (sound) sound.checked = Boolean(preferences.channels.sound);
+  const email = qs("#emailNotifications");
+  if (email) email.checked = Boolean(preferences.channels.email);
+  qsa("[data-notification-topic]").forEach((input) => {
+    input.checked = preferences.topics[input.dataset.notificationTopic] !== false;
+  });
+  const permission = qs("#notificationPermissionState");
+  if (permission) permission.textContent = notificationPermissionCopy();
 }
 
 function renderNotifications() {
@@ -739,21 +1088,84 @@ function renderNotifications() {
   badge.textContent = items.length > 99 ? "99+" : String(items.length);
   badge.classList.toggle("hidden", !items.length);
   qs("#notificationSummary").textContent = items.length ? `${items.length} ${items.length === 1 ? "aggiornamento" : "aggiornamenti"}` : "Tutto aggiornato";
-  qs("#notificationList").innerHTML = items.length ? items.map((item) => `<button class="notification-item" type="button" data-notification-type="${item.type}" ${item.collaborationId ? `data-notification-collaboration="${item.collaborationId}"` : ""}>${icon(item.type === "message" ? "message-circle" : item.type === "feedback" || item.type === "review" ? "star" : "user-plus")}<span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.detail)}</small></span></button>`).join("") : `<div class="notification-empty">${icon("bell-check")}<span>Nessuna nuova notifica.</span></div>`;
+  qs("#notificationList").innerHTML = items.length ? items.map((item) => `<button class="notification-item" type="button" data-notification-type="${item.type}" ${item.collaborationId ? `data-notification-collaboration="${item.collaborationId}"` : ""}>${icon(item.type === "message" ? "message-circle" : item.type === "feedback" || item.type === "review" ? "star" : item.type === "match" ? "handshake" : "user-plus")}<span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.detail)}</small></span></button>`).join("") : `<div class="notification-empty">${icon("bell-check")}<span>Nessuna nuova notifica.</span></div>`;
+  renderNotificationSettings();
   redrawIcons();
+}
+
+function collaborationSortDate(item) {
+  return new Date(item.updated_at || item.created_at || item.work_date || 0).getTime();
+}
+
+function chatPeerKey(collaboration) {
+  const peerId = otherParticipantId(collaboration);
+  if (peerId) return `profile:${peerId}`;
+  const fallbackName = (otherParticipant(collaboration)?.full_name || "").trim().toLowerCase();
+  return fallbackName ? `name:${fallbackName}` : `collaboration:${collaboration?.id || ""}`;
+}
+
+function chatGroupForPeer(peerKey) {
+  const items = state.collaborations
+    .filter((item) => ["pending", "accepted", "completed"].includes(item.status) && chatPeerKey(item) === peerKey)
+    .sort((a, b) => {
+      const statusWeight = (item) => item.status === "accepted" ? 3 : item.status === "pending" ? 2 : 1;
+      return statusWeight(b) - statusWeight(a) || collaborationSortDate(b) - collaborationSortDate(a);
+    });
+  const ids = new Set(items.map((item) => item.id));
+  const lastMessage = state.recentMessages.find((message) => ids.has(message.collaboration_id));
+  const unread = state.incomingMessages.filter((message) => ids.has(message.collaboration_id) && message.created_at > lastNotificationsReadAt()).length;
+  return { peerKey, items, primary: items[0], ids, lastMessage, unread };
+}
+
+function chatGroups() {
+  const peerKeys = new Set();
+  state.collaborations
+    .filter((item) => ["pending", "accepted", "completed"].includes(item.status))
+    .forEach((item) => peerKeys.add(chatPeerKey(item)));
+  return [...peerKeys].map(chatGroupForPeer).filter((group) => group.primary)
+    .sort((a, b) => {
+      const aDate = a.lastMessage?.created_at || a.primary?.updated_at || a.primary?.created_at || a.primary?.work_date;
+      const bDate = b.lastMessage?.created_at || b.primary?.updated_at || b.primary?.created_at || b.primary?.work_date;
+      return new Date(bDate || 0) - new Date(aDate || 0);
+    });
+}
+
+function renderChatPage() {
+  const host = qs("#chatThreadList");
+  if (!host) return;
+  const currentUserId = state.session?.user?.id;
+  const groups = chatGroups();
+  host.innerHTML = groups.length ? groups.map(({ primary, items, lastMessage, unread }) => {
+    const other = resolvedOtherParticipant(primary, lastMessage ? [lastMessage] : []) || otherParticipant(primary);
+    const status = items.length > 1 ? `${items.length} collaborazioni` : primary.status === "pending" && primary.professional_id === state.session?.user?.id ? "Richiesta ricevuta" : statusLabel(primary.status);
+    const preview = lastMessage ? `${lastMessage.sender_id === currentUserId ? "Tu: " : ""}${lastMessage.body}` : primary.note || "Apri la conversazione per scrivere un messaggio.";
+    const when = lastMessage?.created_at ? new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(lastMessage.created_at)) : "";
+    return `<button class="chat-thread-card" type="button" data-chat="${primary.id}">
+      <span class="avatar chat-thread-avatar">${avatarContent(other)}</span>
+      <span class="chat-thread-body"><strong>${escapeHtml(other?.full_name || "Professionista")}</strong><small>${escapeHtml(primary.role?.name || "Collaborazione")} · ${formatDate(primary.work_date)} · ${escapeHtml(primary.zone)}</small><em>${escapeHtml(preview)}</em></span>
+      <span class="chat-thread-side">${when ? `<time>${escapeHtml(when)}</time>` : ""}<span class="status-chip">${escapeHtml(status)}</span>${unread ? `<b>${unread > 9 ? "9+" : unread}</b>` : ""}</span>
+    </button>`;
+  }).join("") : `<div class="empty-state chat-empty-state">${icon("message-circle")}<strong>Nessuna conversazione attiva</strong><span>Quando contatti un professionista o ricevi una richiesta, la chat comparirà qui.</span></div>`;
+  renderNotificationSettings();
 }
 
 async function openChat(collaborationId) {
   try {
     const collaboration = state.collaborations.find((item) => item.id === collaborationId);
     if (!collaboration) throw new Error("Conversazione non disponibile. Aggiorna la pagina e riprova.");
-    state.activeChatId = collaborationId;
-    updateChatHeader(collaboration);
+    const peerKey = chatPeerKey(collaboration);
+    const group = chatGroupForPeer(peerKey);
+    const related = group.items.length ? group.items : [collaboration];
+    state.activeChatId = group.primary?.id || collaborationId;
+    state.activeChatIds = related.map((item) => item.id);
+    state.activeChatPeerId = peerKey;
+    setChatInfoOpen(false);
+    updateChatHeader(group.primary || collaboration, [], related);
     qs("#chatBackdrop").classList.remove("hidden");
     document.body.classList.add("modal-open");
     await refreshChat();
-    state.chatSubscription?.unsubscribe?.();
-    state.chatSubscription = backend.subscribeToMessages(collaborationId, refreshChat);
+    state.chatSubscriptions.forEach((subscription) => subscription?.unsubscribe?.());
+    state.chatSubscriptions = state.activeChatIds.map((id) => backend.subscribeToMessages(id, refreshChat));
     qs("#chatInput").focus();
     redrawIcons();
   } catch (error) {
@@ -763,14 +1175,26 @@ async function openChat(collaborationId) {
 
 async function refreshChat() {
   if (!state.activeChatId) return;
-  const messages = await backend.messages(state.activeChatId);
-  const collaboration = state.collaborations.find((item) => item.id === state.activeChatId);
-  if (collaboration) updateChatHeader(collaboration, messages);
+  const activeIds = state.activeChatIds.length ? state.activeChatIds : [state.activeChatId];
+  const related = activeIds.map((id) => state.collaborations.find((item) => item.id === id)).filter(Boolean);
+  const messageGroups = await Promise.all(activeIds.map(async (id) => {
+    const collaboration = state.collaborations.find((item) => item.id === id);
+    const messages = await backend.messages(id);
+    return messages.map((message) => ({ ...message, collaboration }));
+  }));
+  const messages = messageGroups.flat().sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  const collaboration = related[0] || state.collaborations.find((item) => item.id === state.activeChatId);
+  if (collaboration) updateChatHeader(collaboration, messages, related);
   const currentUserId = state.session?.user?.id;
+  let previousCollaborationId = "";
   qs("#chatMessages").innerHTML = messages.length ? messages.map((message) => {
     const mine = message.sender_id === currentUserId;
     const time = new Intl.DateTimeFormat("it-IT", { hour: "2-digit", minute: "2-digit" }).format(new Date(message.created_at));
-    return `<div class="chat-row ${mine ? "mine" : "theirs"}"><div class="chat-bubble"><p>${escapeHtml(message.body)}</p><time>${time}</time></div></div>`;
+    const marker = related.length > 1 && message.collaboration_id !== previousCollaborationId
+      ? `<div class="chat-context-marker">${escapeHtml(message.collaboration?.role?.name || "Collaborazione")} · ${message.collaboration?.work_date ? formatDate(message.collaboration.work_date) : ""}</div>`
+      : "";
+    previousCollaborationId = message.collaboration_id;
+    return `${marker}<div class="chat-row ${mine ? "mine" : "theirs"}"><div class="chat-bubble"><p>${escapeHtml(message.body)}</p><time>${time}</time></div></div>`;
   }).join("") : `<div class="chat-empty">${icon("messages-square")}<strong>Inizia la conversazione</strong><span>Condividi call time, dettagli operativi e prossimi passi.</span></div>`;
   const panel = qs("#chatMessages");
   panel.scrollTop = panel.scrollHeight;
@@ -778,9 +1202,12 @@ async function refreshChat() {
 }
 
 function closeChat() {
-  state.chatSubscription?.unsubscribe?.();
-  state.chatSubscription = null;
+  state.chatSubscriptions.forEach((subscription) => subscription?.unsubscribe?.());
+  state.chatSubscriptions = [];
   state.activeChatId = null;
+  state.activeChatIds = [];
+  state.activeChatPeerId = null;
+  setChatInfoOpen(false);
   qs("#chatBackdrop").classList.add("hidden");
   document.body.classList.remove("modal-open");
 }
@@ -816,12 +1243,13 @@ async function submitReview(event) {
   button.disabled = true;
   button.querySelector("span").textContent = "Invio in corso...";
   try {
-    await backend.submitReview({
+    const review = await backend.submitReview({
       collaboration_id: collaboration.id, recipient_id: recipient.id, recommend: form.get("recommend") === "on",
       punctuality: Number(form.get("punctuality")), communication: Number(form.get("communication")),
       reliability: Number(form.get("reliability")), organization: Number(form.get("organization")),
       problem_solving: Number(form.get("problem_solving")), public_comment: form.get("public_comment").trim(), private_note: form.get("private_note").trim(),
     });
+    if (review?.id) notifyEvent({ type: "review", review_id: review.id });
     closeReview();
     formElement.reset();
     showToast("Feedback salvato. Sarà visibile dopo la recensione reciproca.");
@@ -835,34 +1263,220 @@ async function submitReview(event) {
 }
 
 function monthDays() {
-  const year = state.month.getFullYear();
-  const month = state.month.getMonth();
-  const firstWeekday = (new Date(year, month, 1).getDay() + 6) % 7;
-  const total = new Date(year, month + 1, 0).getDate();
-  return [...Array(firstWeekday).fill(null), ...Array.from({ length: total }, (_, index) => new Date(year, month, index + 1))];
+  return monthDaysFor(state.month);
 }
 
 function renderCalendar() {
   const ownAvailability = new Map(state.availability.filter((item) => item.profile_id === state.session?.user?.id).map((item) => [item.work_date, item.status]));
   const labels = { available: "Disponibile", maybe: "Forse", busy: "Occupato" };
   const monthName = new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" }).format(state.month);
-  qs("#availabilityGrid").innerHTML = `<div class="availability-toolbar"><div><span class="toolbar-label">Segna le giornate come</span><div class="availability-modes">${Object.entries(labels).map(([value, label]) => `<button class="availability-mode ${state.availabilityMode === value ? "active" : ""}" data-mode="${value}"><span class="mode-dot ${value}"></span>${label}</button>`).join("")}</div></div><p>Seleziona uno stato, poi clicca sui giorni che vuoi aggiornare.</p></div>
+  const selectedCount = state.selectedAvailabilityDates.size;
+  qs("#availabilityGrid").innerHTML = `<div class="availability-toolbar"><div><span class="toolbar-label">Segna le giornate come</span><div class="availability-modes">${Object.entries(labels).map(([value, label]) => `<button class="availability-mode ${state.availabilityMode === value ? "active" : ""}" data-mode="${value}"><span class="mode-dot ${value}"></span>${label}</button>`).join("")}</div></div><p>Seleziona uno stato, scegli uno o più giorni e poi applica la modifica.</p></div>
     <div class="month-calendar"><div class="month-calendar-head"><button class="calendar-arrow" data-month="-1" title="Mese precedente">${icon("chevron-left")}</button><h3>${monthName}</h3><button class="calendar-arrow" data-month="1" title="Mese successivo">${icon("chevron-right")}</button></div>
     <div class="calendar-weekdays">${["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"].map((day) => `<span>${day}</span>`).join("")}</div>
-    <div class="calendar-month-grid">${monthDays().map((date) => date ? `<button class="calendar-day ${ownAvailability.get(isoDate(date)) || ""} ${isoDate(date) === isoDate(new Date()) ? "today" : ""}" data-day="${isoDate(date)}" title="${labels[ownAvailability.get(isoDate(date))] || "Nessuno stato"}"><span>${date.getDate()}</span></button>` : `<span class="calendar-empty"></span>`).join("")}</div>
-    <div class="calendar-legend"><span><i class="legend-dot available"></i>Disponibile</span><span><i class="legend-dot maybe"></i>Forse</span><span><i class="legend-dot busy"></i>Occupato</span></div></div>`;
+    <div class="calendar-month-grid">${monthDays().map((date) => date ? `<button class="calendar-day ${ownAvailability.get(isoDate(date)) || ""} ${state.selectedAvailabilityDates.has(isoDate(date)) ? "pending" : ""} ${isoDate(date) === isoDate(new Date()) ? "today" : ""}" data-day="${isoDate(date)}" title="${state.selectedAvailabilityDates.has(isoDate(date)) ? "Selezionato" : labels[ownAvailability.get(isoDate(date))] || "Nessuno stato"}"><span>${date.getDate()}</span></button>` : `<span class="calendar-empty"></span>`).join("")}</div>
+    <div class="calendar-selection-bar ${selectedCount ? "" : "is-empty"}"><span>${selectedCount ? `${selectedCount} ${selectedCount === 1 ? "giorno selezionato" : "giorni selezionati"}` : "Nessun giorno selezionato"}</span><div><button class="ghost-button" type="button" data-availability-clear ${selectedCount ? "" : "disabled"}>Annulla selezione</button><button class="primary-button" type="button" data-availability-apply ${selectedCount ? "" : "disabled"}>${icon("check")}Applica</button></div></div>
+    <div class="calendar-legend"><span><i class="legend-dot available"></i>Disponibile</span><span><i class="legend-dot maybe"></i>Forse</span><span><i class="legend-dot busy"></i>Occupato</span><span><i class="legend-ring"></i>Selezionato</span></div></div>`;
 }
 
 async function setDayAvailability(date) {
+  if (state.selectedAvailabilityDates.has(date)) state.selectedAvailabilityDates.delete(date);
+  else state.selectedAvailabilityDates.add(date);
+  renderCalendar();
+  redrawIcons();
+}
+
+async function applySelectedAvailability() {
+  const dates = [...state.selectedAvailabilityDates];
+  if (!dates.length) return;
   try {
-    const result = await backend.setAvailability(date, state.availabilityMode);
-    const index = state.availability.findIndex((item) => item.profile_id === result.profile_id && item.work_date === result.work_date);
-    if (index >= 0) state.availability[index] = result; else state.availability.push(result);
+    const results = await Promise.all(dates.map((date) => backend.setAvailability(date, state.availabilityMode)));
+    results.forEach((result) => {
+      const index = state.availability.findIndex((item) => item.profile_id === result.profile_id && item.work_date === result.work_date);
+      if (index >= 0) state.availability[index] = result; else state.availability.push(result);
+    });
+    state.selectedAvailabilityDates.clear();
     renderCalendar();
     redrawIcons();
+    showToast(`${dates.length} ${dates.length === 1 ? "giorno aggiornato" : "giorni aggiornati"}`);
   } catch (error) {
     showToast(errorMessage(error), true);
   }
+}
+
+function clearSelectedAvailability() {
+  state.selectedAvailabilityDates.clear();
+  renderCalendar();
+  redrawIcons();
+}
+
+function profileDisplayName(profile = {}) {
+  return profile.account_type === "company" ? (profile.company_name || profile.full_name || "") : (profile.full_name || "");
+}
+
+function profilePrimaryRole(profile = {}) {
+  return roleById(profile.primary_role_id)?.name || profile.primary_other_role_name || (profile.account_type === "company" ? "Agenzia / casa di produzione" : "Professionista");
+}
+
+function ownSecondaryRoleNames(profile = {}) {
+  return (profile.secondaryRoles || profile.secondary_roles || []).map((item) => item.roles?.name || item.other_role_name).filter(Boolean);
+}
+
+function profileSocialLinks(profile = {}) {
+  return [["instagram_url", "instagram", "Instagram"], ["facebook_url", "facebook", "Facebook"], ["tiktok_url", "tiktok", "TikTok"], ["linkedin_url", "linkedin", "LinkedIn"]]
+    .filter(([key]) => profile[key] && profile[key] !== "null");
+}
+
+function profileValue(value, fallback = "Da completare") {
+  const clean = value == null || value === "null" || value === "undefined" || value === "" ? "" : String(value);
+  if (!clean) return `<span class="profile-empty-value">${fallback}</span>`;
+  return clean.startsWith("<a ") ? clean : escapeHtml(clean);
+}
+
+function profileTagRow(items, emptyText) {
+  return items.length
+    ? `<div class="profile-chip-row">${items.map((item) => `<span>${escapeHtml(item)}</span>`).join("")}</div>`
+    : `<span class="profile-empty-value">${emptyText}</span>`;
+}
+
+function profileOnboardingSteps(profile = state.profile || {}) {
+  const isCompany = (profile.account_type || "freelance") === "company";
+  const displayName = profileDisplayName(profile);
+  const socialLinks = profileSocialLinks(profile);
+  const hasLocation = profile.region && profile.city;
+  const hasRole = isCompany ? true : Boolean(profile.primary_role_id || profile.primary_other_role_name);
+  const hasAvailability = Boolean(profile.availability_visible);
+  return [
+    {
+      icon: "user-round",
+      title: isCompany ? "Identità aziendale" : "Identità professionale",
+      body: isCompany ? "Logo, nome realtà e referente aiutano gli altri utenti a capire chi sta costruendo la crew." : "Foto e nome chiari rendono il profilo riconoscibile e più affidabile nei primi secondi.",
+      complete: Boolean(displayName && profile.avatar_url),
+      action: "Completa identità",
+    },
+    {
+      icon: "clapperboard",
+      title: isCompany ? "Area operativa" : "Ruolo e zona",
+      body: isCompany ? "Indica la provincia di base e il tipo di realtà: serve a contestualizzare le richieste che pubblichi." : "Ruolo principale, regione e provincia sono i dati minimi per comparire nelle ricerche pertinenti.",
+      complete: Boolean(hasRole && hasLocation),
+      action: "Aggiorna ruolo e zona",
+    },
+    {
+      icon: "sparkles",
+      title: "Esperienza e posizionamento",
+      body: "Bio, anni di esperienza e trasferte raccontano come lavori prima ancora di aprire una chat.",
+      complete: Boolean(profile.bio && Number(profile.years_experience || 0) >= 0 && profile.travel_area),
+      action: "Aggiungi esperienza",
+    },
+    {
+      icon: "link",
+      title: "Portfolio e social",
+      body: "Inserisci portfolio, sito o social professionali per rendere verificabile il tuo lavoro.",
+      complete: Boolean(profile.portfolio_url || profile.company_website || socialLinks.length),
+      action: "Collega i tuoi link",
+    },
+    {
+      icon: "calendar-check",
+      title: "Disponibilità",
+      body: "Rendi il profilo visibile nelle ricerche e aggiorna le date in cui puoi lavorare.",
+      complete: hasAvailability,
+      action: "Aggiorna disponibilità",
+      go: "calendar",
+    },
+  ];
+}
+
+function renderProfileOnboarding() {
+  const host = qs("#profileOnboarding");
+  if (!host) return;
+  if (state.profileEditing) {
+    host.classList.add("hidden");
+    host.innerHTML = "";
+    return;
+  }
+  const profile = state.profile || {};
+  const steps = profileOnboardingSteps(profile);
+  const completed = steps.filter((step) => step.complete).length;
+  const isDone = completed === steps.length && profile.profile_status === "active";
+  host.classList.toggle("hidden", isDone);
+  if (isDone) {
+    host.innerHTML = "";
+    return;
+  }
+  state.onboardingStep = Math.min(state.onboardingStep, steps.length - 1);
+  const current = steps[state.onboardingStep] || steps[0];
+  const progress = Math.round((completed / steps.length) * 100);
+  host.innerHTML = `<div class="profile-onboarding-card">
+    <div class="profile-onboarding-copy">
+      <p class="eyebrow">Setup profilo</p>
+      <h3>${completed ? `Profilo completo al ${progress}%` : "Completa il tuo profilo"}</h3>
+      <span>Segui questi passaggi per essere trovato meglio e dare più fiducia a chi sta costruendo una crew.</span>
+    </div>
+    <div class="onboarding-progress" aria-label="Completamento profilo"><span style="width:${progress}%"></span></div>
+    <div class="onboarding-slide">
+      <div class="onboarding-icon">${icon(current.icon)}</div>
+      <div><span class="status-chip">${current.complete ? "Completato" : "Da completare"}</span><h4>${escapeHtml(current.title)}</h4><p>${escapeHtml(current.body)}</p></div>
+    </div>
+    <div class="onboarding-actions">
+      <button class="ghost-button" type="button" data-onboarding-prev>${icon("chevron-left")}Indietro</button>
+      <div class="onboarding-dots">${steps.map((step, index) => `<button class="${index === state.onboardingStep ? "active" : ""} ${step.complete ? "done" : ""}" type="button" data-onboarding-step="${index}" aria-label="Passaggio ${index + 1}"></button>`).join("")}</div>
+      <button class="ghost-button" type="button" data-onboarding-next>Avanti${icon("chevron-right")}</button>
+      <button class="primary-button" type="button" ${current.go ? `data-go="${current.go}"` : "data-profile-edit"}>${icon(current.go ? "calendar-days" : "pencil")}${escapeHtml(current.action)}</button>
+    </div>
+  </div>`;
+}
+
+function renderProfileOverview(profile = state.profile || {}) {
+  const host = qs("#profileOverview");
+  if (!host) return;
+  const isCompany = (profile.account_type || "freelance") === "company";
+  const displayName = profileDisplayName(profile) || "Profilo Trankui";
+  const primary = profilePrimaryRole(profile);
+  const secondaryNames = ownSecondaryRoleNames(profile);
+  const expertise = (profile.production_types || []).filter(Boolean);
+  const brands = (profile.brands || []).filter(Boolean);
+  const socialLinks = profileSocialLinks(profile);
+  const googleConnected = state.calendarConnections.some((item) => item.provider === "google" && item.status === "connected");
+  const connectedCalendars = [googleConnected ? "Google Calendar" : ""].filter(Boolean);
+  const profileRows = [
+    ["clapperboard", isCompany ? "Ruolo ricercato più spesso" : "Ruolo principale", primary],
+    ["map-pin", "Dove lavori", [profile.city, profile.region].filter(Boolean).join(", ")],
+    ["briefcase-business", isCompany ? "Anni di attività" : "Anni di esperienza", `${Number(profile.years_experience || 0)} anni`],
+    ["plane", isCompany ? "Area operativa" : "Trasferte", profile.travel_area],
+    ["camera", "Attrezzatura", profile.equipment],
+    ["tags", "Brand utilizzati", brands.join(", ")],
+    ["globe", isCompany ? "Sito / showreel" : "Portfolio", profile.portfolio_url ? `<a href="${escapeHtml(profile.portfolio_url)}" target="_blank" rel="noopener">Apri link</a>` : ""],
+    ["calendar-check", "Calendario", connectedCalendars.length ? connectedCalendars.join(" + ") : "Non collegato"],
+    ["eye", "Visibilità ricerca", profile.availability_visible ? "Profilo visibile quando disponibile" : "Non ancora visibile per disponibilità"],
+    ["shield-check", "Stato profilo", profile.profile_status === "active" ? "Attivo" : "Bozza da completare"],
+  ];
+  host.innerHTML = `<div class="profile-overview-shell">
+    <aside class="profile-overview-identity">
+      <div class="avatar profile-overview-avatar">${profile.avatar_url ? `<img src="${escapeHtml(profile.avatar_url)}" alt="Foto profilo" />` : initials(displayName)}</div>
+      <button class="secondary-button compact-button" type="button" data-profile-edit>${icon("pencil")}Modifica</button>
+      <button class="ghost-button compact-button" type="button" data-profile-preview>${icon("eye")}Anteprima pubblica</button>
+    </aside>
+    <div class="profile-overview-main">
+      <div class="profile-overview-title">
+        <p class="eyebrow">${isCompany ? "Profilo aziendale" : "Profilo professionale"}</p>
+        <h3>${escapeHtml(displayName)}</h3>
+        <span>${escapeHtml(primary)}${profile.city ? ` · ${escapeHtml(profile.city)}` : ""}</span>
+      </div>
+      <div class="profile-info-list">${profileRows.map(([iconName, label, value]) => `<div class="profile-info-row">${icon(iconName)}<span>${label}</span><strong>${profileValue(value)}</strong></div>`).join("")}</div>
+    </div>
+  </div>
+  <section class="profile-read-section">
+    <div class="profile-read-section-head"><h3>${isCompany ? "Descrizione" : "Chi sono"}</h3><button class="text-button" type="button" data-profile-edit>Modifica</button></div>
+    <p class="profile-read-bio">${profile.bio ? escapeHtml(profile.bio) : "Aggiungi una descrizione chiara del tuo modo di lavorare, delle produzioni che segui e del tipo di crew con cui collabori meglio."}</p>
+  </section>
+  <section class="profile-read-grid">
+    <div class="profile-read-section"><div class="profile-read-section-head"><h3>Competenze secondarie</h3><button class="text-button" type="button" data-profile-edit>Modifica</button></div>${profileTagRow(secondaryNames, "Nessuna competenza secondaria selezionata")}</div>
+    <div class="profile-read-section"><div class="profile-read-section-head"><h3>Ambiti di specializzazione</h3><button class="text-button" type="button" data-profile-edit>Modifica</button></div>${profileTagRow(expertise, "Nessun ambito selezionato")}</div>
+  </section>
+  <section class="profile-read-section">
+    <div class="profile-read-section-head"><h3>Link e social</h3><button class="text-button" type="button" data-profile-edit>Modifica</button></div>
+    ${(profile.portfolio_url || socialLinks.length) ? `<div class="profile-links profile-read-links">${profile.portfolio_url ? `<a class="secondary-button" href="${escapeHtml(profile.portfolio_url)}" target="_blank" rel="noopener">${icon("external-link")}${isCompany ? "Showreel" : "Portfolio"}</a>` : ""}${socialLinks.map(([key, network, label]) => `<a class="social-icon-button" href="${escapeHtml(profile[key])}" target="_blank" rel="noopener" title="${label}" aria-label="${label}">${socialIcon(network)}</a>`).join("")}</div>` : `<span class="profile-empty-value">Nessun link inserito</span>`}
+  </section>`;
 }
 
 function renderProfileForm() {
@@ -874,7 +1488,15 @@ function renderProfileForm() {
   const secondaryNames = (profile.secondaryRoles || []).map((item) => item.roles?.name || item.other_role_name).filter(Boolean);
   const selectedSpecializations = new Set(profile.production_types || []);
   const profileRegion = profile.region && italianAreas[profile.region] ? profile.region : "Sardegna";
-  qs("#profileForm").innerHTML = `<div class="profile-photo-editor"><div class="avatar profile-photo-preview">${profile.avatar_url ? `<img src="${escapeHtml(profile.avatar_url)}" alt="Foto profilo" />` : initials(displayName)}</div><div><strong>${isCompany ? "Logo o immagine aziendale" : "Foto profilo"}</strong><span>JPG, PNG o WebP, massimo 5 MB.</span><label class="secondary-button" for="avatarFile">${icon("camera")}Carica foto</label><input class="visually-hidden" id="avatarFile" type="file" accept="image/jpeg,image/png,image/webp" data-avatar-file /><input type="hidden" name="avatar_url" value="${escapeHtml(profile.avatar_url)}" /></div></div>
+  renderProfileOverview(profile);
+  qs("#profileForm").classList.toggle("hidden", !state.profileEditing);
+  qs("#profileOverview").classList.toggle("hidden", state.profileEditing);
+  if (!state.profileEditing) {
+    qs("#profileForm").innerHTML = "";
+    return;
+  }
+  qs("#profileForm").innerHTML = `<div class="profile-edit-header"><div><p class="eyebrow">Modifica profilo</p><h3>Aggiorna le informazioni pubbliche</h3><span>Salva quando hai finito: tornerai alla vista ordinata del profilo.</span></div><button class="ghost-button" type="button" data-profile-cancel>${icon("x")}Annulla</button></div>
+    <div class="profile-photo-editor"><div class="avatar profile-photo-preview">${profile.avatar_url ? `<img src="${escapeHtml(profile.avatar_url)}" alt="Foto profilo" />` : initials(displayName)}</div><div><strong>${isCompany ? "Logo o immagine aziendale" : "Foto profilo"}</strong><span>JPG, PNG o WebP, massimo 5 MB.</span><label class="secondary-button" for="avatarFile">${icon("camera")}Carica foto</label><input class="visually-hidden" id="avatarFile" type="file" accept="image/jpeg,image/png,image/webp" data-avatar-file /><input type="hidden" name="avatar_url" value="${escapeHtml(profile.avatar_url)}" /></div></div>
     <fieldset class="account-type-selector profile-account-type">
       <legend>Tipo account</legend>
       <label><input type="radio" name="account_type" value="freelance" ${!isCompany ? "checked" : ""} /><span><strong>Freelance</strong><small>Profilo personale ricercabile per ruolo e disponibilità.</small></span></label>
@@ -936,6 +1558,7 @@ async function saveProfile(event) {
       profile_status: isCompany ? (companyReady ? "active" : "draft") : (fullName && primaryRoleId && city ? "active" : "draft"),
     }, selected.map((roleId, position) => ({ role_id: roleId, position })));
     showToast("Profilo aggiornato");
+    state.profileEditing = false;
     await loadAppData();
   } catch (error) {
     showToast(errorMessage(error), true);
@@ -945,34 +1568,24 @@ async function saveProfile(event) {
 function renderIntegrations() {
   const connection = (provider) => state.calendarConnections.find((item) => item.provider === provider);
   const google = connection("google");
-  const apple = connection("apple");
   qs("#integrationsGrid").innerHTML = `<article class="integration-card"><div class="integration-icon">${icon("calendar-days")}</div><div><h3>Google Calendar</h3><span>${google?.last_synced_at ? `Ultimo aggiornamento ${new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(google.last_synced_at))}` : "Autorizza la lettura dello stato libero/occupato."}</span></div><button class="${google?.status === "connected" ? "secondary-button" : "primary-button"}" type="button" ${google?.status === "connected" ? "data-sync-google" : "data-connect-google"}>${google?.status === "connected" ? `${icon("refresh-cw")}Sincronizza` : `${icon("link")}Collega Google`}</button></article>
-    <article class="integration-card"><div class="integration-icon">${icon("calendar-range")}</div><div><h3>Apple Calendar</h3><span>Importa un file .ics esportato da Calendario.</span></div><label class="${apple?.status === "connected" ? "secondary-button" : "primary-button"}" for="appleCalendarFile">${apple?.status === "connected" ? `${icon("refresh-cw")}Aggiorna` : `${icon("upload")}Importa .ics`}</label><input class="visually-hidden" id="appleCalendarFile" type="file" accept="text/calendar,.ics" data-apple-calendar /></article>
     <p class="integration-note">Trankui non legge titoli, clienti o dettagli degli eventi: usa soltanto lo stato libero/occupato dopo autorizzazione esplicita.</p>`;
 }
 
-async function importAppleCalendar(file) {
-  const text = await file.text();
-  const dates = [...text.matchAll(/^DTSTART(?:;VALUE=DATE)?(?:;[^:]*)?:(\d{8})/gm)].map((match) => `${match[1].slice(0, 4)}-${match[1].slice(4, 6)}-${match[1].slice(6, 8)}`);
-  const uniqueDates = [...new Set(dates)];
-  if (!uniqueDates.length) throw new Error("Il file non contiene eventi importabili");
-  await Promise.all(uniqueDates.slice(0, 366).map((date) => backend.setAvailability(date, "busy")));
-  await backend.saveCalendarConnection("apple", { status: "connected", external_calendar_id: file.name, last_synced_at: new Date().toISOString() });
-  showToast(`${uniqueDates.length} giornate occupate importate da Apple Calendar`);
-  await loadAppData();
-}
-
 function renderCommunity(query = qs("#communitySearch")?.value || "") {
-  const active = state.profiles.length;
-  const verified = state.profiles.filter((profile) => profile.verified).length;
   const needle = query.trim().toLowerCase();
   const visibleProfiles = state.profiles.filter((profile) => {
     const roleNames = [profile.roles?.name, ...(profile.secondary_roles || []).map((item) => item.roles?.name || item.other_role_name)];
     const searchable = [profile.full_name, profile.city, profile.region, ...roleNames, ...(profile.production_types || [])].filter(Boolean).join(" ").toLowerCase();
     return !needle || searchable.includes(needle);
-  });
-  qs("#betaStats").innerHTML = `<div><strong>${active}</strong><span>profili attivi</span></div><div><strong>${verified}</strong><span>verificati</span></div><div><strong>${state.collaborations.filter((item) => item.status === "completed").length}</strong><span>collaborazioni concluse</span></div>`;
-  qs("#userDirectory").innerHTML = visibleProfiles.map((profile) => `<button class="community-card" type="button" data-open-profile="${profile.id}"><div class="avatar">${avatarContent(profile)}</div><div><strong>${escapeHtml(profile.full_name)}</strong><span>${escapeHtml(profile.roles?.name || profile.primary_other_role_name || (profile.account_type === "company" ? "Agenzia / casa di produzione" : "Professionista"))} · ${escapeHtml(profile.city)}</span></div>${profile.verified ? icon("badge-check") : ""}</button>`).join("") || `<div class="empty-state">${needle ? "Nessun professionista corrisponde alla ricerca." : "La community iniziera a comparire qui."}</div>`;
+  }).sort((a, b) => (a.full_name || "").localeCompare(b.full_name || "", "it"));
+  const pageSize = 20;
+  const totalPages = Math.max(1, Math.ceil(visibleProfiles.length / pageSize));
+  state.communityPage = Math.min(Math.max(1, state.communityPage), totalPages);
+  const pageProfiles = visibleProfiles.slice((state.communityPage - 1) * pageSize, state.communityPage * pageSize);
+  const cards = pageProfiles.map((profile) => `<button class="community-card" type="button" data-open-profile="${profile.id}"><div class="avatar">${avatarContent(profile)}</div><div><strong>${escapeHtml(profile.full_name)}</strong><span>${escapeHtml(profile.roles?.name || profile.primary_other_role_name || (profile.account_type === "company" ? "Agenzia / casa di produzione" : "Professionista"))} · ${escapeHtml(profile.city)}</span></div>${profile.verified ? icon("badge-check") : ""}</button>`).join("");
+  const pagination = visibleProfiles.length > pageSize ? `<div class="community-pagination"><button class="ghost-button" type="button" data-community-page="${state.communityPage - 1}" ${state.communityPage === 1 ? "disabled" : ""}>Precedenti</button><span>Pagina ${state.communityPage} di ${totalPages}</span><button class="ghost-button" type="button" data-community-page="${state.communityPage + 1}" ${state.communityPage === totalPages ? "disabled" : ""}>Successivi</button></div>` : "";
+  qs("#userDirectory").innerHTML = cards ? `${cards}${pagination}` : `<div class="empty-state">${needle ? "Nessun professionista corrisponde alla ricerca." : "La community inizierà a comparire qui."}</div>`;
 }
 
 function supportStatusLabel(status) {
@@ -996,8 +1609,8 @@ function supportAnswer(question) {
   if (/(chat|messaggio|contattare|contatto)/i.test(text)) {
     return "Quando contatti un professionista si apre una chat interna. Usala per chiarire disponibilità, data, ruolo, dettagli operativi e prossimi passi. I contatti diretti vengono condivisi solo quando la collaborazione è accettata.";
   }
-  if (/(calendario|google|apple|disponibilità|occupato|sync|sincronizza)/i.test(text)) {
-    return "Nel calendario indichi i giorni disponibili, forse disponibili o occupati. Google Calendar e Apple Calendar servono a sincronizzare lo stato libero/occupato: Trankui non deve leggere titoli, clienti o dettagli privati degli eventi.";
+  if (/(calendario|google|disponibilità|occupato|sync|sincronizza)/i.test(text)) {
+    return "Nel calendario indichi i giorni disponibili, forse disponibili o occupati. Google Calendar può sincronizzare lo stato libero/occupato: Trankui non legge titoli, clienti o dettagli privati degli eventi.";
   }
   if (/(recensione|feedback|blind|rating|reputazione)/i.test(text)) {
     return "Le recensioni sono blind: diventano pubbliche solo quando entrambi avete lasciato il feedback. Questo riduce pressioni e rende più credibile la reputazione. Si valutano puntualità, comunicazione, affidabilità, organizzazione e problem solving.";
@@ -1080,15 +1693,35 @@ async function createSupportTicket(event) {
 
 function switchView(view) {
   qsa(".nav-item").forEach((item) => item.classList.toggle("active", item.dataset.view === view));
+  qs(".brand-chat-button")?.classList.toggle("active", view === "chat");
   qsa(".view").forEach((item) => item.classList.toggle("active-view", item.id === `view-${view}`));
   const titles = {
     search: ["Crew finder", "Trova un collaboratore affidabile in pochi minuti"], board: ["Bacheca", "Richieste aperte della community"],
-    requests: ["Attivita", "Gestisci richieste, match e feedback"], calendar: ["Disponibilita", "Aggiorna quando puoi lavorare"],
+    requests: ["Attivita", "Collaborazioni, messaggi e feedback in ordine"], chat: ["Chat", "Conversazioni attive e risposte in tempo reale"], calendar: ["Disponibilita", "Aggiorna quando puoi lavorare"],
     profile: ["Profilo", "Racconta come lavori, senza rumore"], admin: ["Community", "La rete professionale Trankui"],
-    support: ["Assistenza", "Risposte rapide e ticket per anomalie"],
+    support: ["Help", "Risposte rapide e ticket per anomalie"],
   };
   qs("#pageEyebrow").textContent = titles[view][0];
   qs("#pageTitle").textContent = titles[view][1];
+  redrawIcons();
+}
+
+function prefillPostFromSearch() {
+  if (state.search.roleId) qs("#postRole").value = state.search.roleId;
+  if (state.search.date) qs("#postDate").value = state.search.date;
+  if (state.search.region) {
+    qs("#postRegion").value = state.search.region;
+    qs("#postZone").innerHTML = optionList(provincesFor(state.search.region));
+  }
+  if (state.search.zone) qs("#postZone").value = state.search.zone;
+  if (state.search.production) qs("#postProduction").value = state.search.production;
+}
+
+function openBoardComposer(prefill = false) {
+  switchView("board");
+  if (prefill) prefillPostFromSearch();
+  qs("#postForm").classList.remove("hidden");
+  qs("#postForm").scrollIntoView({ behavior: "smooth", block: "start" });
   redrawIcons();
 }
 
@@ -1117,13 +1750,117 @@ document.addEventListener("click", async (event) => {
     }
     return;
   }
+  const dateToggle = event.target.closest("#searchDateButton");
+  if (dateToggle) {
+    const panel = qs("#searchDatePopover");
+    panel.classList.toggle("hidden");
+    dateToggle.setAttribute("aria-expanded", String(!panel.classList.contains("hidden")));
+    renderSearchDatePicker();
+    redrawIcons();
+    return;
+  }
+  const searchMonth = event.target.closest("[data-search-month]");
+  if (searchMonth) {
+    state.searchMonth = new Date(state.searchMonth.getFullYear(), state.searchMonth.getMonth() + Number(searchMonth.dataset.searchMonth), 1);
+    renderSearchDatePicker();
+    redrawIcons();
+    return;
+  }
+  const searchDay = event.target.closest("[data-search-day]");
+  if (searchDay) {
+    const date = searchDay.dataset.searchDay;
+    if (state.searchDates.has(date)) state.searchDates.delete(date);
+    else state.searchDates.add(date);
+    syncSearchDateInput();
+    renderSearchDatePicker();
+    redrawIcons();
+    return;
+  }
+  if (event.target.closest("[data-search-date-clear]")) {
+    state.searchDates.clear();
+    syncSearchDateInput();
+    renderSearchDatePicker();
+    redrawIcons();
+    return;
+  }
+  if (event.target.closest("[data-search-date-close]")) {
+    qs("#searchDatePopover")?.classList.add("hidden");
+    qs("#searchDateButton")?.setAttribute("aria-expanded", "false");
+    return;
+  }
+  if (!event.target.closest(".search-date-field")) {
+    qs("#searchDatePopover")?.classList.add("hidden");
+    qs("#searchDateButton")?.setAttribute("aria-expanded", "false");
+  }
+  if (event.target.closest("#chatInfoButton")) {
+    toggleChatInfoPanel();
+    redrawIcons();
+    return;
+  }
+  if (!event.target.closest("#chatInfoPanel")) setChatInfoOpen(false);
   const nav = event.target.closest("[data-view]");
   if (nav) return switchView(nav.dataset.view);
+  const boardRequest = event.target.closest("[data-open-board-request]");
+  if (boardRequest) return openBoardComposer(true);
   const go = event.target.closest("[data-go]");
-  if (go) return switchView(go.dataset.go);
+  if (go) {
+    qs("#notificationPanel")?.classList.add("hidden");
+    qs("#notificationButton")?.setAttribute("aria-expanded", "false");
+    return switchView(go.dataset.go);
+  }
+  const onboardingPrev = event.target.closest("[data-onboarding-prev]");
+  if (onboardingPrev) {
+    const total = profileOnboardingSteps().length;
+    state.onboardingStep = (state.onboardingStep - 1 + total) % total;
+    renderProfileOnboarding();
+    redrawIcons();
+    return;
+  }
+  const onboardingNext = event.target.closest("[data-onboarding-next]");
+  if (onboardingNext) {
+    const total = profileOnboardingSteps().length;
+    state.onboardingStep = (state.onboardingStep + 1) % total;
+    renderProfileOnboarding();
+    redrawIcons();
+    return;
+  }
+  const onboardingStep = event.target.closest("[data-onboarding-step]");
+  if (onboardingStep) {
+    state.onboardingStep = Number(onboardingStep.dataset.onboardingStep);
+    renderProfileOnboarding();
+    redrawIcons();
+    return;
+  }
+  if (event.target.closest("[data-profile-edit]")) {
+    state.profileEditing = true;
+    renderProfileOnboarding();
+    renderProfileForm();
+    qs("#profileForm")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    redrawIcons();
+    return;
+  }
+  if (event.target.closest("[data-profile-cancel]")) {
+    state.profileEditing = false;
+    renderProfileOnboarding();
+    renderProfileForm();
+    redrawIcons();
+    return;
+  }
+  if (event.target.closest("[data-profile-preview]")) {
+    if (!state.profile?.id) return showToast("Completa prima il profilo", true);
+    if (!state.profiles.some((profile) => profile.id === state.profile.id)) return showToast("L'anteprima pubblica sarà disponibile quando il profilo è attivo.", true);
+    return openPublicProfile(state.profile.id);
+  }
   const supportQuestion = event.target.closest("[data-support-question]");
   if (supportQuestion) {
     askSupportAssistant(supportQuestion.dataset.supportQuestion);
+    return;
+  }
+  const communityPage = event.target.closest("[data-community-page]");
+  if (communityPage) {
+    state.communityPage = Number(communityPage.dataset.communityPage);
+    renderCommunity();
+    redrawIcons();
     return;
   }
   const profile = event.target.closest("[data-profile]");
@@ -1136,7 +1873,12 @@ document.addEventListener("click", async (event) => {
   if (apply) {
     const message = window.prompt("Messaggio per chi ha pubblicato la richiesta", "Sono disponibile e interessato alla produzione.");
     if (message === null) return;
-    try { await backend.applyToPost(apply.dataset.apply, message); showToast("Candidatura inviata"); await loadAppData(); } catch (error) { showToast(errorMessage(error), true); }
+    try {
+      const application = await backend.applyToPost(apply.dataset.apply, message);
+      notifyEvent({ type: "application", application_id: application.id });
+      showToast("Candidatura inviata");
+      await loadAppData();
+    } catch (error) { showToast(errorMessage(error), true); }
     return;
   }
   const editPost = event.target.closest("[data-edit-post]");
@@ -1166,11 +1908,58 @@ document.addEventListener("click", async (event) => {
     return;
   }
   const select = event.target.closest("[data-select-applicant]");
-  if (select) { try { await backend.selectApplicant(select.dataset.selectApplicant); showToast("Collaboratore selezionato"); await loadAppData(); } catch (error) { showToast(errorMessage(error), true); } return; }
+  if (select) {
+    try {
+      const collaboration = await backend.selectApplicant(select.dataset.selectApplicant);
+      notifyEvent({ type: "match", collaboration_id: collaboration.id });
+      showToast("Collaboratore selezionato");
+      await loadAppData();
+    } catch (error) { showToast(errorMessage(error), true); }
+    return;
+  }
+  const activityFilter = event.target.closest("[data-activity-filter]");
+  if (activityFilter) { state.activityFilter = activityFilter.dataset.activityFilter; renderActivity(); redrawIcons(); return; }
+  const archiveCollaboration = event.target.closest("[data-archive-collaboration]");
+  if (archiveCollaboration) {
+    const collaboration = state.collaborations.find((item) => item.id === archiveCollaboration.dataset.archiveCollaboration);
+    if (!collaboration || collaboration.status !== "completed") return showToast("Puoi archiviare solo collaborazioni concluse.", true);
+    state.archivedCollaborationIds.add(collaboration.id);
+    persistArchivedCollaborationIds();
+    renderActivity();
+    redrawIcons();
+    showToast("Collaborazione archiviata");
+    return;
+  }
+  const unarchiveCollaboration = event.target.closest("[data-unarchive-collaboration]");
+  if (unarchiveCollaboration) {
+    state.archivedCollaborationIds.delete(unarchiveCollaboration.dataset.unarchiveCollaboration);
+    persistArchivedCollaborationIds();
+    state.activityFilter = "completed";
+    renderActivity();
+    redrawIcons();
+    showToast("Collaborazione ripristinata");
+    return;
+  }
   const transition = event.target.closest("[data-transition]");
-  if (transition) { try { await backend.transitionCollaboration(transition.dataset.collaboration, transition.dataset.transition); showToast("Richiesta aggiornata"); await loadAppData(); } catch (error) { showToast(errorMessage(error), true); } return; }
+  if (transition) {
+    try {
+      const collaboration = await backend.transitionCollaboration(transition.dataset.collaboration, transition.dataset.transition);
+      notifyEvent({ type: "match", collaboration_id: collaboration.id });
+      showToast("Richiesta aggiornata");
+      await loadAppData();
+    } catch (error) { showToast(errorMessage(error), true); }
+    return;
+  }
   const complete = event.target.closest("[data-complete]");
-  if (complete) { try { const result = await backend.confirmComplete(complete.dataset.complete); await loadAppData(); if (result.status === "completed") openReview(result.id); else showToast("Conferma registrata. Attendi quella dell'altra persona."); } catch (error) { showToast(errorMessage(error), true); } return; }
+  if (complete) {
+    try {
+      const result = await backend.confirmComplete(complete.dataset.complete);
+      notifyEvent({ type: "completion", collaboration_id: result.id });
+      await loadAppData();
+      if (result.status === "completed") openReview(result.id); else showToast("Conferma registrata. Attendi quella dell'altra persona.");
+    } catch (error) { showToast(errorMessage(error), true); }
+    return;
+  }
   const chat = event.target.closest("[data-chat]");
   if (chat) return openChat(chat.dataset.chat);
   const review = event.target.closest("[data-review]");
@@ -1187,12 +1976,14 @@ document.addEventListener("click", async (event) => {
   if (googleCalendar) { try { await backend.connectGoogleCalendar(); } catch (error) { showToast(errorMessage(error), true); } return; }
   const syncGoogle = event.target.closest("[data-sync-google]");
   if (syncGoogle) { try { syncGoogle.disabled = true; const count = await backend.syncGoogleCalendar(); showToast(`${count} giornate occupate sincronizzate`); await loadAppData(); } catch (error) { showToast(errorMessage(error), true); } finally { syncGoogle.disabled = false; } return; }
+  if (event.target.closest("[data-availability-apply]")) return applySelectedAvailability();
+  if (event.target.closest("[data-availability-clear]")) return clearSelectedAvailability();
   const day = event.target.closest("[data-day]");
   if (day) return setDayAvailability(day.dataset.day);
   const mode = event.target.closest("[data-mode]");
   if (mode) { state.availabilityMode = mode.dataset.mode; renderCalendar(); redrawIcons(); return; }
   const month = event.target.closest("[data-month]");
-  if (month) { state.month = new Date(state.month.getFullYear(), state.month.getMonth() + Number(month.dataset.month), 1); await loadAppData(); return; }
+  if (month) { state.selectedAvailabilityDates.clear(); state.month = new Date(state.month.getFullYear(), state.month.getMonth() + Number(month.dataset.month), 1); await loadAppData(); return; }
 });
 
 qs("#authForm").addEventListener("submit", handleAuth);
@@ -1200,10 +1991,18 @@ qs("#googleAuthButton").addEventListener("click", handleGoogleAuth);
 qs("#authForm").addEventListener("change", (event) => {
   if (event.target.matches("input[name='account_type']")) syncAuthAccountType();
 });
-qs("#searchForm").addEventListener("submit", (event) => {
+qs("#searchForm").addEventListener("submit", async (event) => {
   event.preventDefault(); const form = new FormData(event.currentTarget);
-  state.search = { roleId: form.get("role"), date: form.get("date"), region: form.get("region"), zone: form.get("zone"), production: form.get("production") };
-  renderSearchResults(); redrawIcons();
+  state.searchDates = new Set(String(form.get("date") || "").split(",").filter(Boolean));
+  state.search = { roleId: form.get("role"), date: selectedSearchDates()[0] || "", region: form.get("region"), zone: form.get("zone"), production: form.get("production") };
+  state.searchSubmitted = true;
+  try {
+    await ensureAvailabilityForSearchDates();
+    renderSearchResults();
+    redrawIcons();
+  } catch (error) {
+    showToast(errorMessage(error), true);
+  }
 });
 qs("#region").addEventListener("change", (event) => {
   qs("#zone").innerHTML = `<option value="">Tutte le province</option>${optionList(provincesFor(event.target.value))}`;
@@ -1223,7 +2022,7 @@ qs("#profileForm").addEventListener("change", (event) => {
   renderProfileForm();
   redrawIcons();
 });
-qs("#communitySearch").addEventListener("input", (event) => { renderCommunity(event.target.value); redrawIcons(); });
+qs("#communitySearch").addEventListener("input", (event) => { state.communityPage = 1; renderCommunity(event.target.value); redrawIcons(); });
 qs("#supportChatForm").addEventListener("submit", (event) => {
   event.preventDefault();
   const input = qs("#supportQuestion");
@@ -1245,8 +2044,55 @@ qs("#togglePostForm").addEventListener("click", () => qs("#postForm").classList.
 qs("#cancelPost").addEventListener("click", () => {
   resetPostForm();
 });
-qs("#openBoard").addEventListener("click", () => { switchView("board"); qs("#postForm").classList.remove("hidden"); });
+qs("#openBoard").addEventListener("click", openBoardComposer);
 qs("#openAvailability").addEventListener("click", () => switchView("calendar"));
+qs("#enableNotifications").addEventListener("click", async () => {
+  try {
+    await ensurePushSubscription();
+    updateNotificationPreference("channels", "push", true);
+    renderNotificationSettings();
+    showToast("Notifiche push attive su questo dispositivo");
+  } catch (error) {
+    updateNotificationPreference("channels", "push", false);
+    renderNotificationSettings();
+    showToast(errorMessage(error), true);
+  }
+});
+qs("#soundNotifications").addEventListener("change", (event) => {
+  updateNotificationPreference("channels", "sound", event.target.checked);
+  if (event.target.checked) playNotificationTone();
+  renderNotificationSettings();
+});
+qs("#pushNotifications").addEventListener("change", async (event) => {
+  if (!event.target.checked) {
+    await disablePushSubscription();
+    updateNotificationPreference("channels", "push", false);
+    renderNotificationSettings();
+    return;
+  }
+  try {
+    await ensurePushSubscription();
+    updateNotificationPreference("channels", "push", true);
+    renderNotificationSettings();
+    showToast("Notifiche push attive su questo dispositivo");
+  } catch (error) {
+    updateNotificationPreference("channels", "push", false);
+    renderNotificationSettings();
+    showToast(errorMessage(error), true);
+  }
+});
+qs("#emailNotifications").addEventListener("change", (event) => {
+  updateNotificationPreference("channels", "email", event.target.checked);
+  renderNotificationSettings();
+  showToast(event.target.checked ? "Notifiche email attive" : "Notifiche email disattivate");
+});
+qsa("[data-notification-topic]").forEach((input) => {
+  input.addEventListener("change", (event) => {
+    updateNotificationPreference("topics", event.target.dataset.notificationTopic, event.target.checked);
+    renderNotifications();
+    rememberCurrentNotifications();
+  });
+});
 qs("#notificationButton").addEventListener("click", () => {
   const panel = qs("#notificationPanel");
   panel.classList.toggle("hidden");
@@ -1255,6 +2101,7 @@ qs("#notificationButton").addEventListener("click", () => {
 qs("#markNotificationsRead").addEventListener("click", () => {
   localStorage.setItem(notificationStorageKey(), new Date().toISOString());
   renderNotifications();
+  rememberCurrentNotifications();
 });
 qs("#openProfile").addEventListener("click", () => switchView("profile"));
 qs("#openDeleteAccount").addEventListener("click", () => {
@@ -1294,7 +2141,14 @@ qs("#chatForm").addEventListener("submit", async (event) => {
   const body = input.value.trim();
   if (!body || !state.activeChatId) return;
   input.disabled = true;
-  try { await backend.sendMessage(state.activeChatId, body); input.value = ""; await refreshChat(); }
+  try {
+    const message = await backend.sendMessage(state.activeChatId, body);
+    notifyEvent({ type: "message", collaboration_id: state.activeChatId, message_id: message.id });
+    input.value = "";
+    state.recentMessages = backend.recentMessages ? await backend.recentMessages() : state.recentMessages;
+    renderChatPage();
+    await refreshChat();
+  }
   catch (error) { showToast(errorMessage(error), true); }
   finally { input.disabled = false; input.focus(); }
 });
@@ -1307,7 +2161,20 @@ document.addEventListener("keydown", (event) => {
   if (!qs("#deleteAccountBackdrop").classList.contains("hidden")) { qs("#deleteAccountBackdrop").classList.add("hidden"); document.body.classList.remove("modal-open"); }
 });
 
-qs("#logoutButton").addEventListener("click", async () => { clearInterval(state.notificationTimer); await backend.signOut(); state.session = null; qs("#appShell").classList.add("hidden"); qs("#authScreen").classList.remove("hidden"); });
+qs("#logoutButton").addEventListener("click", async () => {
+  clearInterval(state.notificationTimer);
+  state.chatSubscriptions.forEach((subscription) => subscription?.unsubscribe?.());
+  state.chatSubscriptions = [];
+  await backend.signOut();
+  state.session = null;
+  state.activeChatId = null;
+  state.activeChatIds = [];
+  state.activeChatPeerId = null;
+  qs("#chatBackdrop")?.classList.add("hidden");
+  document.body.classList.remove("modal-open");
+  qs("#appShell").classList.add("hidden");
+  qs("#authScreen").classList.remove("hidden");
+});
 qs("#profileForm").addEventListener("input", (event) => {
   if (event.target.matches("[data-role-search]")) qsa("[data-role-label]").forEach((label) => label.classList.toggle("hidden", !label.dataset.roleLabel.includes(event.target.value.toLowerCase())));
   if (event.target.matches("[data-specialization-search]")) qsa("[data-specialization-label]").forEach((label) => label.classList.toggle("hidden", !label.dataset.specializationLabel.includes(event.target.value.toLowerCase())));
@@ -1338,12 +2205,6 @@ qs("#profileForm").addEventListener("change", async (event) => {
   } catch (error) { showToast(errorMessage(error), true); }
   finally { event.target.disabled = false; }
 });
-qs("#integrationsGrid").addEventListener("change", async (event) => {
-  if (!event.target.matches("[data-apple-calendar]")) return;
-  try { await importAppleCalendar(event.target.files?.[0]); }
-  catch (error) { showToast(errorMessage(error), true); }
-});
-
 async function init() {
   redrawIcons();
   setAuthMode("signup");
