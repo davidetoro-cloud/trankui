@@ -1249,11 +1249,16 @@ button {
 
 .avatar-notification-button {
   position: relative;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
   padding: 0;
   border: 0;
   border-radius: 50%;
   background: transparent;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 .user-avatar {
@@ -3170,10 +3175,15 @@ textarea {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.profile-availability-settings,
 .profile-calendar-settings {
   margin-top: 48px;
   padding-top: 32px;
   border-top: 1px solid var(--line);
+}
+
+.profile-availability-settings {
+  scroll-margin-top: 104px;
 }
 
 .profile-notification-settings {
@@ -4404,6 +4414,8 @@ textarea {
 
 @media (max-width: 720px) {
   .sidebar-notification-center .notification-panel { position: fixed; top: 72px; right: 14px; left: 14px; width: auto; max-height: calc(100vh - 92px); }
+  .avatar-notification-button { width: 46px; height: 46px; }
+  .user-avatar { width: 38px; height: 38px; }
   .notification-account-actions { grid-template-columns: 1fr; }
   .search-date-popover { position: fixed; top: 108px; left: 14px; right: 14px; width: auto; }
   .search-date-calendar { padding: 18px 12px; }
