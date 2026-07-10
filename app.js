@@ -261,6 +261,48 @@ function localSupportTickets() {
   }
 }
 
+function fallbackProfileFromSession(session = state.session) {
+  const user = session?.user || {};
+  const metadata = user.user_metadata || {};
+  const fallbackName = metadata.company_name || metadata.full_name || metadata.name || user.email?.split("@")[0] || "Profilo Trankui";
+  return {
+    id: user.id || "local-profile",
+    full_name: fallbackName,
+    account_type: metadata.account_type || (metadata.company_name ? "company" : "freelance"),
+    company_name: metadata.company_name || null,
+    company_type: metadata.company_type || null,
+    contact_name: metadata.contact_name || null,
+    avatar_url: metadata.avatar_url || metadata.picture || null,
+    email: user.email || "",
+    phone: "",
+    primary_role_id: null,
+    primary_other_role_name: "",
+    bio: "",
+    city: "",
+    region: "Sardegna",
+    travel_area: "",
+    years_experience: 0,
+    portfolio_url: "",
+    equipment: "",
+    brands: [],
+    production_types: [],
+    availability_visible: false,
+    profile_status: "draft",
+    verified: false,
+    secondaryRoles: [],
+    secondary_roles: [],
+  };
+}
+
+async function safeLoad(label, loader, fallback) {
+  try {
+    return await loader();
+  } catch (error) {
+    console.warn(`Trankui: ${label} non disponibile`, error);
+    return typeof fallback === "function" ? fallback(error) : fallback;
+  }
+}
+
 function saveLocalSupportTicket(ticket) {
   const tickets = [ticket, ...localSupportTickets()].slice(0, 30);
   localStorage.setItem(supportTicketStorageKey(), JSON.stringify(tickets));
@@ -526,22 +568,23 @@ function startNotificationPolling() {
 
 async function loadAppData() {
   try {
-    if (!state.roles.length) state.roles = await backend.roles();
-    state.profile = await backend.ownProfile();
+    if (!state.roles.length) state.roles = await safeLoad("ruoli", () => backend.roles(), []);
+    state.profile = await safeLoad("profilo", () => backend.ownProfile(), () => fallbackProfileFromSession());
+    state.profile ||= fallbackProfileFromSession();
     const start = new Date(state.month.getFullYear(), state.month.getMonth(), 1);
     const end = new Date(state.month.getFullYear(), state.month.getMonth() + 1, 0);
     const [profiles, availability, posts, collaborations, reviews, receivedReviews, incomingMessages, recentMessages, calendarConnections, supportTickets, notificationPrefs] = await Promise.all([
-      backend.publicProfiles(),
-      backend.availabilityForRange(isoDate(start), isoDate(end)),
-      backend.listPosts(),
-      backend.collaborations(),
-      backend.ownReviews(),
-      backend.publishedReviews(state.session.user.id),
-      backend.incomingMessages(),
-      backend.recentMessages ? backend.recentMessages() : Promise.resolve([]),
-      backend.calendarConnections(),
-      backend.supportTickets ? backend.supportTickets().catch(() => localSupportTickets()) : Promise.resolve(localSupportTickets()),
-      backend.notificationPreferences ? backend.notificationPreferences().catch(() => notificationPreferences()) : Promise.resolve(notificationPreferences()),
+      safeLoad("profili pubblici", () => backend.publicProfiles(), []),
+      safeLoad("disponibilita", () => backend.availabilityForRange(isoDate(start), isoDate(end)), []),
+      safeLoad("bacheca", () => backend.listPosts(), []),
+      safeLoad("collaborazioni", () => backend.collaborations(), []),
+      safeLoad("recensioni inviate", () => backend.ownReviews(), []),
+      safeLoad("recensioni ricevute", () => backend.publishedReviews(state.session.user.id), []),
+      safeLoad("messaggi in arrivo", () => backend.incomingMessages(), []),
+      safeLoad("messaggi recenti", () => backend.recentMessages ? backend.recentMessages() : Promise.resolve([]), []),
+      safeLoad("calendari collegati", () => backend.calendarConnections(), []),
+      safeLoad("ticket assistenza", () => backend.supportTickets ? backend.supportTickets() : Promise.resolve(localSupportTickets()), localSupportTickets()),
+      safeLoad("preferenze notifiche", () => backend.notificationPreferences ? backend.notificationPreferences() : Promise.resolve(notificationPreferences()), notificationPreferences()),
     ]);
     state.profiles = profiles.map((profile) => profile.id === state.profile?.id
       ? { ...profile, ...state.profile, secondary_roles: profile.secondary_roles }
@@ -560,6 +603,25 @@ async function loadAppData() {
     state.search.roleId ||= state.roles[0]?.id || "";
     renderApp();
   } catch (error) {
+    console.error("Trankui: caricamento applicazione non riuscito", error);
+    state.profile ||= fallbackProfileFromSession();
+    state.roles ||= [];
+    state.profiles ||= [];
+    state.availability ||= [];
+    state.posts ||= [];
+    state.collaborations ||= [];
+    state.reviews ||= [];
+    state.receivedReviews ||= [];
+    state.incomingMessages ||= [];
+    state.recentMessages ||= [];
+    state.calendarConnections ||= [];
+    state.supportTickets ||= localSupportTickets();
+    state.notificationPreferences ||= notificationPreferences();
+    try {
+      renderApp();
+    } catch (renderError) {
+      console.error("Trankui: render fallback non riuscito", renderError);
+    }
     showToast(errorMessage(error), true);
   }
 }
@@ -2206,33 +2268,44 @@ qs("#profileForm").addEventListener("change", async (event) => {
   finally { event.target.disabled = false; }
 });
 async function init() {
-  redrawIcons();
-  setAuthMode("signup");
-  if (!backend?.configured) {
-    setAuthStatus("Backend non configurato", backend?.error || "Il backend Trankui non e ancora configurato.");
-    qs("#authSubmit").disabled = true;
-    qs("#googleAuthButton").disabled = true;
-    return;
-  }
-  const session = await backend.session();
-  if (session) {
-    if (new URLSearchParams(window.location.search).get("calendar") === "google") {
-      const count = await backend.syncGoogleCalendar();
-      showToast(`${count} giornate occupate importate da Google Calendar`);
-      history.replaceState({}, "", window.location.pathname);
-    }
-    await enterApp(session);
-  }
-  backend.onAuthChange(async (nextSession, event) => {
-    if (event === "PASSWORD_RECOVERY") {
-      state.session = nextSession;
-      qs("#authScreen").classList.remove("hidden");
-      qs("#appShell").classList.add("hidden");
-      setAuthMode("new-password");
+  try {
+    redrawIcons();
+    setAuthMode("signup");
+    if (!backend?.configured) {
+      setAuthStatus("Backend non configurato", backend?.error || "Il backend Trankui non e ancora configurato.");
+      qs("#authSubmit").disabled = true;
+      qs("#googleAuthButton").disabled = true;
       return;
     }
-    if (nextSession && !state.session) await enterApp(nextSession);
-  });
+    const session = await backend.session();
+    if (session) {
+      if (new URLSearchParams(window.location.search).get("calendar") === "google") {
+        try {
+          const count = await backend.syncGoogleCalendar();
+          showToast(`${count} giornate occupate importate da Google Calendar`);
+          history.replaceState({}, "", window.location.pathname);
+        } catch (error) {
+          showToast(errorMessage(error), true);
+          history.replaceState({}, "", window.location.pathname);
+        }
+      }
+      await enterApp(session);
+    }
+    backend.onAuthChange(async (nextSession, event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        state.session = nextSession;
+        qs("#authScreen").classList.remove("hidden");
+        qs("#appShell").classList.add("hidden");
+        setAuthMode("new-password");
+        return;
+      }
+      if (nextSession && !state.session) await enterApp(nextSession);
+    });
+  } catch (error) {
+    console.error("Trankui: inizializzazione non riuscita", error);
+    setAuthStatus("Accesso temporaneamente non disponibile", errorMessage(error));
+    showToast(errorMessage(error), true);
+  }
 }
 
 init();
