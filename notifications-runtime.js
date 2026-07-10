@@ -1,4 +1,6 @@
 (function setupTrankuiNotifications() {
+  if (window.__trankuiNotificationsRuntimeBooted) return;
+  window.__trankuiNotificationsRuntimeBooted = true;
   const VERSION = "20260710-notifications-bridge-1";
   const STORAGE_KEY = "trankui-notification-preferences";
   const config = window.TRANKUI_CONFIG || {};
@@ -235,7 +237,7 @@
     }
     const target = profile.querySelector(".account-danger-zone") || profile.lastElementChild;
     target?.insertAdjacentHTML("beforebegin", notificationMarkup());
-    window.lucide?.createIcons();
+    window.requestAnimationFrame?.(() => window.lucide?.createIcons());
     syncControls();
   }
 
@@ -339,11 +341,12 @@
     bindControls();
     setupSound();
     loadRemotePreferences();
-    const observer = new MutationObserver(ensureNotificationPanel);
-    observer.observe(document.body, { childList: true, subtree: true });
+    window.addEventListener("trankui:profile-rendered", ensureNotificationPanel);
     ensureNotificationPanel();
+    let wrapAttempts = 0;
     const wrapTimer = window.setInterval(() => {
-      if (wrapBackend()) window.clearInterval(wrapTimer);
+      wrapAttempts += 1;
+      if (wrapBackend() || wrapAttempts > 20) window.clearInterval(wrapTimer);
     }, 250);
   }
 
