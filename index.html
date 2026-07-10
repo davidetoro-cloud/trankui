@@ -9,7 +9,11 @@
         document.documentElement.classList.add("theme-night");
       }
     </script>
-    <link rel="stylesheet" href="./styles.css?v=20260706-chat-name-1" />
+    <link rel="manifest" href="./manifest.webmanifest?v=20260710-notifications-1" />
+    <meta name="theme-color" content="#0068ff" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Trankui" />
+    <link rel="stylesheet" href="./styles.css?v=20260710-notifications-1" />
   </head>
   <body>
     <section class="auth-screen" id="authScreen">
@@ -118,6 +122,7 @@
       <aside class="sidebar" aria-label="Navigazione principale">
         <div class="brand">
           <img class="brand-logo" src="./clipboard.png?v=20260706-official-logo" alt="Trankui" />
+          <button class="brand-chat-button" type="button" data-view="chat" title="Apri chat" aria-label="Apri chat"><i data-lucide="message-circle" aria-hidden="true"></i></button>
         </div>
 
         <nav class="nav-list">
@@ -126,10 +131,9 @@
           <button class="nav-item" type="button" data-view="requests"><i data-lucide="activity" aria-hidden="true"></i>Attività</button>
           <button class="nav-item" type="button" data-view="calendar"><i data-lucide="calendar-days" aria-hidden="true"></i>Disponibilità</button>
           <button class="nav-item" type="button" data-view="admin"><i data-lucide="users-round" aria-hidden="true"></i>Community</button>
-          <button class="nav-item" type="button" data-view="support"><i data-lucide="life-buoy" aria-hidden="true"></i>Assistenza</button>
         </nav>
 
-        <div class="utility-links"><a href="./trankui.html">Trankui</a><a href="./faq.html">FAQ</a><a href="./blog.html">Blog</a></div>
+        <div class="utility-links"><a href="./trankui.html">Trankui</a><a href="./faq.html">FAQ</a><a href="./blog.html">Blog</a><button type="button" data-view="support">Help</button></div>
 
         <div class="sidebar-note">
           <div class="sidebar-user-row">
@@ -139,6 +143,10 @@
               </button>
               <section class="notification-panel hidden" id="notificationPanel" aria-label="Notifiche recenti">
                 <header><div><strong>Notifiche</strong><span id="notificationSummary">Nessun aggiornamento</span></div><button class="text-button" type="button" id="markNotificationsRead">Segna come lette</button></header>
+                <div class="notification-account-actions">
+                  <button class="secondary-button compact-button" type="button" data-go="profile"><i data-lucide="user-round" aria-hidden="true"></i>Il mio profilo</button>
+                  <button class="ghost-button compact-button" type="button" data-go="calendar"><i data-lucide="calendar-days" aria-hidden="true"></i>Disponibilità</button>
+                </div>
                 <div class="notification-list" id="notificationList"></div>
               </section>
             </div>
@@ -166,9 +174,14 @@
               <label for="role"><i data-lucide="clapperboard" aria-hidden="true"></i>Ruolo</label>
               <select id="role" name="role"></select>
             </div>
-            <div class="field">
-              <label for="date"><i data-lucide="calendar" aria-hidden="true"></i>Data</label>
-              <input id="date" name="date" type="date" />
+            <div class="field search-date-field">
+              <label for="searchDateButton"><i data-lucide="calendar" aria-hidden="true"></i>Date</label>
+              <button class="search-date-trigger" type="button" id="searchDateButton" aria-expanded="false" aria-controls="searchDatePopover">
+                <span id="searchDateLabel">Scegli date</span>
+                <i data-lucide="chevron-down" aria-hidden="true"></i>
+              </button>
+              <input id="date" name="date" type="hidden" />
+              <div class="search-date-popover hidden" id="searchDatePopover" aria-label="Seleziona una o più date"></div>
             </div>
             <div class="field">
               <label for="region"><i data-lucide="map-pin" aria-hidden="true"></i>Regione</label>
@@ -241,11 +254,21 @@
         <section class="view" id="view-requests">
           <div class="section-head">
             <h2>Attività</h2>
-            <span>Richieste dirette, candidature, match accettati e feedback post-lavoro.</span>
+            <span>Azioni aperte, collaborazioni in corso e storico essenziale.</span>
           </div>
           <div class="activity-summary" id="activitySummary"></div>
           <div class="feedback-queue" id="feedbackQueue"></div>
           <div class="request-list" id="requestList"></div>
+        </section>
+
+        <section class="view" id="view-chat">
+          <div class="section-head chat-page-head">
+            <div>
+              <h2>Chat</h2>
+              <span>Una conversazione unica per ogni persona, con lo storico sempre disponibile.</span>
+            </div>
+          </div>
+          <div class="chat-thread-list" id="chatThreadList"></div>
         </section>
 
         <section class="view" id="view-calendar">
@@ -258,17 +281,49 @@
 
         <section class="view" id="view-profile">
           <div class="section-head">
-            <h2>Profilo professionista</h2>
-            <span>Modifica le informazioni usate nella ricerca e nel trust layer.</span>
+            <h2>Il mio profilo</h2>
+            <span>Controlla come appari agli altri professionisti. Quando serve, entra in modifica.</span>
           </div>
-          <form class="profile-form" id="profileForm"></form>
+          <section class="profile-onboarding hidden" id="profileOnboarding"></section>
+          <section class="profile-overview" id="profileOverview"></section>
+          <form class="profile-form profile-form-editor hidden" id="profileForm"></form>
           <div class="profile-calendar-settings">
             <div class="section-head">
               <h2>Calendari collegati</h2>
-              <span>Gestisci sincronizzazione, esportazione e privacy del calendario.</span>
+              <span>Gestisci Google Calendar e la privacy dello stato libero/occupato.</span>
             </div>
             <div class="integrations-grid" id="integrationsGrid"></div>
           </div>
+          <section class="profile-notification-settings">
+            <div class="section-head">
+              <div>
+                <h2>Notifiche</h2>
+                <span>Scegli canali e aggiornamenti da ricevere per non perdere richieste, messaggi e feedback.</span>
+              </div>
+            </div>
+            <div class="notification-preferences-grid">
+              <article class="notification-channel-card">
+                <div><i data-lucide="smartphone" aria-hidden="true"></i><strong>Push mobile e browser</strong><span id="notificationPermissionState">Notifiche browser non ancora attive.</span></div>
+                <label class="switch-line"><input id="pushNotifications" type="checkbox" data-notification-channel="push" /><span></span></label>
+                <button class="secondary-button compact-button" type="button" id="enableNotifications"><i data-lucide="bell-ring" aria-hidden="true"></i>Autorizza</button>
+              </article>
+              <article class="notification-channel-card">
+                <div><i data-lucide="volume-2" aria-hidden="true"></i><strong>Suono</strong><span>Un avviso leggero quando arriva qualcosa di nuovo.</span></div>
+                <label class="switch-line"><input id="soundNotifications" type="checkbox" data-notification-channel="sound" checked /><span></span></label>
+              </article>
+              <article class="notification-channel-card">
+                <div><i data-lucide="mail" aria-hidden="true"></i><strong>Email</strong><span>Preferenza pronta per l'invio mail che attiveremo nel prossimo step.</span></div>
+                <label class="switch-line"><input id="emailNotifications" type="checkbox" data-notification-channel="email" /><span></span></label>
+              </article>
+            </div>
+            <div class="notification-topic-list" aria-label="Tipi di notifica">
+              <label><input type="checkbox" data-notification-topic="messages" checked /><span><strong>Messaggi in chat</strong><small>Risposte e nuove conversazioni.</small></span></label>
+              <label><input type="checkbox" data-notification-topic="requests" checked /><span><strong>Richieste e candidature</strong><small>Nuove richieste dirette o risposte dalla bacheca.</small></span></label>
+              <label><input type="checkbox" data-notification-topic="matches" checked /><span><strong>Aggiornamenti match</strong><small>Accettazioni, conferme e cambi di stato.</small></span></label>
+              <label><input type="checkbox" data-notification-topic="reviews" checked /><span><strong>Recensioni e feedback</strong><small>Feedback ricevuti o da completare.</small></span></label>
+              <label><input type="checkbox" data-notification-topic="availability" checked /><span><strong>Disponibilità</strong><small>Promemoria legati al calendario e alla visibilità in ricerca.</small></span></label>
+            </div>
+          </section>
           <section class="account-danger-zone">
             <div><p class="eyebrow">Gestione account</p><h2>Cancella account</h2><span>Elimina definitivamente profilo, disponibilità, messaggi e collaborazioni associate.</span></div>
             <button class="danger-button" type="button" id="openDeleteAccount"><i data-lucide="trash-2" aria-hidden="true"></i>Cancella il mio account</button>
@@ -276,11 +331,6 @@
         </section>
 
         <section class="view" id="view-admin">
-          <div class="section-head">
-            <h2>Community Trankui</h2>
-            <span>Una vista della rete professionale e delle collaborazioni create.</span>
-          </div>
-          <div class="mission-strip" id="betaStats"></div>
           <div class="community-search">
             <i data-lucide="search" aria-hidden="true"></i>
             <input id="communitySearch" type="search" placeholder="Cerca per nome, ruolo, provincia o specializzazione" aria-label="Cerca nella community" />
@@ -291,10 +341,10 @@
         <section class="view" id="view-support">
           <div class="section-head support-head">
             <div>
-              <h2>Assistenza Trankui</h2>
+              <h2>Help Trankui</h2>
               <span>Chiedi come funziona la piattaforma o apri un ticket se trovi un'anomalia.</span>
             </div>
-            <div class="support-state-pill"><i data-lucide="sparkles" aria-hidden="true"></i>AI guida prodotto</div>
+            <div class="support-state-pill"><i data-lucide="sparkles" aria-hidden="true"></i>Guida AI prodotto</div>
           </div>
           <div class="support-layout">
             <section class="support-assistant" aria-label="Chat assistenza Trankui">
@@ -369,8 +419,9 @@
         <header class="chat-head">
           <button class="close-button" type="button" id="closeChat" title="Chiudi chat"><i data-lucide="x" aria-hidden="true"></i></button>
           <div class="chat-person"><span class="user-avatar" id="chatAvatar">T</span><div><strong id="chatTitle">Conversazione</strong><span id="chatContext">Collaborazione</span></div></div>
-          <button class="icon-button" type="button" title="Dettagli collaborazione"><i data-lucide="info" aria-hidden="true"></i></button>
+          <button class="chat-info-button" type="button" id="chatInfoButton" title="Info utente" aria-label="Info utente" aria-controls="chatInfoPanel" aria-expanded="false"><i data-lucide="info" aria-hidden="true"></i></button>
         </header>
+        <section class="chat-info-panel hidden" id="chatInfoPanel" aria-label="Info utente"></section>
         <div class="chat-messages" id="chatMessages" aria-live="polite"></div>
         <form class="chat-compose" id="chatForm">
           <textarea id="chatInput" rows="1" maxlength="2000" placeholder="Scrivi un messaggio…" aria-label="Messaggio"></textarea>
@@ -418,9 +469,9 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="./config.js"></script>
-    <script src="./backend.js?v=20260706-chat-name-1"></script>
+    <script src="./backend.js?v=20260710-notifications-1"></script>
     <script src="./lucide.min.js"></script>
     <script src="./cookie-consent.js"></script>
-    <script src="./app.js?v=20260706-chat-name-1"></script>
+    <script src="./app.js?v=20260710-notifications-1"></script>
   </body>
 </html>
