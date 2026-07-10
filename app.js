@@ -1765,6 +1765,7 @@ async function createSupportTicket(event) {
 }
 
 function switchView(view) {
+  if (view === "calendar" || view === "profile-availability") return openProfileAvailability();
   qsa(".nav-item").forEach((item) => item.classList.toggle("active", item.dataset.view === view));
   qs(".brand-chat-button")?.classList.toggle("active", view === "chat");
   qsa(".view").forEach((item) => item.classList.toggle("active-view", item.id === `view-${view}`));
@@ -1799,6 +1800,13 @@ function openBoardComposer(prefill = false) {
   qs("#postForm").classList.remove("hidden");
   qs("#postForm").scrollIntoView({ behavior: "smooth", block: "start" });
   redrawIcons();
+}
+
+function openProfileAvailability() {
+  switchView("profile");
+  window.setTimeout(() => {
+    qs("#profileAvailabilitySection")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 60);
 }
 
 document.addEventListener("click", async (event) => {
@@ -1882,6 +1890,7 @@ document.addEventListener("click", async (event) => {
   if (go) {
     qs("#notificationPanel")?.classList.add("hidden");
     qs("#notificationButton")?.setAttribute("aria-expanded", "false");
+    if (go.dataset.go === "calendar" || go.dataset.go === "profile-availability") return openProfileAvailability();
     return switchView(go.dataset.go);
   }
   const onboardingPrev = event.target.closest("[data-onboarding-prev]");
@@ -2121,7 +2130,7 @@ qs("#cancelPost").addEventListener("click", () => {
   resetPostForm();
 });
 qs("#openBoard").addEventListener("click", openBoardComposer);
-qs("#openAvailability").addEventListener("click", () => switchView("calendar"));
+qs("#openAvailability").addEventListener("click", openProfileAvailability);
 qs("#enableNotifications").addEventListener("click", async () => {
   try {
     await ensurePushSubscription();
@@ -2169,11 +2178,16 @@ qsa("[data-notification-topic]").forEach((input) => {
     rememberCurrentNotifications();
   });
 });
-qs("#notificationButton").addEventListener("click", () => {
+function toggleAccountPanel(event) {
+  event?.preventDefault();
+  event?.stopPropagation();
   const panel = qs("#notificationPanel");
   panel.classList.toggle("hidden");
   qs("#notificationButton").setAttribute("aria-expanded", String(!panel.classList.contains("hidden")));
-});
+}
+
+qs("#notificationButton").addEventListener("click", toggleAccountPanel);
+qs("#notificationButton").addEventListener("touchend", toggleAccountPanel, { passive: false });
 qs("#markNotificationsRead").addEventListener("click", () => {
   localStorage.setItem(notificationStorageKey(), new Date().toISOString());
   renderNotifications();
