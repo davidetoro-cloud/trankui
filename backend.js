@@ -92,7 +92,31 @@
   async function ownProfile() {
     const current = await session();
     if (!current) return null;
-    const profile = unwrap(await client.from("profiles").select("*").eq("id", current.user.id).single());
+    const profileResult = await client.from("profiles").select("*").eq("id", current.user.id).maybeSingle();
+    if (profileResult.error) throw profileResult.error;
+    let profile = profileResult.data;
+    if (!profile) {
+      const metadata = current.user.user_metadata || {};
+      const fallbackName = metadata.full_name || metadata.name || current.user.email?.split("@")[0] || "Profilo Trankui";
+      profile = unwrap(await client.from("profiles").insert({
+        id: current.user.id,
+        full_name: fallbackName,
+        account_type: metadata.account_type || "freelance",
+        company_name: metadata.company_name || null,
+        company_type: metadata.company_type || null,
+        contact_name: metadata.contact_name || null,
+        avatar_url: metadata.avatar_url || metadata.picture || null,
+        region: "Sardegna",
+        city: "",
+        bio: "",
+        travel_area: "",
+        years_experience: 0,
+        brands: [],
+        production_types: [],
+        availability_visible: false,
+        profile_status: "draft",
+      }).select("*").single());
+    }
     const secondaryRoles = unwrap(await client.from("secondary_roles")
       .select("id,role_id,other_role_name,position,roles(id,name,category,slug)")
       .eq("profile_id", current.user.id).order("position"));
@@ -256,6 +280,14 @@
       .neq("sender_id", current.user.id).order("created_at", { ascending: false }).limit(100));
   }
 
+  async function recentMessages() {
+    const current = await session();
+    if (!current) return [];
+    return unwrap(await client.from("messages")
+      .select("id,collaboration_id,sender_id,body,created_at,sender:sender_id(id,full_name,avatar_url)")
+      .order("created_at", { ascending: false }).limit(200));
+  }
+
   async function sendMessage(collaborationId, body) {
     const current = await session();
     if (!current) throw new Error("Sessione scaduta");
@@ -285,8 +317,7 @@
       .eq("author_id", current.user.id).maybeSingle());
     if (existing) return existing;
     const review = { ...payload, author_id: current.user.id };
-    unwrap(await client.from("reviews").insert(review));
-    return review;
+    return unwrap(await client.from("reviews").insert(review).select("*").single());
   }
 
   async function publishedReviews(profileId) {
@@ -370,6 +401,69 @@
     }).select().single());
   }
 
+  function defaultNotificationPreferences() {
+    return {
+      channels: { push: false, sound: true, email: false },
+      topics: { messages: true, requests: true, matches: true, reviews: true, availability: true },
+    };
+  }
+
+  async function notificationPreferences() {
+    const current = await session();
+    if (!current) return defaultNotificationPreferences();
+    const result = await client.from("notification_preferences")
+      .select("channels,topics")
+      .eq("profile_id", current.user.id)
+      .maybeSingle();
+    if (result.error) throw result.error;
+    return {
+      channels: { ...defaultNotificationPreferences().channels, ...(result.data?.channels || {}) },
+      topics: { ...defaultNotificationPreferences().topics, ...(result.data?.topics || {}) },
+    };
+  }
+
+  async function saveNotificationPreferences(preferences) {
+    const current = await session();
+    if (!current) throw new Error("Sessione scaduta");
+    const merged = {
+      channels: { ...defaultNotificationPreferences().channels, ...(preferences.channels || {}) },
+      topics: { ...defaultNotificationPreferences().topics, ...(preferences.topics || {}) },
+    };
+    return unwrap(await client.from("notification_preferences").upsert({
+      profile_id: current.user.id,
+      channels: merged.channels,
+      topics: merged.topics,
+    }, { onConflict: "profile_id" }).select("channels,topics").single());
+  }
+
+  async function savePushSubscription(subscription) {
+    const current = await session();
+    if (!current) throw new Error("Sessione scaduta");
+    const payload = subscription?.toJSON ? subscription.toJSON() : subscription;
+    if (!payload?.endpoint || !payload?.keys?.p256dh || !payload?.keys?.auth) throw new Error("Iscrizione push non valida");
+    return unwrap(await client.from("push_subscriptions").upsert({
+      profile_id: current.user.id,
+      endpoint: payload.endpoint,
+      p256dh: payload.keys.p256dh,
+      auth: payload.keys.auth,
+      user_agent: navigator.userAgent || "",
+      last_seen_at: new Date().toISOString(),
+    }, { onConflict: "endpoint" }).select("id").single());
+  }
+
+  async function deletePushSubscription(endpoint) {
+    const current = await session();
+    if (!current || !endpoint) return null;
+    return unwrap(await client.from("push_subscriptions").delete()
+      .eq("profile_id", current.user.id)
+      .eq("endpoint", endpoint)
+      .select("id"));
+  }
+
+  async function notifyEvent(payload) {
+    return unwrap(await client.functions.invoke("notify", { body: payload }));
+  }
+
   async function supportTickets() {
     const current = await session();
     if (!current) return [];
@@ -421,6 +515,7 @@
     confirmComplete,
     messages,
     incomingMessages,
+    recentMessages,
     sendMessage,
     subscribeToMessages,
     submitReview,
@@ -433,6 +528,11 @@
     deleteAccount,
     collaborationContact,
     recordConsent,
+    notificationPreferences,
+    saveNotificationPreferences,
+    savePushSubscription,
+    deletePushSubscription,
+    notifyEvent,
     supportTickets,
     createSupportTicket,
   };
