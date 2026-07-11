@@ -2186,34 +2186,40 @@ function toggleAccountPanel(event) {
   qs("#notificationButton").setAttribute("aria-expanded", String(!panel.classList.contains("hidden")));
 }
 
-qs("#notificationButton").addEventListener("click", toggleAccountPanel);
-qs("#notificationButton").addEventListener("touchend", toggleAccountPanel, { passive: false });
-qs("#markNotificationsRead").addEventListener("click", () => {
-  localStorage.setItem(notificationStorageKey(), new Date().toISOString());
-  renderNotifications();
-  rememberCurrentNotifications();
-});
-qs("#openProfile").addEventListener("click", () => switchView("profile"));
-qs("#openDeleteAccount").addEventListener("click", () => {
+let lastAccountPanelPointerAt = 0;
+function handleAccountPanelPointer(event) {
+  const now = Date.now();
+  if (now - lastAccountPanelPointerAt < 350) return;
+  lastAccountPanelPointerAt = now;
+  toggleAccountPanel(event);
+}
+
+function handleAccountPanelClick(event) {
+  if (event.detail > 0 && Date.now() - lastAccountPanelPointerAt < 700) return;
+  toggleAccountPanel(event);
+}
+
+function openDeleteAccountModal(event) {
+  event?.preventDefault();
+  event?.stopPropagation();
   qs("#deleteAccountConfirmation").value = "";
   qs("#confirmDeleteAccount").disabled = true;
   qs("#deleteAccountBackdrop").classList.remove("hidden");
   document.body.classList.add("modal-open");
-});
-qs("#closeDeleteAccount").addEventListener("click", () => {
+}
+
+function closeDeleteAccountModal() {
   qs("#deleteAccountBackdrop").classList.add("hidden");
   document.body.classList.remove("modal-open");
-});
-qs("#deleteAccountConfirmation").addEventListener("input", (event) => {
-  qs("#confirmDeleteAccount").disabled = event.target.value.trim().toUpperCase() !== "CANCELLA";
-});
-qs("#confirmDeleteAccount").addEventListener("click", async () => {
+}
+
+async function confirmDeleteAccount() {
   const button = qs("#confirmDeleteAccount");
   button.disabled = true;
   try {
     const result = await backend.deleteAccount();
     state.session = null;
-    qs("#deleteAccountBackdrop").classList.add("hidden");
+    closeDeleteAccountModal();
     qs("#appShell").classList.add("hidden");
     qs("#authScreen").classList.remove("hidden");
     setAuthMode("signin");
@@ -2222,6 +2228,37 @@ qs("#confirmDeleteAccount").addEventListener("click", async () => {
     showToast(errorMessage(error), true);
     button.disabled = false;
   }
+}
+
+qs("#notificationButton").addEventListener("pointerup", handleAccountPanelPointer);
+qs("#notificationButton").addEventListener("touchend", handleAccountPanelPointer, { passive: false });
+qs("#notificationButton").addEventListener("click", handleAccountPanelClick);
+qs("#markNotificationsRead").addEventListener("click", () => {
+  localStorage.setItem(notificationStorageKey(), new Date().toISOString());
+  renderNotifications();
+  rememberCurrentNotifications();
+});
+qs("#openProfile").addEventListener("click", () => switchView("profile"));
+qs("#openDeleteAccount").addEventListener("pointerup", openDeleteAccountModal);
+qs("#openDeleteAccount").addEventListener("click", (event) => {
+  if (event.detail > 0 && "PointerEvent" in window) return;
+  openDeleteAccountModal(event);
+});
+qs("#closeDeleteAccount").addEventListener("pointerup", closeDeleteAccountModal);
+qs("#closeDeleteAccount").addEventListener("click", (event) => {
+  if (event.detail > 0 && "PointerEvent" in window) return;
+  closeDeleteAccountModal(event);
+});
+qs("#deleteAccountConfirmation").addEventListener("input", (event) => {
+  qs("#confirmDeleteAccount").disabled = event.target.value.trim().toUpperCase() !== "CANCELLA";
+});
+qs("#confirmDeleteAccount").addEventListener("pointerup", (event) => {
+  event.preventDefault();
+  if (!event.currentTarget.disabled) confirmDeleteAccount();
+});
+qs("#confirmDeleteAccount").addEventListener("click", (event) => {
+  if (event.detail > 0 && "PointerEvent" in window) return;
+  if (!event.currentTarget.disabled) confirmDeleteAccount();
 });
 qs("#closeChat").addEventListener("click", closeChat);
 qs("#chatBackdrop").addEventListener("click", (event) => { if (event.target === event.currentTarget) closeChat(); });
