@@ -271,7 +271,7 @@
 window.loadTrankuiNotificationsRuntime = function loadTrankuiNotificationsRuntime() {
   if (document.querySelector("script[data-trankui-notifications]")) return;
   const script = document.createElement("script");
-  script.src = "./notifications-runtime.js?v=20260710-freeze-guard-1";
+  script.src = "./notifications-runtime.js?v=20260712-notification-settings-1";
   script.defer = true;
   script.dataset.trankuiNotifications = "true";
   document.body.appendChild(script);

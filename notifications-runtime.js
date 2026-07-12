@@ -197,44 +197,53 @@
   function notificationMarkup() {
     return `
       <section class="profile-notification-settings" id="profileNotificationSettings">
-        <div class="section-head">
+        <div class="section-head notification-section-head">
           <div>
             <h2>Notifiche</h2>
-            <span>Scegli canali e aggiornamenti da ricevere per non perdere richieste, messaggi e feedback.</span>
+            <span>Decidi come Trankui ti avvisa. Le preferenze vengono salvate automaticamente.</span>
           </div>
+          <small>Salvataggio automatico</small>
         </div>
-        <div class="notification-preferences-grid">
-          <article class="notification-channel-card">
-            <div>${icon("smartphone")}<strong>Push mobile e browser</strong><span id="notificationPermissionState">Notifiche browser non ancora attive.</span></div>
-            <label class="switch-line"><input id="pushNotifications" type="checkbox" data-notification-channel="push" /><span></span></label>
-            <button class="secondary-button compact-button" type="button" id="enableNotifications">${icon("bell-ring")}Autorizza</button>
-          </article>
-          <article class="notification-channel-card">
-            <div>${icon("volume-2")}<strong>Suono</strong><span>Un avviso leggero quando arriva qualcosa di nuovo.</span></div>
-            <label class="switch-line"><input id="soundNotifications" type="checkbox" data-notification-channel="sound" /><span></span></label>
-          </article>
-          <article class="notification-channel-card">
-            <div>${icon("mail")}<strong>Email</strong><span>Promemoria e aggiornamenti importanti via mail.</span></div>
-            <label class="switch-line"><input id="emailNotifications" type="checkbox" data-notification-channel="email" /><span></span></label>
-          </article>
-        </div>
-        <div class="notification-topic-list" aria-label="Tipi di notifica">
-          <label><input type="checkbox" data-notification-topic="messages" /><span><strong>Messaggi in chat</strong><small>Risposte e nuove conversazioni.</small></span></label>
-          <label><input type="checkbox" data-notification-topic="requests" /><span><strong>Richieste e candidature</strong><small>Nuove richieste dirette o risposte dalla bacheca.</small></span></label>
-          <label><input type="checkbox" data-notification-topic="matches" /><span><strong>Aggiornamenti match</strong><small>Accettazioni, conferme e cambi di stato.</small></span></label>
-          <label><input type="checkbox" data-notification-topic="reviews" /><span><strong>Recensioni e feedback</strong><small>Feedback ricevuti o da completare.</small></span></label>
-          <label><input type="checkbox" data-notification-topic="availability" /><span><strong>Disponibilità</strong><small>Promemoria legati al calendario e alla visibilità in ricerca.</small></span></label>
+        <div class="notification-settings-card">
+          <div class="notification-settings-group">
+            <p class="notification-settings-label">Canali</p>
+            <div class="notification-preferences-grid">
+              <article class="notification-channel-card">
+                <div>${icon("smartphone")}<span><strong>Push</strong><small id="notificationPermissionState">Notifiche browser non ancora attive.</small></span></div>
+                <label class="switch-line"><input id="pushNotifications" type="checkbox" data-notification-channel="push" /><span></span></label>
+                <button class="secondary-button compact-button" type="button" id="enableNotifications">${icon("bell-ring")}Autorizza</button>
+              </article>
+              <article class="notification-channel-card">
+                <div>${icon("volume-2")}<span><strong>Suono</strong><small>Avviso leggero quando arriva qualcosa.</small></span></div>
+                <label class="switch-line"><input id="soundNotifications" type="checkbox" data-notification-channel="sound" /><span></span></label>
+              </article>
+              <article class="notification-channel-card">
+                <div>${icon("mail")}<span><strong>Email</strong><small>Riepiloghi e aggiornamenti importanti.</small></span></div>
+                <label class="switch-line"><input id="emailNotifications" type="checkbox" data-notification-channel="email" /><span></span></label>
+              </article>
+            </div>
+          </div>
+          <div class="notification-settings-group">
+            <p class="notification-settings-label">Cosa vuoi ricevere</p>
+            <div class="notification-topic-list" aria-label="Tipi di notifica">
+              <label><input type="checkbox" data-notification-topic="messages" /><span><strong>Chat</strong><small>Nuovi messaggi e conversazioni.</small></span></label>
+              <label><input type="checkbox" data-notification-topic="requests" /><span><strong>Richieste</strong><small>Richieste dirette e candidature.</small></span></label>
+              <label><input type="checkbox" data-notification-topic="matches" /><span><strong>Match</strong><small>Accettazioni e cambi di stato.</small></span></label>
+              <label><input type="checkbox" data-notification-topic="reviews" /><span><strong>Feedback</strong><small>Recensioni ricevute o da completare.</small></span></label>
+              <label><input type="checkbox" data-notification-topic="availability" /><span><strong>Disponibilità</strong><small>Promemoria sul calendario.</small></span></label>
+            </div>
+          </div>
         </div>
       </section>`;
   }
 
   function ensureNotificationPanel() {
-    injectStyle();
     const profile = document.querySelector("#view-profile");
     if (!profile || document.querySelector("#profileNotificationSettings")) {
       syncControls();
       return;
     }
+    injectStyle();
     const target = profile.querySelector(".account-danger-zone") || profile.lastElementChild;
     target?.insertAdjacentHTML("beforebegin", notificationMarkup());
     window.requestAnimationFrame?.(() => window.lucide?.createIcons());

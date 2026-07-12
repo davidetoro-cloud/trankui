@@ -13,7 +13,7 @@
     <meta name="theme-color" content="#0068ff" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Trankui" />
-    <link rel="stylesheet" href="./styles.css?v=20260711-mobile-touch-1" />
+    <link rel="stylesheet" href="./styles.css?v=20260712-notification-settings-1" />
   </head>
   <body>
     <section class="auth-screen" id="authScreen">
@@ -292,34 +292,43 @@
             </div>
             <div class="integrations-grid" id="integrationsGrid"></div>
           </div>
-          <section class="profile-notification-settings">
-            <div class="section-head">
+          <section class="profile-notification-settings" id="profileNotificationSettings">
+            <div class="section-head notification-section-head">
               <div>
                 <h2>Notifiche</h2>
-                <span>Scegli canali e aggiornamenti da ricevere per non perdere richieste, messaggi e feedback.</span>
+                <span>Decidi come Trankui ti avvisa. Le preferenze vengono salvate automaticamente.</span>
               </div>
+              <small>Salvataggio automatico</small>
             </div>
-            <div class="notification-preferences-grid">
-              <article class="notification-channel-card">
-                <div><i data-lucide="smartphone" aria-hidden="true"></i><strong>Push mobile e browser</strong><span id="notificationPermissionState">Notifiche browser non ancora attive.</span></div>
-                <label class="switch-line"><input id="pushNotifications" type="checkbox" data-notification-channel="push" /><span></span></label>
-                <button class="secondary-button compact-button" type="button" id="enableNotifications"><i data-lucide="bell-ring" aria-hidden="true"></i>Autorizza</button>
-              </article>
-              <article class="notification-channel-card">
-                <div><i data-lucide="volume-2" aria-hidden="true"></i><strong>Suono</strong><span>Un avviso leggero quando arriva qualcosa di nuovo.</span></div>
-                <label class="switch-line"><input id="soundNotifications" type="checkbox" data-notification-channel="sound" checked /><span></span></label>
-              </article>
-              <article class="notification-channel-card">
-                <div><i data-lucide="mail" aria-hidden="true"></i><strong>Email</strong><span>Preferenza pronta per l'invio mail che attiveremo nel prossimo step.</span></div>
-                <label class="switch-line"><input id="emailNotifications" type="checkbox" data-notification-channel="email" /><span></span></label>
-              </article>
-            </div>
-            <div class="notification-topic-list" aria-label="Tipi di notifica">
-              <label><input type="checkbox" data-notification-topic="messages" checked /><span><strong>Messaggi in chat</strong><small>Risposte e nuove conversazioni.</small></span></label>
-              <label><input type="checkbox" data-notification-topic="requests" checked /><span><strong>Richieste e candidature</strong><small>Nuove richieste dirette o risposte dalla bacheca.</small></span></label>
-              <label><input type="checkbox" data-notification-topic="matches" checked /><span><strong>Aggiornamenti match</strong><small>Accettazioni, conferme e cambi di stato.</small></span></label>
-              <label><input type="checkbox" data-notification-topic="reviews" checked /><span><strong>Recensioni e feedback</strong><small>Feedback ricevuti o da completare.</small></span></label>
-              <label><input type="checkbox" data-notification-topic="availability" checked /><span><strong>Disponibilità</strong><small>Promemoria legati al calendario e alla visibilità in ricerca.</small></span></label>
+            <div class="notification-settings-card">
+              <div class="notification-settings-group">
+                <p class="notification-settings-label">Canali</p>
+                <div class="notification-preferences-grid">
+                  <article class="notification-channel-card">
+                    <div><i data-lucide="smartphone" aria-hidden="true"></i><span><strong>Push</strong><small id="notificationPermissionState">Notifiche browser non ancora attive.</small></span></div>
+                    <label class="switch-line"><input id="pushNotifications" type="checkbox" data-notification-channel="push" /><span></span></label>
+                    <button class="secondary-button compact-button" type="button" id="enableNotifications"><i data-lucide="bell-ring" aria-hidden="true"></i>Autorizza</button>
+                  </article>
+                  <article class="notification-channel-card">
+                    <div><i data-lucide="volume-2" aria-hidden="true"></i><span><strong>Suono</strong><small>Avviso leggero quando arriva qualcosa.</small></span></div>
+                    <label class="switch-line"><input id="soundNotifications" type="checkbox" data-notification-channel="sound" checked /><span></span></label>
+                  </article>
+                  <article class="notification-channel-card">
+                    <div><i data-lucide="mail" aria-hidden="true"></i><span><strong>Email</strong><small>Riepiloghi e aggiornamenti importanti.</small></span></div>
+                    <label class="switch-line"><input id="emailNotifications" type="checkbox" data-notification-channel="email" /><span></span></label>
+                  </article>
+                </div>
+              </div>
+              <div class="notification-settings-group">
+                <p class="notification-settings-label">Cosa vuoi ricevere</p>
+                <div class="notification-topic-list" aria-label="Tipi di notifica">
+                  <label><input type="checkbox" data-notification-topic="messages" checked /><span><strong>Chat</strong><small>Nuovi messaggi e conversazioni.</small></span></label>
+                  <label><input type="checkbox" data-notification-topic="requests" checked /><span><strong>Richieste</strong><small>Richieste dirette e candidature.</small></span></label>
+                  <label><input type="checkbox" data-notification-topic="matches" checked /><span><strong>Match</strong><small>Accettazioni e cambi di stato.</small></span></label>
+                  <label><input type="checkbox" data-notification-topic="reviews" checked /><span><strong>Feedback</strong><small>Recensioni ricevute o da completare.</small></span></label>
+                  <label><input type="checkbox" data-notification-topic="availability" checked /><span><strong>Disponibilità</strong><small>Promemoria sul calendario.</small></span></label>
+                </div>
+              </div>
             </div>
           </section>
           <section class="account-danger-zone">
@@ -470,6 +479,6 @@
     <script src="./backend.js?v=20260712-delete-account-2"></script>
     <script src="./lucide.min.js"></script>
     <script src="./cookie-consent.js?v=20260712-delete-account-2"></script>
-    <script src="./app.js?v=20260712-delete-account-2"></script>
+    <script src="./app.js?v=20260712-notification-settings-1"></script>
   </body>
 </html>

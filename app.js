@@ -183,8 +183,8 @@ function notificationPreferences() {
     const stored = JSON.parse(localStorage.getItem(notificationPreferenceStorageKey()) || "{}");
     const legacySound = localStorage.getItem(soundNotificationStorageKey());
     return {
-      channels: { ...defaults.channels, ...(stored.channels || {}), ...(state.notificationPreferences?.channels || {}), ...(legacySound === "off" ? { sound: false } : {}) },
-      topics: { ...defaults.topics, ...(stored.topics || {}), ...(state.notificationPreferences?.topics || {}) },
+      channels: { ...defaults.channels, ...(state.notificationPreferences?.channels || {}), ...(stored.channels || {}), ...(legacySound === "off" ? { sound: false } : {}) },
+      topics: { ...defaults.topics, ...(state.notificationPreferences?.topics || {}), ...(stored.topics || {}) },
     };
   } catch (_) {
     return {
@@ -199,7 +199,14 @@ function saveNotificationPreferences(preferences) {
   localStorage.setItem(notificationPreferenceStorageKey(), JSON.stringify(preferences));
   localStorage.setItem(soundNotificationStorageKey(), preferences.channels.sound ? "on" : "off");
   if (backend?.saveNotificationPreferences && state.session) {
-    backend.saveNotificationPreferences(preferences).catch(() => {});
+    backend.saveNotificationPreferences(preferences).then((saved) => {
+      if (!saved) return;
+      state.notificationPreferences = {
+        channels: { ...defaultNotificationPreferences().channels, ...(saved.channels || {}) },
+        topics: { ...defaultNotificationPreferences().topics, ...(saved.topics || {}) },
+      };
+      localStorage.setItem(notificationPreferenceStorageKey(), JSON.stringify(state.notificationPreferences));
+    }).catch(() => {});
   }
 }
 
