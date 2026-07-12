@@ -2252,14 +2252,16 @@ qs("#closeDeleteAccount").addEventListener("click", (event) => {
 qs("#deleteAccountConfirmation").addEventListener("input", (event) => {
   qs("#confirmDeleteAccount").disabled = event.target.value.trim().toUpperCase() !== "CANCELLA";
 });
-qs("#confirmDeleteAccount").addEventListener("pointerup", (event) => {
-  event.preventDefault();
-  if (!event.currentTarget.disabled) confirmDeleteAccount();
-});
-qs("#confirmDeleteAccount").addEventListener("click", (event) => {
-  if (event.detail > 0 && "PointerEvent" in window) return;
-  if (!event.currentTarget.disabled) confirmDeleteAccount();
-});
+if (!window.trankuiDeleteAccountRuntime) {
+  qs("#confirmDeleteAccount").addEventListener("pointerup", (event) => {
+    event.preventDefault();
+    if (!event.currentTarget.disabled) confirmDeleteAccount();
+  });
+  qs("#confirmDeleteAccount").addEventListener("click", (event) => {
+    if (event.detail > 0 && "PointerEvent" in window) return;
+    if (!event.currentTarget.disabled) confirmDeleteAccount();
+  });
+}
 qs("#closeChat").addEventListener("click", closeChat);
 qs("#chatBackdrop").addEventListener("click", (event) => { if (event.target === event.currentTarget) closeChat(); });
 qs("#chatForm").addEventListener("submit", async (event) => {

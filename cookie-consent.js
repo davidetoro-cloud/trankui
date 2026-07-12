@@ -88,6 +88,7 @@
 })();
 
 (function setupDeleteAccountFeedback() {
+  window.trankuiDeleteAccountRuntime = true;
   let deleteInProgress = false;
 
   function ensureDeleteStyles() {
