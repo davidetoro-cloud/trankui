@@ -65,6 +65,7 @@
     if (confirmButton) confirmButton.disabled = true;
     if (backdrop) backdrop.classList.remove("hidden");
     document.body.classList.add("modal-open");
+    window.setTimeout(() => updateDeleteAccountState(), 60);
   }
 
   function handleClick(event) {
@@ -84,6 +85,177 @@
   document.addEventListener("pointerup", openDeleteAccountModal, true);
   document.addEventListener("touchend", openDeleteAccountModal, { capture: true, passive: false });
   document.addEventListener("click", handleClick, true);
+})();
+
+(function setupDeleteAccountFeedback() {
+  let deleteInProgress = false;
+
+  function ensureDeleteStyles() {
+    if (document.querySelector("#deleteAccountRuntimeStyles")) return;
+    const style = document.createElement("style");
+    style.id = "deleteAccountRuntimeStyles";
+    style.textContent = `
+      .delete-account-status {
+        margin: 12px 0;
+        padding: 12px 14px;
+        border: 1px solid #dfe4ec;
+        border-radius: 8px;
+        background: #f8fafc;
+        color: #5f6368;
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 1.35;
+      }
+      .delete-account-status[data-tone="ready"] {
+        border-color: #b9d3ff;
+        background: #eef5ff;
+        color: #0058d8;
+      }
+      .delete-account-status[data-tone="loading"] {
+        border-color: #dfe4ec;
+        background: #f3f4f6;
+        color: #2b2d31;
+      }
+      .delete-account-status[data-tone="error"] {
+        border-color: #f3b4b8;
+        background: #fff1f2;
+        color: #b4232d;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function qs(selector) {
+    return document.querySelector(selector);
+  }
+
+  function visibleDeleteModal() {
+    const backdrop = qs("#deleteAccountBackdrop");
+    return backdrop && !backdrop.classList.contains("hidden");
+  }
+
+  function deleteElements() {
+    return {
+      backdrop: qs("#deleteAccountBackdrop"),
+      input: qs("#deleteAccountConfirmation"),
+      button: qs("#confirmDeleteAccount"),
+      app: qs("#appShell"),
+      auth: qs("#authScreen"),
+      status: ensureDeleteStatus(),
+    };
+  }
+
+  function ensureDeleteStatus() {
+    ensureDeleteStyles();
+    let status = qs("#deleteAccountStatus");
+    const button = qs("#confirmDeleteAccount");
+    if (!status && button) {
+      status = document.createElement("p");
+      status.id = "deleteAccountStatus";
+      status.className = "delete-account-status";
+      status.setAttribute("role", "status");
+      status.setAttribute("aria-live", "polite");
+      button.insertAdjacentElement("beforebegin", status);
+    }
+    return status;
+  }
+
+  function setDeleteStatus(message, tone = "neutral") {
+    const status = ensureDeleteStatus();
+    if (!status) return;
+    status.textContent = message || "";
+    status.dataset.tone = tone;
+  }
+
+  function isConfirmed() {
+    return (qs("#deleteAccountConfirmation")?.value || "").trim().toUpperCase() === "CANCELLA";
+  }
+
+  function restoreDeleteButton() {
+    const button = qs("#confirmDeleteAccount");
+    if (!button) return;
+    button.innerHTML = `<i data-lucide="trash-2"></i>Cancella definitivamente`;
+    window.lucide?.createIcons();
+  }
+
+  function updateDeleteAccountState() {
+    if (!visibleDeleteModal()) return;
+    const { button } = deleteElements();
+    if (!button || deleteInProgress) return;
+    const confirmed = isConfirmed();
+    button.disabled = !confirmed;
+    setDeleteStatus(
+      confirmed
+        ? "Conferma attiva. Clicca sul pulsante per cancellare definitivamente l'account."
+        : "Per continuare scrivi esattamente CANCELLA.",
+      confirmed ? "ready" : "neutral",
+    );
+  }
+
+  function showAuthDeletionResult(result) {
+    const { app, auth } = deleteElements();
+    app?.classList.add("hidden");
+    auth?.classList.remove("hidden");
+    const status = qs("#authStatus");
+    if (!status) return;
+    if (result?.email_sent) {
+      status.innerHTML = `<strong>Account cancellato</strong><span>Ti abbiamo inviato una conferma via email. Controlla anche spam o promozioni.</span>`;
+    } else {
+      status.innerHTML = `<strong>Account cancellato</strong><span>La cancellazione è stata completata. La mail automatica non risulta inviata: stiamo verificando la configurazione di welcome@trankui.com.</span>`;
+    }
+  }
+
+  async function runDeleteAccount(event) {
+    const target = event.target?.closest?.("#confirmDeleteAccount");
+    if (!target) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+
+    if (deleteInProgress) return;
+    updateDeleteAccountState();
+    if (!isConfirmed()) {
+      setDeleteStatus("Scrivi esattamente CANCELLA per abilitare la cancellazione.", "error");
+      return;
+    }
+
+    const { backdrop, button } = deleteElements();
+    deleteInProgress = true;
+    button.disabled = true;
+    button.innerHTML = `<i data-lucide="loader-circle"></i>Cancellazione in corso...`;
+    window.lucide?.createIcons();
+    setDeleteStatus("Stiamo cancellando il profilo. Non chiudere questa pagina.", "loading");
+
+    try {
+      if (!window.trankuiBackend?.deleteAccount) throw new Error("Servizio di cancellazione non disponibile.");
+      const result = await window.trankuiBackend.deleteAccount();
+      backdrop?.classList.add("hidden");
+      document.body.classList.remove("modal-open");
+      showAuthDeletionResult(result);
+    } catch (error) {
+      const message = error?.message || "Non siamo riusciti a cancellare l'account. Riprova tra poco.";
+      setDeleteStatus(message, "error");
+      deleteInProgress = false;
+      button.disabled = !isConfirmed();
+      restoreDeleteButton();
+    }
+  }
+
+  document.addEventListener("input", (event) => {
+    if (event.target?.matches?.("#deleteAccountConfirmation")) updateDeleteAccountState();
+  }, true);
+  document.addEventListener("change", (event) => {
+    if (event.target?.matches?.("#deleteAccountConfirmation")) updateDeleteAccountState();
+  }, true);
+  document.addEventListener("keyup", (event) => {
+    if (event.target?.matches?.("#deleteAccountConfirmation")) updateDeleteAccountState();
+  }, true);
+  document.addEventListener("paste", (event) => {
+    if (event.target?.matches?.("#deleteAccountConfirmation")) window.setTimeout(updateDeleteAccountState, 0);
+  }, true);
+  document.addEventListener("pointerup", runDeleteAccount, true);
+  document.addEventListener("touchend", runDeleteAccount, { capture: true, passive: false });
+  document.addEventListener("click", runDeleteAccount, true);
+  window.setInterval(updateDeleteAccountState, 500);
 })();
 
 window.loadTrankuiNotificationsRuntime = function loadTrankuiNotificationsRuntime() {
