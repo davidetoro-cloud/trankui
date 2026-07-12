@@ -32,6 +32,16 @@
     return result.data;
   }
 
+  async function readJsonResponse(response) {
+    const text = await response.text();
+    if (!text) return null;
+    try {
+      return JSON.parse(text);
+    } catch (error) {
+      return { error: text };
+    }
+  }
+
   async function session() {
     const data = unwrap(await client.auth.getSession());
     return data.session;
@@ -382,7 +392,30 @@
   async function deleteAccount() {
     const current = await session();
     if (!current) throw new Error("Sessione scaduta");
-    return unwrap(await client.functions.invoke("delete-account", { body: { confirmation: "DELETE" } }));
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 25000);
+    try {
+      const response = await fetch(`${config.supabaseUrl}/functions/v1/delete-account`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${current.access_token}`,
+          apikey: config.supabasePublishableKey,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ confirmation: "DELETE" }),
+        signal: controller.signal,
+      });
+      const payload = await readJsonResponse(response);
+      if (!response.ok) throw new Error(payload?.error || "Non siamo riusciti a cancellare l'account. Riprova tra poco.");
+      return payload;
+    } catch (error) {
+      if (error?.name === "AbortError") {
+        throw new Error("La cancellazione sta impiegando troppo tempo. Ricarica la pagina e controlla se il profilo risulta ancora attivo, poi riprova.");
+      }
+      throw error;
+    } finally {
+      window.clearTimeout(timeout);
+    }
   }
 
   async function collaborationContact(collaborationId) {
