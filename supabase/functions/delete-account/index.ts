@@ -45,6 +45,18 @@ function isMissingTable(error: unknown) {
   return typeof error === "object" && error !== null && "code" in error && error.code === "42P01";
 }
 
+function readableError(error: unknown) {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === "string" && error.trim()) return error.trim();
+  if (typeof error === "object" && error !== null) {
+    const candidate = error as { message?: unknown; details?: unknown; hint?: unknown; code?: unknown };
+    const parts = [candidate.message, candidate.details, candidate.hint, candidate.code]
+      .filter((value) => typeof value === "string" && value.trim());
+    if (parts.length) return parts.join(" ");
+  }
+  return "Operazione non riuscita";
+}
+
 function readBearerToken(authorization: string) {
   const match = authorization.match(/^Bearer\s+(.+)$/i);
   if (!match?.[1]) throw new Error("Autorizzazione non valida");
@@ -160,7 +172,7 @@ Deno.serve(async (request) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Operazione non riuscita";
+    const message = readableError(error);
     return new Response(JSON.stringify({ error: message }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
