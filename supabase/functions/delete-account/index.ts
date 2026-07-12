@@ -42,7 +42,11 @@ function accountDeletedEmailHtml() {
 }
 
 function isMissingTable(error: unknown) {
-  return typeof error === "object" && error !== null && "code" in error && error.code === "42P01";
+  if (typeof error !== "object" || error === null) return false;
+  const candidate = error as { code?: unknown; message?: unknown };
+  const code = typeof candidate.code === "string" ? candidate.code : "";
+  const message = typeof candidate.message === "string" ? candidate.message : "";
+  return code === "42P01" || code === "PGRST205" || message.includes("Could not find the table");
 }
 
 function readableError(error: unknown) {
