@@ -45,6 +45,14 @@ function isMissingTable(error: unknown) {
   return typeof error === "object" && error !== null && "code" in error && error.code === "42P01";
 }
 
+function readBearerToken(authorization: string) {
+  const match = authorization.match(/^Bearer\s+(.+)$/i);
+  if (!match?.[1]) throw new Error("Autorizzazione non valida");
+  const token = match[1].trim();
+  if (token.split(".").length !== 3) throw new Error("Sessione non valida. Effettua nuovamente l'accesso.");
+  return token;
+}
+
 async function deleteMatching(adminClient: AdminClient, table: string, buildQuery: (query: any) => unknown) {
   const query = adminClient.from(table).delete();
   const { error } = await buildQuery(query) as { error: unknown };
@@ -130,10 +138,11 @@ Deno.serve(async (request) => {
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     if (!url || !anonKey || !serviceKey) throw new Error("Configurazione Supabase incompleta per la cancellazione account.");
-    const userClient = createClient(url, anonKey, { global: { headers: { Authorization: authorization } } });
+    const accessToken = readBearerToken(authorization);
+    const userClient = createClient(url, anonKey);
     const adminClient = createClient(url, serviceKey);
 
-    const { data: { user }, error: userError } = await userClient.auth.getUser();
+    const { data: { user }, error: userError } = await userClient.auth.getUser(accessToken);
     if (userError || !user?.email) throw userError || new Error("Utente non trovato");
 
     const { data: avatarFiles } = await adminClient.storage.from("avatars").list(user.id);
