@@ -224,6 +224,12 @@
     button.innerHTML = `<i data-lucide="loader-circle"></i>Cancellazione in corso...`;
     window.lucide?.createIcons();
     setDeleteStatus("Stiamo cancellando il profilo. Non chiudere questa pagina.", "loading");
+    const slowTimer = window.setTimeout(() => {
+      setDeleteStatus("Sta richiedendo qualche secondo in più. La procedura continua: stiamo rimuovendo i dati collegati.", "loading");
+    }, 12000);
+    const verySlowTimer = window.setTimeout(() => {
+      setDeleteStatus("Stiamo ancora completando la cancellazione. Attendi la conferma finale prima di chiudere la pagina.", "loading");
+    }, 26000);
 
     try {
       if (!window.trankuiBackend?.deleteAccount) throw new Error("Servizio di cancellazione non disponibile.");
@@ -237,6 +243,9 @@
       deleteInProgress = false;
       button.disabled = !isConfirmed();
       restoreDeleteButton();
+    } finally {
+      window.clearTimeout(slowTimer);
+      window.clearTimeout(verySlowTimer);
     }
   }
 

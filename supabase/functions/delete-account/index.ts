@@ -45,18 +45,6 @@ function isMissingTable(error: unknown) {
   return typeof error === "object" && error !== null && "code" in error && error.code === "42P01";
 }
 
-async function withTimeout<T>(operation: Promise<T>, ms: number, message: string): Promise<T> {
-  let timeoutId = 0;
-  const timeout = new Promise<never>((_, reject) => {
-    timeoutId = setTimeout(() => reject(new Error(message)), ms);
-  });
-  try {
-    return await Promise.race([operation, timeout]);
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
 async function deleteMatching(adminClient: AdminClient, table: string, buildQuery: (query: any) => unknown) {
   const query = adminClient.from(table).delete();
   const { error } = await buildQuery(query) as { error: unknown };
@@ -97,9 +85,19 @@ async function deleteAccountData(adminClient: AdminClient, userId: string) {
   if (collaborationReadError && !isMissingTable(collaborationReadError)) throw collaborationReadError;
   const collaborationIds = (collaborations || []).map((item) => item.id);
 
+  const { data: ownedPosts, error: ownedPostReadError } = await adminClient
+    .from("posts")
+    .select("id")
+    .eq("owner_id", userId);
+  if (ownedPostReadError && !isMissingTable(ownedPostReadError)) throw ownedPostReadError;
+  const ownedPostIds = (ownedPosts || []).map((item) => item.id);
+
   if (collaborationIds.length) {
     await deleteMatching(adminClient, "reviews", (query) => query.in("collaboration_id", collaborationIds));
     await deleteMatching(adminClient, "messages", (query) => query.in("collaboration_id", collaborationIds));
+  }
+  if (ownedPostIds.length) {
+    await deleteMatching(adminClient, "post_applications", (query) => query.in("post_id", ownedPostIds));
   }
 
   await deleteMatching(adminClient, "reviews", (query) => query.or(`author_id.eq.${userId},recipient_id.eq.${userId}`));
@@ -128,9 +126,10 @@ Deno.serve(async (request) => {
     const body = await request.json();
     if (body.confirmation !== "DELETE") throw new Error("Conferma non valida");
 
-    const url = Deno.env.get("SUPABASE_URL")!;
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const url = Deno.env.get("SUPABASE_URL");
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!url || !anonKey || !serviceKey) throw new Error("Configurazione Supabase incompleta per la cancellazione account.");
     const userClient = createClient(url, anonKey, { global: { headers: { Authorization: authorization } } });
     const adminClient = createClient(url, serviceKey);
 
@@ -142,13 +141,9 @@ Deno.serve(async (request) => {
       await adminClient.storage.from("avatars").remove(avatarFiles.map((file) => `${user.id}/${file.name}`));
     }
 
-    await withTimeout(deleteAccountData(adminClient, user.id), 14000, "La cancellazione dei dati collegati ha impiegato troppo tempo.");
+    await deleteAccountData(adminClient, user.id);
 
-    const { error: deleteError } = await withTimeout(
-      adminClient.auth.admin.deleteUser(user.id),
-      10000,
-      "La cancellazione dell'utente ha impiegato troppo tempo.",
-    );
+    const { error: deleteError } = await adminClient.auth.admin.deleteUser(user.id);
     if (deleteError) throw deleteError;
 
     const emailSent = await sendDeletedEmail(user.email);

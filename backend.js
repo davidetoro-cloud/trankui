@@ -392,30 +392,18 @@
   async function deleteAccount() {
     const current = await session();
     if (!current) throw new Error("Sessione scaduta");
-    const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), 25000);
-    try {
-      const response = await fetch(`${config.supabaseUrl}/functions/v1/delete-account`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${current.access_token}`,
-          apikey: config.supabasePublishableKey,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ confirmation: "DELETE" }),
-        signal: controller.signal,
-      });
-      const payload = await readJsonResponse(response);
-      if (!response.ok) throw new Error(payload?.error || "Non siamo riusciti a cancellare l'account. Riprova tra poco.");
-      return payload;
-    } catch (error) {
-      if (error?.name === "AbortError") {
-        throw new Error("La cancellazione sta impiegando troppo tempo. Ricarica la pagina e controlla se il profilo risulta ancora attivo, poi riprova.");
-      }
-      throw error;
-    } finally {
-      window.clearTimeout(timeout);
-    }
+    const response = await fetch(`${config.supabaseUrl}/functions/v1/delete-account`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${current.access_token}`,
+        apikey: config.supabasePublishableKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ confirmation: "DELETE" }),
+    });
+    const payload = await readJsonResponse(response);
+    if (!response.ok) throw new Error(payload?.error || "Non siamo riusciti a cancellare l'account. Riprova tra poco.");
+    return payload;
   }
 
   async function collaborationContact(collaborationId) {
