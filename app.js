@@ -647,6 +647,8 @@ async function loadAppData() {
 function renderApp() {
   qs("#sidebarUser").textContent = state.profile?.full_name || state.session?.user?.email || "Profilo Trankui";
   qs("#sidebarAvatar").innerHTML = avatarContent(state.profile);
+  qs("#mobileMenuUser").textContent = state.profile?.full_name || state.session?.user?.email || "Profilo Trankui";
+  qs("#mobileMenuAvatar").innerHTML = avatarContent(state.profile);
   renderSearchControls();
   renderSearchResults();
   renderBoard();
@@ -1167,6 +1169,9 @@ function renderNotifications() {
   const badge = qs("#notificationBadge");
   badge.textContent = items.length > 99 ? "99+" : String(items.length);
   badge.classList.toggle("hidden", !items.length);
+  const mobileBadge = qs("#mobileMenuNotificationBadge");
+  mobileBadge.textContent = items.length > 99 ? "99+" : String(items.length);
+  mobileBadge.classList.toggle("hidden", !items.length);
   qs("#notificationSummary").textContent = items.length ? `${items.length} ${items.length === 1 ? "aggiornamento" : "aggiornamenti"}` : "Tutto aggiornato";
   qs("#notificationList").innerHTML = items.length ? items.map((item) => `<button class="notification-item" type="button" data-notification-type="${item.type}" ${item.collaborationId ? `data-notification-collaboration="${item.collaborationId}"` : ""}>${icon(item.type === "message" ? "message-circle" : item.type === "feedback" || item.type === "review" ? "star" : item.type === "match" ? "handshake" : "user-plus")}<span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.detail)}</small></span></button>`).join("") : `<div class="notification-empty">${icon("bell-check")}<span>Nessuna nuova notifica.</span></div>`;
   renderNotificationSettings();
@@ -1772,6 +1777,7 @@ async function createSupportTicket(event) {
 }
 
 function switchView(view) {
+  closeMobileMenu();
   if (view === "calendar" || view === "profile-availability") return openProfileAvailability();
   qsa(".nav-item").forEach((item) => item.classList.toggle("active", item.dataset.view === view));
   qs(".brand-chat-button")?.classList.toggle("active", view === "chat");
@@ -1814,6 +1820,30 @@ function openProfileAvailability() {
   window.setTimeout(() => {
     qs("#profileAvailabilitySection")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, 60);
+}
+
+function openMobileMenu() {
+  qs("#mobileMenuBackdrop").classList.remove("hidden");
+  qs("#mobileMenuPanel").classList.remove("hidden");
+  qs("#mobileMenuPanel").setAttribute("aria-hidden", "false");
+  qs("#mobileMenuOpen").setAttribute("aria-expanded", "true");
+  document.body.classList.add("mobile-menu-open");
+}
+
+function closeMobileMenu() {
+  qs("#mobileMenuBackdrop")?.classList.add("hidden");
+  qs("#mobileMenuPanel")?.classList.add("hidden");
+  qs("#mobileMenuPanel")?.setAttribute("aria-hidden", "true");
+  qs("#mobileMenuOpen")?.setAttribute("aria-expanded", "false");
+  document.body.classList.remove("mobile-menu-open");
+}
+
+function openMobileNotificationSettings() {
+  closeMobileMenu();
+  switchView("profile");
+  window.setTimeout(() => {
+    qs("#profileNotificationSettings")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 70);
 }
 
 document.addEventListener("click", async (event) => {
@@ -1895,6 +1925,7 @@ document.addEventListener("click", async (event) => {
   if (boardRequest) return openBoardComposer(true);
   const go = event.target.closest("[data-go]");
   if (go) {
+    closeMobileMenu();
     qs("#notificationPanel")?.classList.add("hidden");
     qs("#notificationButton")?.setAttribute("aria-expanded", "false");
     if (go.dataset.go === "calendar" || go.dataset.go === "profile-availability") return openProfileAvailability();
@@ -2240,6 +2271,14 @@ async function confirmDeleteAccount() {
 qs("#notificationButton").addEventListener("pointerup", handleAccountPanelPointer);
 qs("#notificationButton").addEventListener("touchend", handleAccountPanelPointer, { passive: false });
 qs("#notificationButton").addEventListener("click", handleAccountPanelClick);
+qs("#mobileMenuOpen").addEventListener("click", openMobileMenu);
+qs("#mobileMenuClose").addEventListener("click", closeMobileMenu);
+qs("#mobileMenuBackdrop").addEventListener("click", closeMobileMenu);
+qs("#mobileOpenNotifications").addEventListener("click", openMobileNotificationSettings);
+qs("#mobileLogoutButton").addEventListener("click", () => {
+  closeMobileMenu();
+  qs("#logoutButton").click();
+});
 qs("#markNotificationsRead").addEventListener("click", () => {
   localStorage.setItem(notificationStorageKey(), new Date().toISOString());
   renderNotifications();
@@ -2290,6 +2329,7 @@ qs("#chatForm").addEventListener("submit", async (event) => {
 });
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;
+  closeMobileMenu();
   if (state.activeChatId) closeChat();
   if (state.activeReviewId) closeReview();
   if (!qs("#publicProfileBackdrop").classList.contains("hidden")) closePublicProfile();

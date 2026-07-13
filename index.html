@@ -13,7 +13,7 @@
     <meta name="theme-color" content="#0068ff" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Trankui" />
-    <link rel="stylesheet" href="./styles.css?v=20260712-notification-settings-1" />
+    <link rel="stylesheet" href="./styles.css?v=20260713-mobile-menu-1" />
   </head>
   <body>
     <section class="auth-screen" id="authScreen">
@@ -120,9 +120,18 @@
 
     <div class="app-shell hidden" id="appShell">
       <aside class="sidebar" aria-label="Navigazione principale">
+        <button class="mobile-menu-button" type="button" id="mobileMenuOpen" aria-label="Apri menu" aria-controls="mobileMenuPanel" aria-expanded="false">
+          <i data-lucide="menu" aria-hidden="true"></i>
+        </button>
         <div class="brand">
           <img class="brand-logo" src="./clipboard.png?v=20260706-official-logo" alt="Trankui" />
           <button class="brand-chat-button" type="button" data-view="chat" title="Apri chat" aria-label="Apri chat"><i data-lucide="message-circle" aria-hidden="true"></i></button>
+        </div>
+        <div class="mobile-search-shell">
+          <button class="mobile-search-trigger" type="button" data-view="search" aria-label="Vai alla ricerca crew">
+            <i data-lucide="search" aria-hidden="true"></i>
+            <span>Trova crew per ruolo, data o zona</span>
+          </button>
         </div>
 
         <nav class="nav-list">
@@ -152,6 +161,33 @@
             <button class="user-name-button" type="button" id="openProfile" title="Apri il profilo"><strong id="sidebarUser">-</strong></button>
           </div>
           <button class="tiny-button" type="button" id="logoutButton">Esci</button>
+        </div>
+      </aside>
+      <div class="mobile-menu-backdrop hidden" id="mobileMenuBackdrop"></div>
+      <aside class="mobile-menu-panel hidden" id="mobileMenuPanel" aria-label="Menu mobile" aria-hidden="true">
+        <header class="mobile-menu-account">
+          <span class="user-avatar mobile-menu-avatar" id="mobileMenuAvatar">T</span>
+          <div><strong id="mobileMenuUser">Profilo Trankui</strong><small>Account Trankui</small></div>
+          <button class="mobile-menu-close" type="button" id="mobileMenuClose" aria-label="Chiudi menu"><i data-lucide="x" aria-hidden="true"></i></button>
+        </header>
+        <nav class="mobile-menu-links">
+          <button type="button" data-view="search"><i data-lucide="search" aria-hidden="true"></i>Trova crew</button>
+          <button type="button" data-view="board"><i data-lucide="clipboard-list" aria-hidden="true"></i>Bacheca</button>
+          <button type="button" data-view="requests"><i data-lucide="activity" aria-hidden="true"></i>Attività</button>
+          <button type="button" data-view="chat"><i data-lucide="message-circle" aria-hidden="true"></i>Chat</button>
+          <button type="button" data-view="admin"><i data-lucide="users-round" aria-hidden="true"></i>Community</button>
+          <button type="button" data-go="profile"><i data-lucide="user-round" aria-hidden="true"></i>Il mio profilo</button>
+          <button type="button" data-go="profile-availability"><i data-lucide="calendar-days" aria-hidden="true"></i>Disponibilità</button>
+          <button type="button" id="mobileOpenNotifications"><i data-lucide="bell" aria-hidden="true"></i>Notifiche<span class="mobile-menu-badge hidden" id="mobileMenuNotificationBadge">0</span></button>
+        </nav>
+        <nav class="mobile-menu-links mobile-menu-secondary" aria-label="Informazioni">
+          <a href="./trankui.html"><i data-lucide="info" aria-hidden="true"></i>Trankui</a>
+          <a href="./faq.html"><i data-lucide="circle-help" aria-hidden="true"></i>FAQ</a>
+          <a href="./blog.html"><i data-lucide="newspaper" aria-hidden="true"></i>Blog</a>
+          <button type="button" data-view="support"><i data-lucide="life-buoy" aria-hidden="true"></i>Help</button>
+        </nav>
+        <div class="mobile-menu-footer">
+          <button class="ghost-button full-button" type="button" id="mobileLogoutButton"><i data-lucide="log-out" aria-hidden="true"></i>Esci</button>
         </div>
       </aside>
 
@@ -479,6 +515,6 @@
     <script src="./backend.js?v=20260712-delete-account-2"></script>
     <script src="./lucide.min.js"></script>
     <script src="./cookie-consent.js?v=20260712-delete-account-2"></script>
-    <script src="./app.js?v=20260712-notification-settings-1"></script>
+    <script src="./app.js?v=20260713-mobile-menu-1"></script>
   </body>
 </html>
