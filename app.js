@@ -763,10 +763,11 @@ async function renderSelectedProfile() {
   const secondary = (profile.secondary_roles || []).map((item) => item.roles?.name || item.other_role_name).filter(Boolean);
   const expertise = (profile.production_types || []).filter((item) => specializations.includes(item));
   const socialLinks = [["instagram_url", "instagram", "Instagram"], ["facebook_url", "facebook", "Facebook"], ["tiktok_url", "tiktok", "TikTok"], ["linkedin_url", "linkedin", "LinkedIn"]].filter(([key]) => profile[key] && profile[key] !== "null");
+  const defaultEyebrow = isCompany ? "Profilo aziendale" : "Profilo professionale";
   qs("#profilePanel").innerHTML = `<article class="professional-profile">
     <header class="profile-hero"><div class="avatar large">${avatarContent(profile)}</div>
-      <div class="profile-identity"><p class="eyebrow">${isCompany ? "Profilo aziendale" : (profile.verified ? "Profilo verificato" : "Profilo professionale")}</p><h2>${escapeHtml(profile.full_name)}</h2><span>${escapeHtml(primary)}</span><small>${icon("map-pin")}${escapeHtml(profile.city)}, ${escapeHtml(profile.region)}</small></div></header>
-    <div class="trust-row"><div class="profile-stat">${icon(isCompany ? "building-2" : "briefcase")}<span><strong>${profile.years_experience}</strong><small>${isCompany ? "anni di attività" : "anni di esperienza"}</small></span></div><div class="profile-stat">${icon(profile.verified ? "badge-check" : "clock-3")}<span><strong>${profile.verified ? "Verificato" : "In verifica"}</strong><small>${isCompany ? "realtà produttiva" : "identità professionale"}</small></span></div></div>
+      <div class="profile-identity"><p class="eyebrow" data-profile-eyebrow data-default-label="${escapeHtml(defaultEyebrow)}">${escapeHtml(defaultEyebrow)}</p><h2>${escapeHtml(profile.full_name)}</h2><span>${escapeHtml(primary)}</span><small>${icon("map-pin")}${escapeHtml(profile.city)}, ${escapeHtml(profile.region)}</small></div></header>
+    <div class="trust-row"><div class="profile-stat">${icon(isCompany ? "building-2" : "briefcase")}<span><strong>${profile.years_experience}</strong><small>${isCompany ? "anni di attività" : "anni di esperienza"}</small></span></div><div class="profile-stat" data-profile-verification-state>${icon("clock-3")}<span><strong>In verifica</strong><small>0/3 feedback ricevuti</small></span></div></div>
     <section class="profile-section"><h3>Profilo</h3><p class="profile-bio">${escapeHtml(profile.bio || "Bio professionale non ancora inserita.")}</p></section>
     ${isCompany ? `<section class="profile-section"><h3>Dati realtà</h3><dl class="profile-facts"><div>${icon("building-2")}<span><dt>Tipo realtà</dt><dd>${escapeHtml(profile.company_type || "Non indicato")}</dd></span></div><div>${icon("user-round")}<span><dt>Referente</dt><dd>${escapeHtml(profile.contact_name || "Da definire")}</dd></span></div><div>${icon("globe")}<span><dt>Sito</dt><dd>${profile.company_website ? `<a href="${escapeHtml(profile.company_website)}" target="_blank" rel="noopener">Apri sito</a>` : "Non indicato"}</dd></span></div></dl></section>` : ""}
     ${secondary.length ? `<section class="profile-section"><h3>Competenze secondarie</h3><div class="tag-row">${secondary.map((role) => `<span>${escapeHtml(role)}</span>`).join("")}</div></section>` : ""}
@@ -774,18 +775,16 @@ async function renderSelectedProfile() {
     <section class="profile-section"><h3>Dettagli operativi</h3><dl class="profile-facts"><div>${icon("plane")}<span><dt>Trasferte</dt><dd>${escapeHtml(profile.travel_area || "Da concordare")}</dd></span></div><div>${icon("camera")}<span><dt>Attrezzatura</dt><dd>${escapeHtml(profile.equipment || "Da chiedere")}</dd></span></div><div>${icon("tags")}<span><dt>Brand utilizzati</dt><dd>${escapeHtml((profile.brands || []).join(", ") || "Non indicati")}</dd></span></div></dl></section>
     ${(profile.portfolio_url || socialLinks.length) ? `<div class="profile-links">${profile.portfolio_url ? `<a class="secondary-button" href="${escapeHtml(profile.portfolio_url)}" target="_blank" rel="noopener">${icon("external-link")}${isCompany ? "Showreel" : "Portfolio"}</a>` : ""}${socialLinks.map(([key, network, label]) => `<a class="social-icon-button" href="${escapeHtml(profile[key])}" target="_blank" rel="noopener" title="${label}" aria-label="${label}">${socialIcon(network)}</a>`).join("")}</div>` : ""}
     <button class="primary-button full-button profile-contact-button" type="button" data-request="${profile.id}">${icon("message-circle")}Contatta in chat</button>
-    <section class="profile-section profile-reputation" id="publicReviews"><span>Caricamento reputazione...</span></section>
+    <section class="profile-section profile-reputation" id="publicReviews"><span>Caricamento affidabilità...</span></section>
   </article>`;
   redrawIcons();
   try {
     const reviews = await backend.publishedReviews(profile.id);
     const host = qs("#publicReviews");
     if (!host || state.selectedProfileId !== profile.id) return;
-    const overallRating = reviews.length ? reviews.reduce((sum, review) => sum + (review.punctuality + review.communication + review.reliability + review.organization + review.problem_solving) / 5, 0) / reviews.length : 0;
-    host.innerHTML = reviews.length ? `<div class="review-summary"><div><p class="eyebrow">Reputazione</p><span class="review-score"><strong>${overallRating.toFixed(1)}</strong>${icon("star")}</span><small>${reviews.length} ${reviews.length === 1 ? "recensione" : "recensioni"} blind</small></div><p>${icon("eye-off")}I feedback diventano pubblici solo dopo la recensione reciproca.</p></div><div class="public-review-grid">${reviews.slice(0, 6).map((review) => {
-      const average = (review.punctuality + review.communication + review.reliability + review.organization + review.problem_solving) / 5;
-      return `<blockquote><div><strong>${average.toFixed(1)}</strong>${icon("star")}</div><p>${escapeHtml(review.public_comment || "Collaborazione consigliata")}</p><footer>${escapeHtml(review.author_name)} · ${new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" }).format(new Date(review.created_at))}</footer></blockquote>`;
-    }).join("")}</div>` : `<div class="review-empty">${icon("star")}<div><strong>Nessuna recensione pubblicata</strong><span>I feedback compariranno dopo una collaborazione recensita da entrambe le persone.</span></div></div>`;
+    updateProfileVerificationUi(qs("#profilePanel"), reviews);
+    host.innerHTML = renderReliabilitySummary(profile, reviews);
+    redrawIcons();
   } catch (_) {
     const host = qs("#publicReviews");
     if (host) host.innerHTML = "";
@@ -943,6 +942,88 @@ function profileById(id) {
   return state.profiles.find((profile) => profile.id === id) || null;
 }
 
+function reviewAverage(review = {}) {
+  return (Number(review.punctuality || 0) + Number(review.communication || 0) + Number(review.reliability || 0) + Number(review.organization || 0) + Number(review.problem_solving || 0)) / 5;
+}
+
+function collaborationTargetKind(collaboration, profileId) {
+  if (!collaboration || !profileId) return "";
+  if (collaboration.requester_id === profileId) return "builder";
+  if (collaboration.professional_id === profileId) return "member";
+  return "";
+}
+
+function reviewCollaboration(review = {}) {
+  return review.collaboration || state.collaborations.find((item) => item.id === review.collaboration_id) || null;
+}
+
+function reviewTargetKind(review = {}, profile = {}) {
+  const explicit = String(review.target_kind || review.review_kind || review.recipient_kind || review.context || "").toLowerCase();
+  if (explicit.includes("builder")) return "builder";
+  if (explicit.includes("member")) return "member";
+  const targetId = review.recipient_id || profile.id;
+  const fromCollaboration = collaborationTargetKind(reviewCollaboration(review), targetId);
+  if (fromCollaboration) return fromCollaboration;
+  return profile.account_type === "company" ? "builder" : "member";
+}
+
+function splitReliabilityReviews(reviews = [], profile = {}) {
+  return reviews.reduce((groups, review) => {
+    groups[reviewTargetKind(review, profile)].push(review);
+    return groups;
+  }, { member: [], builder: [] });
+}
+
+function reviewSummary(reviews = []) {
+  const count = reviews.length;
+  const rating = count ? reviews.reduce((sum, review) => sum + reviewAverage(review), 0) / count : 0;
+  return { count, rating };
+}
+
+function profileVerificationFromFeedback(reviews = []) {
+  const count = reviews.length;
+  return {
+    count,
+    verified: count >= 3,
+    label: count >= 3 ? "Verificato" : "In verifica",
+    detail: count >= 3 ? "3+ feedback ricevuti" : `${count}/3 feedback ricevuti`,
+  };
+}
+
+function reliabilityCard(kind, reviews = []) {
+  const summary = reviewSummary(reviews);
+  const label = kind === "builder" ? "Crew Builder" : "Crew Member";
+  const copy = kind === "builder" ? "Affidabilità come referente di produzione" : "Affidabilità come collaboratore";
+  const score = summary.count ? summary.rating.toFixed(1) : "-";
+  const feedbackCopy = summary.count === 1 ? "1 feedback" : `${summary.count} feedback`;
+  return `<article class="reliability-card ${summary.count ? "" : "empty"}"><span>${escapeHtml(label)}</span><strong>${score}${summary.count ? icon("star") : ""}</strong><small>${escapeHtml(feedbackCopy)}</small><p>${escapeHtml(copy)}</p></article>`;
+}
+
+function renderReliabilitySummary(profile, reviews = []) {
+  const groups = splitReliabilityReviews(reviews, profile);
+  const verification = profileVerificationFromFeedback(reviews);
+  const reviewCards = reviews.slice(0, 6).map((review) => {
+    const average = reviewAverage(review);
+    const kind = reviewTargetKind(review, profile);
+    const kindLabel = kind === "builder" ? "Crew Builder" : "Crew Member";
+    return `<blockquote><div><strong>${average.toFixed(1)}</strong>${icon("star")}<span class="review-kind-chip">${escapeHtml(kindLabel)}</span></div><p>${escapeHtml(review.public_comment || "Collaborazione consigliata")}</p><footer>${escapeHtml(review.author_name)} · ${new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" }).format(new Date(review.created_at))}</footer></blockquote>`;
+  }).join("");
+  return reviews.length ? `<div class="reliability-summary"><div class="review-summary"><div><p class="eyebrow">Affidabilità Trankui</p><span class="review-score"><strong>${reviews.length}</strong>${icon("message-square-check")}</span><small>${verification.verified ? "Profilo verificato" : verification.detail}</small></div><p>${icon("eye-off")}I feedback diventano pubblici solo dopo la valutazione reciproca.</p></div><div class="reliability-grid">${reliabilityCard("member", groups.member)}${reliabilityCard("builder", groups.builder)}</div><div class="public-review-grid">${reviewCards}</div></div>` : `<div class="review-empty">${icon("star")}<div><strong>Nessun feedback pubblicato</strong><span>I feedback compariranno dopo una collaborazione valutata da entrambe le persone.</span></div></div>`;
+}
+
+function updateProfileVerificationUi(root, reviews = []) {
+  const verification = profileVerificationFromFeedback(reviews);
+  const eyebrow = qs("[data-profile-eyebrow]", root);
+  if (eyebrow) eyebrow.textContent = verification.verified ? "Profilo verificato" : eyebrow.dataset.defaultLabel || "Profilo professionale";
+  const status = qs("[data-profile-verification-state]", root);
+  if (status) {
+    status.querySelector("strong").textContent = verification.label;
+    status.querySelector("small").textContent = verification.detail;
+    const statusIcon = status.querySelector("svg");
+    if (statusIcon) statusIcon.outerHTML = icon(verification.verified ? "badge-check" : "clock-3");
+  }
+}
+
 function resolvedOtherParticipant(collaboration, messages = []) {
   const currentUserId = state.session?.user?.id;
   const known = otherParticipant(collaboration);
@@ -1050,7 +1131,7 @@ function renderActivity() {
       ${item.status === "pending" && incoming ? `<button class="primary-button" data-transition="accepted" data-collaboration="${item.id}">Accetta</button><button class="secondary-button" data-transition="rejected" data-collaboration="${item.id}">Rifiuta</button>` : ""}
       ${item.status === "pending" && !incoming ? `<span class="completion-wait">${icon("clock")}In attesa di risposta</span>` : ""}
       ${item.status === "accepted" ? `<button class="secondary-button" data-chat="${item.id}">${icon("messages-square")}Chat</button>${userConfirmedComplete(item) ? `<span class="completion-wait">${icon("clock")}In attesa della conferma dell'altra persona</span>` : `<button class="primary-button" data-complete="${item.id}">Lavoro concluso</button>`}` : ""}
-      ${needsReview(item) ? `<button class="primary-button" data-review="${item.id}">${icon("star")}Lascia recensione</button>` : ""}
+      ${needsReview(item) ? `<button class="primary-button" data-review="${item.id}">${icon("star")}Lascia feedback</button>` : ""}
       ${item.status === "completed" && !archivedItem ? `<button class="ghost-button icon-text-button" type="button" data-archive-collaboration="${item.id}">${icon("archive")}Archivia</button>` : ""}
       ${archivedItem ? `<button class="ghost-button icon-text-button" type="button" data-unarchive-collaboration="${item.id}">${icon("rotate-ccw")}Ripristina</button>` : ""}
       </div></article>`;
@@ -1075,7 +1156,7 @@ function notificationItems() {
   const feedback = !topics.reviews ? [] : state.receivedReviews.filter((item) => item.created_at > lastRead).map((item) => ({
     type: "feedback", date: item.created_at,
     title: `Nuovo feedback da ${item.author_name || "un collaboratore"}`,
-    detail: item.public_comment || "La recensione reciproca è ora visibile.",
+    detail: item.public_comment || "Il feedback reciproco è ora visibile.",
   }));
   const reviewedIds = new Set(state.reviews.map((review) => review.collaboration_id));
   const reminders = !topics.reviews ? [] : state.collaborations.filter((item) => item.status === "completed" && !reviewedIds.has(item.id) && (item.completed_at || item.updated_at) > lastRead).map((item) => ({
@@ -1314,9 +1395,15 @@ function openReview(collaborationId) {
   if (!collaboration) return showToast("Collaborazione non disponibile. Aggiorna la pagina e riprova.", true);
   const recipient = otherParticipant(collaboration);
   if (!recipient?.id) return showToast("Non riesco a identificare il collaboratore.", true);
+  const targetKind = collaborationTargetKind(collaboration, recipient.id);
+  const isBuilderReview = targetKind === "builder";
+  const labels = isBuilderReview
+    ? { punctuality: "Chiarezza brief", communication: "Comunicazione", reliability: "Rispetto accordi", organization: "Organizzazione", problem_solving: "Gestione imprevisti" }
+    : { punctuality: "Puntualità", communication: "Comunicazione", reliability: "Affidabilità", organization: "Organizzazione", problem_solving: "Problem solving" };
   state.activeReviewId = collaborationId;
   qs("#reviewTitle").textContent = `Com'è andata con ${recipient?.full_name || "il collaboratore"}?`;
-  qs("#reviewContext").textContent = `${collaboration?.role?.name || "Collaborazione"} · ${formatDate(collaboration.work_date)}`;
+  qs("#reviewContext").textContent = `${isBuilderReview ? "Crew Builder · Affidabilità come referente di produzione" : "Crew Member · Affidabilità come collaboratore"} · ${collaboration?.role?.name || "Collaborazione"} · ${formatDate(collaboration.work_date)}`;
+  qsa("[data-review-label]").forEach((label) => { label.textContent = labels[label.dataset.reviewLabel] || label.textContent; });
   qs("#reviewBackdrop").classList.remove("hidden");
   document.body.classList.add("modal-open");
   redrawIcons();
@@ -1349,7 +1436,7 @@ async function submitReview(event) {
     if (review?.id) notifyEvent({ type: "review", review_id: review.id });
     closeReview();
     formElement.reset();
-    showToast("Feedback salvato. Sarà visibile dopo la recensione reciproca.");
+    showToast("Feedback salvato. Sarà visibile dopo la valutazione reciproca.");
     await loadAppData();
   } catch (error) {
     showToast(errorMessage(error), true);
@@ -1692,7 +1779,7 @@ function supportStatusLabel(status) {
 function supportAnswer(question) {
   const text = question.toLowerCase();
   if (/(cos.?è|come funziona|a cosa serve|trankui|piattaforma)/i.test(text)) {
-    return "Trankui serve a costruire crew audiovisive in modo più rapido e affidabile. Cerchi per ruolo, data e zona; apri il profilo; contatti il professionista in chat; quando la collaborazione viene accettata, la piattaforma ha completato il match. Dopo il lavoro entra in gioco la recensione reciproca.";
+    return "Trankui serve a costruire crew audiovisive in modo più rapido e affidabile. Cerchi per ruolo, data e zona; apri il profilo; contatti il professionista in chat; quando la collaborazione viene accettata, la piattaforma ha completato il match. Dopo il lavoro entra in gioco il feedback reciproco.";
   }
   if (/(profilo|foto|ruolo|competenze|social|portfolio|attrezzatura)/i.test(text)) {
     return "Nel profilo inserisci ruolo principale, competenze secondarie, ambiti di specializzazione, portfolio, attrezzatura, brand, social e foto. Il ruolo principale definisce il tuo posizionamento; le competenze secondarie aumentano le ricerche in cui puoi comparire.";
@@ -1709,8 +1796,8 @@ function supportAnswer(question) {
   if (/(calendario|google|disponibilità|occupato|sync|sincronizza)/i.test(text)) {
     return "Nel calendario indichi i giorni disponibili, forse disponibili o occupati. Google Calendar può sincronizzare lo stato libero/occupato: Trankui non legge titoli, clienti o dettagli privati degli eventi.";
   }
-  if (/(recensione|feedback|blind|rating|reputazione)/i.test(text)) {
-    return "Le recensioni sono blind: diventano pubbliche solo quando entrambi avete lasciato il feedback. Questo riduce pressioni e rende più credibile la reputazione. Si valutano puntualità, comunicazione, affidabilità, organizzazione e problem solving.";
+  if (/(recensione|feedback|blind|rating|affidabilit)/i.test(text)) {
+    return "I feedback sono blind: diventano pubblici solo quando entrambi avete lasciato la vostra valutazione. Questo riduce pressioni e rende più credibile l'Affidabilità Trankui. Per chi lavora in crew parliamo di Crew Member; per chi organizza una produzione parliamo di Crew Builder.";
   }
   if (/(agenzia|casa di produzione|azienda|freelance|account)/i.test(text)) {
     return "In registrazione puoi scegliere freelance oppure agenzia/casa di produzione. Il freelance si posiziona come professionista; l'agenzia usa Trankui per cercare collaboratori e costruire crew per produzioni già confermate.";
@@ -1718,7 +1805,7 @@ function supportAnswer(question) {
   if (/(bug|errore|anomalia|non funziona|problema|ticket|segnalare)/i.test(text)) {
     return "Se hai trovato un'anomalia, apri un ticket dal modulo a destra. Indica area, priorità, oggetto e cosa è successo. Se puoi, scrivi anche da quale sezione eri partito e cosa ti aspettavi.";
   }
-  return "Posso aiutarti su profilo, ricerca crew, bacheca, chat, calendario, recensioni blind e account agenzia/freelance. Se invece hai trovato un errore tecnico, apri un ticket con i dettagli del problema.";
+  return "Posso aiutarti su profilo, ricerca crew, bacheca, chat, calendario, feedback blind e account agenzia/freelance. Se invece hai trovato un errore tecnico, apri un ticket con i dettagli del problema.";
 }
 
 function renderSupportChat() {

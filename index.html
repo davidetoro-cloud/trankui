@@ -13,7 +13,7 @@
     <meta name="theme-color" content="#0068ff" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Trankui" />
-    <link rel="stylesheet" href="./styles.css?v=20260713-mobile-notifications-1" />
+    <link rel="stylesheet" href="./styles.css?v=20260713-reliability-1" />
   </head>
   <body>
     <section class="auth-screen" id="authScreen">
@@ -415,7 +415,7 @@
               <div class="support-suggestions" aria-label="Domande rapide">
                 <button type="button" data-support-question="Come funziona Trankui?">Come funziona?</button>
                 <button type="button" data-support-question="Come apro una richiesta in bacheca?">Bacheca</button>
-                <button type="button" data-support-question="Come funzionano le recensioni blind?">Recensioni blind</button>
+                <button type="button" data-support-question="Come funzionano i feedback blind?">Feedback blind</button>
                 <button type="button" data-support-question="Come collego il calendario?">Calendario</button>
               </div>
               <div class="support-chat-log" id="supportChatLog" aria-live="polite"></div>
@@ -432,7 +432,7 @@
               <form class="support-ticket-form" id="supportTicketForm">
                 <div class="field"><label for="ticketCategory">Area</label><select id="ticketCategory" name="category" required><option value="">Scegli</option><option>Accesso e registrazione</option><option>Profilo</option><option>Ricerca professionisti</option><option>Bacheca</option><option>Chat</option><option>Calendario</option><option>Recensioni</option><option>Pagamenti o dominio</option><option>Altro</option></select></div>
                 <div class="field"><label for="ticketPriority">Priorità</label><select id="ticketPriority" name="priority" required><option>Normale</option><option>Alta</option><option>Bloccante</option></select></div>
-                <div class="field wide"><label for="ticketSubject">Oggetto</label><input id="ticketSubject" name="subject" maxlength="120" placeholder="Es. Non riesco a inviare una recensione" required /></div>
+                <div class="field wide"><label for="ticketSubject">Oggetto</label><input id="ticketSubject" name="subject" maxlength="120" placeholder="Es. Non riesco a inviare un feedback" required /></div>
                 <div class="field wide"><label for="ticketDescription">Descrizione</label><textarea id="ticketDescription" name="description" minlength="10" maxlength="2000" placeholder="Spiega cosa è successo, da quale sezione e cosa ti aspettavi." required></textarea><small class="field-help">Più dettagli inserisci, più velocemente possiamo capire il problema.</small></div>
                 <button class="primary-button full-button" type="submit" id="submitTicketButton"><i data-lucide="send" aria-hidden="true"></i>Invia ticket</button>
               </form>
@@ -458,15 +458,15 @@
       <section class="review-dialog" role="dialog" aria-modal="true" aria-labelledby="reviewTitle">
         <header class="review-head"><div><p class="eyebrow">Feedback blind</p><h2 id="reviewTitle">Com'è andata la collaborazione?</h2><span id="reviewContext"></span></div><button class="close-button" type="button" id="closeReview" title="Chiudi"><i data-lucide="x"></i></button></header>
         <form id="reviewForm" class="review-form">
-          <div class="blind-review-note"><i data-lucide="eye-off"></i><span>La recensione sarà pubblicata soltanto quando entrambi avrete lasciato il feedback.</span></div>
+          <div class="blind-review-note"><i data-lucide="eye-off"></i><span>Il feedback sarà pubblicato soltanto quando entrambi avrete lasciato la vostra valutazione.</span></div>
           <div class="review-scores">
-            <label>Puntualità <select name="punctuality"><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></label>
-            <label>Comunicazione <select name="communication"><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></label>
-            <label>Affidabilità <select name="reliability"><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></label>
-            <label>Organizzazione <select name="organization"><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></label>
-            <label>Problem solving <select name="problem_solving"><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></label>
+            <label><span data-review-label="punctuality">Puntualità</span><select name="punctuality"><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></label>
+            <label><span data-review-label="communication">Comunicazione</span><select name="communication"><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></label>
+            <label><span data-review-label="reliability">Affidabilità</span><select name="reliability"><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></label>
+            <label><span data-review-label="organization">Organizzazione</span><select name="organization"><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></label>
+            <label><span data-review-label="problem_solving">Problem solving</span><select name="problem_solving"><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></label>
           </div>
-          <label class="field">Recensione pubblica<textarea name="public_comment" maxlength="1200" required placeholder="Descrivi in modo utile e rispettoso com'è andata."></textarea></label>
+          <label class="field">Feedback pubblico<textarea name="public_comment" maxlength="1200" required placeholder="Descrivi in modo utile e rispettoso com'è andata."></textarea></label>
           <label class="field">Nota privata per Trankui <textarea name="private_note" maxlength="1200" placeholder="Non sarà mostrata sul profilo."></textarea></label>
           <label class="consent-line"><input type="checkbox" name="recommend" checked /><span>Consiglierei questa persona a un'altra crew.</span></label>
           <button class="primary-button" type="submit" id="submitReviewButton"><i data-lucide="send"></i><span>Invia feedback</span></button>
@@ -532,6 +532,6 @@
     <script src="./backend.js?v=20260712-delete-account-2"></script>
     <script src="./lucide.min.js"></script>
     <script src="./cookie-consent.js?v=20260712-delete-account-2"></script>
-    <script src="./app.js?v=20260713-mobile-notifications-1"></script>
+    <script src="./app.js?v=20260713-reliability-1"></script>
   </body>
 </html>

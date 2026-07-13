@@ -642,6 +642,76 @@ html.theme-night {
 .review-score strong { font-size: 34px; line-height: 1; }
 .review-summary small { color: var(--muted); font-size: 11px; }
 .review-summary svg { width: 17px; color: var(--blue); }
+.reliability-summary {
+  display: grid;
+  gap: 16px;
+}
+
+.reliability-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.reliability-card {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.reliability-card > span {
+  color: var(--blue);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.reliability-card strong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink);
+  font-size: 28px;
+  line-height: 1;
+}
+
+.reliability-card strong svg {
+  width: 18px;
+  color: var(--blue);
+}
+
+.reliability-card small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.reliability-card p {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.reliability-card.empty {
+  background: var(--surface-soft);
+}
+
+.review-kind-chip {
+  margin-left: 6px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+}
+
 .review-empty { display: flex; align-items: center; gap: 12px; padding: 18px; border: 1px dashed var(--line); border-radius: 8px; color: var(--muted); }
 .review-empty svg { width: 22px; color: var(--blue); }
 .review-empty div { display: grid; gap: 3px; }
@@ -653,7 +723,8 @@ html.theme-night {
   .compact-multiselect summary { grid-template-columns: 1fr 20px; }
   .multiselect-summary { grid-column: 1 / -1; grid-row: 2; }
   .review-scores { grid-template-columns: 1fr 1fr; }
-  .public-review-grid { grid-template-columns: 1fr; }
+  .public-review-grid,
+  .reliability-grid { grid-template-columns: 1fr; }
   .public-profile-dialog { width: calc(100vw - 20px); max-height: calc(100vh - 20px); padding: 54px 20px 24px; }
   .delete-post-dialog { padding: 30px 20px 22px; }
   .delete-post-actions { display: grid; grid-template-columns: 1fr; }
