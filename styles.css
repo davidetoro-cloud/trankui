@@ -864,7 +864,7 @@ button {
 .utility-links button {
   color: var(--ink);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 400;
   text-decoration: none;
 }
 
@@ -1293,7 +1293,7 @@ body.mobile-menu-open {
   color: var(--muted);
   font: inherit;
   font-size: 21px;
-  font-weight: 650;
+  font-weight: 400;
   text-align: left;
   text-decoration: none;
 }
@@ -1476,6 +1476,7 @@ body.mobile-menu-open {
   align-items: center;
   gap: 7px;
   padding: 27px 10px 24px;
+  font-weight: 400;
   text-align: left;
   position: relative;
   white-space: nowrap;
@@ -1495,7 +1496,7 @@ body.mobile-menu-open {
 .nav-item.active {
   background: transparent;
   color: var(--ink);
-  font-weight: 700;
+  font-weight: 400;
 }
 
 .nav-item.active::after {
@@ -4839,7 +4840,7 @@ textarea {
     min-width: 0;
     overflow: hidden;
     font-size: 15px;
-    font-weight: 650;
+    font-weight: 400;
     text-overflow: ellipsis;
     white-space: nowrap;
   }

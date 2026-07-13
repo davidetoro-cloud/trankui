@@ -360,6 +360,11 @@
       options: {
         scopes: "https://www.googleapis.com/auth/calendar.readonly",
         redirectTo: `${authRedirectUrl()}?calendar=google`,
+        queryParams: {
+          access_type: "offline",
+          prompt: "consent",
+          include_granted_scopes: "true",
+        },
       },
     }));
   }
