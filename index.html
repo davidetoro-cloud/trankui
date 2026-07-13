@@ -1,590 +1,116 @@
 <!doctype html>
 <html lang="it">
-    <head>
+  <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Trankui | Trova crew audiovisive affidabili</title>
-    <meta name="description" content="Trankui aiuta producer, registi e professionisti audiovisivi a trovare collaboratori disponibili, verificabili e adatti alla produzione." />
-    <meta name="robots" content="index,follow,max-image-preview:large" />
+    <title>Trankui | La piattaforma di matching per crew audiovisive</title>
+    <meta
+      name="description"
+      content="Trankui sta arrivando: la piattaforma per trovare professionisti audiovisivi disponibili, affidabili e compatibili con la tua produzione."
+    />
     <link rel="canonical" href="https://trankui.com/" />
-    <meta property="og:locale" content="it_IT" />
-    <meta property="og:site_name" content="Trankui" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Trankui | Trova crew audiovisive affidabili" />
-    <meta property="og:description" content="Trankui aiuta producer, registi e professionisti audiovisivi a trovare collaboratori disponibili, verificabili e adatti alla produzione." />
+    <meta property="og:site_name" content="Trankui" />
+    <meta property="og:title" content="Trankui | Crew audiovisive affidabili" />
+    <meta property="og:description" content="La piattaforma di matching per costruire crew audiovisive affidabili sta arrivando." />
     <meta property="og:url" content="https://trankui.com/" />
+    <meta name="robots" content="index,follow,max-image-preview:large" />
     <meta property="og:image" content="https://trankui.com/assets/og-trankui.png?v=20260713-search-presence-1" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Trankui | Trova crew audiovisive affidabili" />
-    <meta name="twitter:description" content="Trankui aiuta producer, registi e professionisti audiovisivi a trovare collaboratori disponibili, verificabili e adatti alla produzione." />
+    <meta name="twitter:title" content="Trankui | La piattaforma di matching per crew audiovisive" />
+    <meta name="twitter:description" content="Trankui sta arrivando: la piattaforma per trovare professionisti audiovisivi disponibili, affidabili e compatibili con la tua produzione." />
     <meta name="twitter:image" content="https://trankui.com/assets/og-trankui.png?v=20260713-search-presence-1" />
+    <meta name="theme-color" content="#ffffff" />
     <link rel="icon" href="/favicon.ico?v=20260713-search-presence-1" sizes="any" />
     <link rel="icon" type="image/png" sizes="48x48" href="/assets/favicon-48x48.png?v=20260713-search-presence-1" />
     <link rel="icon" type="image/png" sizes="96x96" href="/assets/favicon-96x96.png?v=20260713-search-presence-1" />
     <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png?v=20260713-search-presence-1" />
-    <link rel="manifest" href="/manifest.webmanifest?v=20260713-search-presence-1" />
-    <meta name="theme-color" content="#0068ff" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="Trankui" />
-    <script>
-      if (new URLSearchParams(window.location.search).get("theme") === "night") {
-        document.documentElement.classList.add("theme-night");
-      }
-    </script>
-    <script type="application/ld+json">
-{
-      "@context": "https://schema.org",
-      "@graph": [
-            {
-                  "@type": "Organization",
-                  "@id": "https://trankui.com/#organization",
-                  "name": "Trankui",
-                  "url": "https://trankui.com/",
-                  "logo": "https://trankui.com/assets/trankui-icon-512.png?v=20260713-search-presence-1"
-            },
-            {
-                  "@type": "WebSite",
-                  "@id": "https://trankui.com/#website",
-                  "url": "https://trankui.com/",
-                  "name": "Trankui",
-                  "description": "Piattaforma operativa per trovare professionisti audiovisivi disponibili e costruire crew affidabili.",
-                  "publisher": {
-                        "@id": "https://trankui.com/#organization"
-                  },
-                  "inLanguage": "it-IT"
-            },
-            {
-                  "@type": "SoftwareApplication",
-                  "name": "Trankui",
-                  "url": "https://trankui.com/",
-                  "applicationCategory": "BusinessApplication",
-                  "operatingSystem": "Web",
-                  "description": "Trankui aiuta producer, registi e professionisti audiovisivi a trovare collaboratori disponibili, costruire crew e gestire feedback blind."
-            }
-      ]
-}
-    </script>
-    <link rel="stylesheet" href="./styles.css?v=20260713-search-presence-1" />
+    <link rel="stylesheet" href="./landing.css?v=20260713-coming-soon-1" />
   </head>
-  <body>
-    <section class="auth-screen" id="authScreen">
-      <div class="auth-card">
-        <header class="auth-nav">
-          <img class="brand-logo auth-logo" src="./clipboard.png?v=20260706-official-logo" alt="Trankui" />
-          <nav aria-label="Informazioni su Trankui">
-            <a href="./trankui.html">Chi è Trankui</a>
-            <a href="./faq.html">FAQ</a>
-            <a href="./blog.html">Blog</a>
-          </nav>
-        </header>
-        <div class="auth-layout">
-          <section class="auth-intro">
-            <p class="eyebrow">La piattaforma operativa per il settore audiovisivo</p>
-            <h1>La crew giusta, quando serve davvero.</h1>
-            <p>Trankui aiuta producer, registi e professionisti audiovisivi a trovare collaboratori disponibili, affidabili e verificabili, anche fuori dalla propria rete di contatti.</p>
-            <div class="auth-problem-list">
-              <div><i data-lucide="calendar-check" aria-hidden="true"></i><strong>Disponibilità reale</strong><span>Trova chi può lavorare nella data della produzione.</span></div>
-              <div><i data-lucide="shield-check" aria-hidden="true"></i><strong>Fiducia operativa</strong><span>Valuta collaborazioni concluse, soft skill e affidabilità.</span></div>
-              <div><i data-lucide="messages-square" aria-hidden="true"></i><strong>Meno passaparola dispersivo</strong><span>Costruisci la crew senza inseguire chat, gruppi e telefonate.</span></div>
-            </div>
-          </section>
-          <section class="auth-entry">
-            <div class="auth-mode" role="tablist" aria-label="Accesso a Trankui">
-              <button class="tiny-button active" type="button" data-auth-mode="signup">Crea profilo</button>
-              <button class="tiny-button" type="button" data-auth-mode="signin">Accedi</button>
-            </div>
-            <h2 id="authTitle">Crea il tuo profilo</h2>
-            <p class="auth-copy" id="authCopy">Inizia a farti trovare per ruolo, zona e disponibilità.</p>
-            <form class="auth-form" id="authForm">
-              <fieldset class="account-type-selector" id="accountTypeSelector">
-                <legend>Che tipo di account vuoi creare?</legend>
-                <label>
-                  <input type="radio" name="account_type" value="freelance" checked />
-                  <span><strong>Freelance</strong><small>Se lavori come professionista e vuoi essere trovato o collaborare.</small></span>
-                </label>
-                <label>
-                  <input type="radio" name="account_type" value="company" />
-                  <span><strong>Agenzia / casa di produzione</strong><small>Se cerchi collaboratori e costruisci crew per produzioni.</small></span>
-                </label>
-              </fieldset>
-              <div class="field">
-                <label for="authName">Nome e cognome</label>
-                <input id="authName" name="name" placeholder="Es. Davide Toro" required />
-              </div>
-              <div class="field hidden" id="authCompanyNameField">
-                <label for="authCompanyName">Nome agenzia / casa di produzione</label>
-                <input id="authCompanyName" name="company_name" placeholder="Es. Trankui Studio" />
-              </div>
-              <div class="field hidden" id="authContactNameField">
-                <label for="authContactName">Referente</label>
-                <input id="authContactName" name="contact_name" placeholder="Es. Davide Toro" />
-              </div>
-              <div class="field hidden" id="authCompanyTypeField">
-                <label for="authCompanyType">Tipo realtà</label>
-                <select id="authCompanyType" name="company_type">
-                  <option value="">Scegli</option>
-                  <option>Agenzia creativa</option>
-                  <option>Casa di produzione</option>
-                  <option>Studio video</option>
-                  <option>Brand / azienda</option>
-                  <option>Organizzatore eventi</option>
-                  <option>Altro</option>
-                </select>
-              </div>
-              <div class="field">
-                <label for="authEmail">Email</label>
-                <input id="authEmail" name="email" type="email" placeholder="nome@email.it" required />
-              </div>
-              <div class="field">
-                <label for="authPassword">Password</label>
-                <input id="authPassword" name="password" type="password" minlength="8" autocomplete="new-password" required />
-              </div>
-              <button class="primary-button" type="submit" id="authSubmit"><i data-lucide="user-plus" aria-hidden="true"></i>Crea profilo</button>
-              <div class="auth-divider"><span>oppure</span></div>
-              <button class="google-auth-button" type="button" id="googleAuthButton" aria-label="Continua con Google">
-                <span class="google-mark" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" focusable="false">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="#FBBC05" d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.84z"/>
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06L5.84 9.9C6.71 7.31 9.14 5.38 12 5.38z"/>
-                  </svg>
-                </span>
-                <span id="googleAuthLabel">Continua con Google</span>
-              </button>
-              <button class="auth-text-button hidden" type="button" id="forgotPassword">Password dimenticata?</button>
-              <button class="auth-text-button hidden" type="button" id="backToLogin">Torna all'accesso</button>
-              <label class="consent-line" id="privacyConsentLine">
-                <input id="privacyConsent" name="privacyConsent" type="checkbox" required />
-                <span>Accetto la <a href="./privacy.html" target="_blank">Privacy Policy</a> e i <a href="./termini.html" target="_blank">Termini di utilizzo</a>.</span>
-              </label>
-              <label class="consent-line" id="calendarConsentLine">
-                <input id="calendarConsent" name="calendarConsent" type="checkbox" />
-                <span>Autorizzo Trankui a usare le disponibilità per mostrarmi nelle ricerche pertinenti.</span>
-              </label>
-            </form>
-            <div class="quick-login" id="authStatus" aria-live="polite"></div>
-          </section>
-        </div>
-      </div>
-    </section>
-
-    <div class="app-shell hidden" id="appShell">
-      <aside class="sidebar" aria-label="Navigazione principale">
-        <button class="mobile-menu-button" type="button" id="mobileMenuOpen" aria-label="Apri menu" aria-controls="mobileMenuPanel" aria-expanded="false">
-          <i data-lucide="menu" aria-hidden="true"></i>
-        </button>
-        <div class="brand">
-          <img class="brand-logo" src="./clipboard.png?v=20260706-official-logo" alt="Trankui" />
-          <button class="brand-chat-button" type="button" data-view="chat" title="Apri chat" aria-label="Apri chat"><i data-lucide="message-circle" aria-hidden="true"></i></button>
-        </div>
-        <div class="mobile-search-shell">
-          <button class="mobile-search-trigger" type="button" data-view="search" aria-label="Vai alla ricerca crew">
-            <i data-lucide="search" aria-hidden="true"></i>
-            <span>Trova crew per ruolo, data o zona</span>
-          </button>
-        </div>
-
-        <nav class="nav-list">
-          <button class="nav-item active" type="button" data-view="search"><i data-lucide="search" aria-hidden="true"></i>Trova crew</button>
-          <button class="nav-item" type="button" data-view="board"><i data-lucide="clipboard-list" aria-hidden="true"></i>Bacheca</button>
-          <button class="nav-item" type="button" data-view="requests"><i data-lucide="activity" aria-hidden="true"></i>Attività</button>
-          <button class="nav-item" type="button" data-view="admin"><i data-lucide="users-round" aria-hidden="true"></i>Community</button>
+  <body class="landing-page">
+    <main class="landing-shell">
+      <header class="landing-nav" aria-label="Trankui">
+        <a class="landing-brand" href="./" aria-label="Trankui">
+          <img src="./clipboard.png?v=20260706-official-logo" alt="Trankui" />
+        </a>
+        <nav aria-label="Informazioni">
+          <a href="./trankui.html">Chi è Trankui</a>
+          <a href="./faq.html">FAQ</a>
+          <a href="./blog.html">Blog</a>
         </nav>
+      </header>
 
-        <div class="utility-links"><a href="./trankui.html">Trankui</a><a href="./faq.html">FAQ</a><a href="./blog.html">Blog</a><button type="button" data-view="support">Help</button></div>
-
-        <div class="sidebar-note">
-          <div class="sidebar-user-row">
-            <div class="notification-center sidebar-notification-center">
-              <button class="avatar-notification-button" type="button" id="notificationButton" title="Apri profilo e notifiche" aria-label="Apri profilo e notifiche" aria-expanded="false">
-                <span class="user-avatar" id="sidebarAvatar">T</span><span class="notification-badge hidden" id="notificationBadge">0</span>
-              </button>
-              <section class="notification-panel hidden" id="notificationPanel" aria-label="Notifiche recenti">
-                <header><div><strong>Account</strong><span id="notificationSummary">Nessun aggiornamento</span></div><button class="text-button" type="button" id="markNotificationsRead">Segna come lette</button></header>
-                <div class="notification-account-actions">
-                  <button class="secondary-button compact-button" type="button" data-go="profile"><i data-lucide="user-round" aria-hidden="true"></i>Il mio profilo</button>
-                  <button class="ghost-button compact-button" type="button" data-go="profile-availability"><i data-lucide="calendar-days" aria-hidden="true"></i>Disponibilità</button>
-                </div>
-                <div class="notification-list" id="notificationList"></div>
-              </section>
-            </div>
-            <button class="user-name-button" type="button" id="openProfile" title="Apri il profilo"><strong id="sidebarUser">-</strong></button>
+      <section class="landing-hero" aria-labelledby="landingTitle">
+        <div class="landing-copy">
+          <p class="landing-eyebrow">Beta privata in preparazione</p>
+          <h1 id="landingTitle">La piattaforma di matching per crew audiovisive sta arrivando.</h1>
+          <p class="landing-lead">
+            Trankui nasce per aiutare producer, registi, DOP e professionisti video a trovare collaboratori disponibili,
+            affidabili e compatibili con il progetto, senza perdersi tra chat, telefonate e passaparola.
+          </p>
+          <div class="landing-actions" aria-label="Stato piattaforma">
+            <span>Matching operativo</span>
+            <span>Disponibilità reali</span>
+            <span>Feedback blind</span>
           </div>
-          <button class="tiny-button" type="button" id="logoutButton">Esci</button>
         </div>
-      </aside>
-      <div class="mobile-menu-backdrop hidden" id="mobileMenuBackdrop"></div>
-      <aside class="mobile-menu-panel hidden" id="mobileMenuPanel" aria-label="Menu mobile" aria-hidden="true">
-        <header class="mobile-menu-account">
-          <span class="user-avatar mobile-menu-avatar" id="mobileMenuAvatar">T</span>
-          <div><strong id="mobileMenuUser">Profilo Trankui</strong><small>Account Trankui</small></div>
-          <button class="mobile-menu-close" type="button" id="mobileMenuClose" aria-label="Chiudi menu"><i data-lucide="x" aria-hidden="true"></i></button>
-        </header>
-        <nav class="mobile-menu-links">
-          <button type="button" data-view="search"><i data-lucide="search" aria-hidden="true"></i>Trova crew</button>
-          <button type="button" data-view="board"><i data-lucide="clipboard-list" aria-hidden="true"></i>Bacheca</button>
-          <button type="button" data-view="requests"><i data-lucide="activity" aria-hidden="true"></i>Attività</button>
-          <button type="button" data-view="chat"><i data-lucide="message-circle" aria-hidden="true"></i>Chat</button>
-          <button type="button" data-view="admin"><i data-lucide="users-round" aria-hidden="true"></i>Community</button>
-          <button type="button" data-go="profile"><i data-lucide="user-round" aria-hidden="true"></i>Il mio profilo</button>
-          <button type="button" data-go="profile-availability"><i data-lucide="calendar-days" aria-hidden="true"></i>Disponibilità</button>
-          <button type="button" id="mobileOpenNotifications"><i data-lucide="bell" aria-hidden="true"></i>Notifiche<span class="mobile-menu-badge hidden" id="mobileMenuNotificationBadge">0</span></button>
-        </nav>
-        <nav class="mobile-menu-links mobile-menu-secondary" aria-label="Informazioni">
-          <a href="./trankui.html"><i data-lucide="info" aria-hidden="true"></i>Trankui</a>
-          <a href="./faq.html"><i data-lucide="circle-help" aria-hidden="true"></i>FAQ</a>
-          <a href="./blog.html"><i data-lucide="newspaper" aria-hidden="true"></i>Blog</a>
-          <button type="button" data-view="support"><i data-lucide="life-buoy" aria-hidden="true"></i>Help</button>
-        </nav>
-        <div class="mobile-menu-footer">
-          <button class="ghost-button full-button" type="button" id="mobileLogoutButton"><i data-lucide="log-out" aria-hidden="true"></i>Esci</button>
+
+        <aside class="landing-signal" aria-label="Anteprima sistema Trankui">
+          <div class="signal-topline">
+            <span>Ricerca crew</span>
+            <strong>meno di 5 minuti</strong>
+          </div>
+          <div class="signal-card active">
+            <span class="signal-dot"></span>
+            <div>
+              <strong>DOP disponibile</strong>
+              <small>Automotive · Cagliari · 18 luglio</small>
+            </div>
+          </div>
+          <div class="signal-card">
+            <span class="signal-dot cyan"></span>
+            <div>
+              <strong>Gaffer confermato</strong>
+              <small>Commercial · Sardegna · feedback 4.9</small>
+            </div>
+          </div>
+          <div class="signal-card">
+            <span class="signal-dot dark"></span>
+            <div>
+              <strong>Crew Builder verificato</strong>
+              <small>Accordi chiari · collaborazione conclusa</small>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="landing-proof" aria-label="Cosa risolve Trankui">
+        <article>
+          <span>01</span>
+          <h2>Disponibilità</h2>
+          <p>Si parte da data, ruolo e zona. Prima di tutto: chi può davvero esserci.</p>
+        </article>
+        <article>
+          <span>02</span>
+          <h2>Affidabilità Trankui</h2>
+          <p>Feedback reciproci e blind per distinguere Crew Member e Crew Builder.</p>
+        </article>
+        <article>
+          <span>03</span>
+          <h2>Matching verticale</h2>
+          <p>Ruoli, competenze secondarie e ambiti di specializzazione pensati per il set.</p>
+        </article>
+      </section>
+
+      <footer class="landing-footer">
+        <p>© 2026 Trankui. La beta privata è in corso con accesso su invito.</p>
+        <div>
+          <a href="./privacy.html">Privacy</a>
+          <a href="./termini.html">Termini</a>
         </div>
-      </aside>
-      <div class="mobile-notification-backdrop hidden" id="mobileNotificationBackdrop" aria-hidden="true">
-        <section class="mobile-notification-panel" role="dialog" aria-modal="true" aria-labelledby="mobileNotificationTitle">
-          <header>
-            <div>
-              <strong id="mobileNotificationTitle">Notifiche</strong>
-              <span id="mobileNotificationSummary">Tutto aggiornato</span>
-            </div>
-            <button class="mobile-menu-close" type="button" id="mobileNotificationClose" aria-label="Chiudi notifiche"><i data-lucide="x" aria-hidden="true"></i></button>
-          </header>
-          <div class="notification-account-actions mobile-notification-actions">
-            <button class="secondary-button compact-button" type="button" data-go="profile"><i data-lucide="user-round" aria-hidden="true"></i>Il mio profilo</button>
-            <button class="ghost-button compact-button" type="button" data-go="profile-availability"><i data-lucide="calendar-days" aria-hidden="true"></i>Disponibilità</button>
-          </div>
-          <button class="text-button mobile-mark-read" type="button" id="mobileMarkNotificationsRead">Segna come lette</button>
-          <div class="notification-list mobile-notification-list" id="mobileNotificationList"></div>
-        </section>
-      </div>
-
-      <main class="main">
-        <header class="topbar">
-          <div>
-            <p class="eyebrow" id="pageEyebrow">Crew finder</p>
-            <h1 id="pageTitle">Trova un collaboratore affidabile in pochi minuti</h1>
-          </div>
-          <div class="topbar-actions">
-            <button class="secondary-button" type="button" id="openBoard"><i data-lucide="plus" aria-hidden="true"></i>Pubblica richiesta</button>
-            <button class="ghost-button" type="button" id="openAvailability"><i data-lucide="calendar-clock" aria-hidden="true"></i>Aggiorna disponibilità</button>
-          </div>
-        </header>
-
-        <section class="view active-view" id="view-search">
-          <form class="search-panel" id="searchForm">
-            <div class="field">
-              <label for="role"><i data-lucide="clapperboard" aria-hidden="true"></i>Ruolo</label>
-              <select id="role" name="role"></select>
-            </div>
-            <div class="field search-date-field">
-              <label for="searchDateButton"><i data-lucide="calendar" aria-hidden="true"></i>Date</label>
-              <button class="search-date-trigger" type="button" id="searchDateButton" aria-expanded="false" aria-controls="searchDatePopover">
-                <span id="searchDateLabel">Scegli date</span>
-                <i data-lucide="chevron-down" aria-hidden="true"></i>
-              </button>
-              <input id="date" name="date" type="hidden" />
-              <div class="search-date-popover hidden" id="searchDatePopover" aria-label="Seleziona una o più date"></div>
-            </div>
-            <div class="field">
-              <label for="region"><i data-lucide="map-pin" aria-hidden="true"></i>Regione</label>
-              <select id="region" name="region"></select>
-            </div>
-            <div class="field">
-              <label for="zone"><i data-lucide="map" aria-hidden="true"></i>Provincia</label>
-              <select id="zone" name="zone"></select>
-            </div>
-            <button class="primary-button" type="submit"><i data-lucide="search" aria-hidden="true"></i>Cerca</button>
-            <details class="search-more">
-              <summary>Altri filtri</summary>
-              <div class="search-more-grid">
-                <div class="field">
-                  <label for="production">Ambito di specializzazione</label>
-                  <select id="production" name="production"></select>
-                </div>
-                <div class="field">
-                  <label for="urgency">Urgenza</label>
-                  <select id="urgency" name="urgency">
-                    <option>Entro 3 giorni</option>
-                    <option>Questa settimana</option>
-                    <option>Data flessibile</option>
-                  </select>
-                </div>
-              </div>
-            </details>
-          </form>
-
-          <div class="alert-panel" id="availabilityAlert"></div>
-
-          <div class="status-row">
-            <div>
-              <strong id="resultCount">0 professionisti disponibili</strong>
-              <span id="resultContext"></span>
-            </div>
-            <div class="sort-chip">Ruolo principale → secondario · disponibilità · fiducia</div>
-          </div>
-
-          <div class="content-grid">
-            <section class="results-list" id="resultsList"></section>
-            <section class="profile-panel" id="profilePanel"></section>
-          </div>
-        </section>
-
-        <section class="view" id="view-board">
-          <div class="section-head board-head">
-            <div>
-              <h2>Richieste aperte</h2>
-              <span>Un percorso di riserva quando la ricerca diretta non chiude la crew.</span>
-            </div>
-            <button class="primary-button" type="button" id="togglePostForm"><i data-lucide="plus" aria-hidden="true"></i>Nuova richiesta</button>
-          </div>
-          <form class="post-form hidden" id="postForm">
-            <div class="field"><label for="postRole">Ruolo</label><select id="postRole" name="role"></select></div>
-            <div class="field"><label for="postDate">Data</label><input id="postDate" name="date" type="date" required /></div>
-            <div class="field"><label for="postRegion">Regione</label><select id="postRegion" name="region"></select></div>
-            <div class="field"><label for="postZone">Provincia</label><select id="postZone" name="zone"></select></div>
-            <div class="field"><label for="postProduction">Ambito</label><select id="postProduction" name="production"></select></div>
-            <div class="field"><label for="postBudget">Budget indicativo</label><input id="postBudget" name="budget" placeholder="Es. 350-450 euro" /></div>
-            <div class="field post-description"><label for="postDescription">Dettagli essenziali</label><textarea id="postDescription" name="description" minlength="10" maxlength="2000" aria-describedby="postDescriptionHelp" placeholder="Call time, durata e informazioni utili per decidere." required></textarea><small class="field-help field-help-row" id="postDescriptionHelp"><span>Inserisci almeno 10 caratteri.</span><span id="postDescriptionCount">0/2000</span></small></div>
-            <div class="post-form-actions">
-              <button class="primary-button" type="submit"><i data-lucide="send" aria-hidden="true"></i><span id="postFormSubmitLabel">Pubblica</span></button>
-              <button class="secondary-button" type="button" id="cancelPost">Annulla</button>
-            </div>
-          </form>
-          <div class="board-list" id="boardList"></div>
-        </section>
-
-        <section class="view" id="view-requests">
-          <div class="section-head">
-            <h2>Attività</h2>
-            <span>Azioni aperte, collaborazioni in corso e storico essenziale.</span>
-          </div>
-          <div class="activity-summary" id="activitySummary"></div>
-          <div class="feedback-queue" id="feedbackQueue"></div>
-          <div class="request-list" id="requestList"></div>
-        </section>
-
-        <section class="view" id="view-chat">
-          <div class="section-head chat-page-head">
-            <div>
-              <h2>Chat</h2>
-              <span>Una conversazione unica per ogni persona, con lo storico sempre disponibile.</span>
-            </div>
-          </div>
-          <div class="chat-thread-list" id="chatThreadList"></div>
-        </section>
-
-        <section class="view" id="view-profile">
-          <div class="section-head">
-            <h2>Il mio profilo</h2>
-            <span>Controlla come appari agli altri professionisti. Quando serve, entra in modifica.</span>
-          </div>
-          <section class="profile-onboarding hidden" id="profileOnboarding"></section>
-          <section class="profile-overview" id="profileOverview"></section>
-          <form class="profile-form profile-form-editor hidden" id="profileForm"></form>
-          <section class="profile-availability-settings" id="profileAvailabilitySection">
-            <div class="section-head">
-              <h2>Disponibilità</h2>
-              <span>Scegli uno stato e seleziona le date. Le collaborazioni confermate restano bloccate.</span>
-            </div>
-            <div class="availability-grid" id="availabilityGrid"></div>
-          </section>
-          <div class="profile-calendar-settings">
-            <div class="section-head">
-              <h2>Calendari collegati</h2>
-              <span>Gestisci Google Calendar e la privacy dello stato libero/occupato.</span>
-            </div>
-            <div class="integrations-grid" id="integrationsGrid"></div>
-          </div>
-          <section class="profile-notification-settings" id="profileNotificationSettings">
-            <div class="section-head notification-section-head">
-              <div>
-                <h2>Notifiche</h2>
-                <span>Decidi come Trankui ti avvisa. Le preferenze vengono salvate automaticamente.</span>
-              </div>
-              <small>Salvataggio automatico</small>
-            </div>
-            <div class="notification-settings-card">
-              <div class="notification-settings-group">
-                <p class="notification-settings-label">Canali</p>
-                <div class="notification-preferences-grid">
-                  <article class="notification-channel-card">
-                    <div><i data-lucide="smartphone" aria-hidden="true"></i><span><strong>Push</strong><small id="notificationPermissionState">Notifiche browser non ancora attive.</small></span></div>
-                    <label class="switch-line"><input id="pushNotifications" type="checkbox" data-notification-channel="push" /><span></span></label>
-                    <button class="secondary-button compact-button" type="button" id="enableNotifications"><i data-lucide="bell-ring" aria-hidden="true"></i>Autorizza</button>
-                  </article>
-                  <article class="notification-channel-card">
-                    <div><i data-lucide="volume-2" aria-hidden="true"></i><span><strong>Suono</strong><small>Avviso leggero quando arriva qualcosa.</small></span></div>
-                    <label class="switch-line"><input id="soundNotifications" type="checkbox" data-notification-channel="sound" checked /><span></span></label>
-                  </article>
-                  <article class="notification-channel-card">
-                    <div><i data-lucide="mail" aria-hidden="true"></i><span><strong>Email</strong><small>Riepiloghi e aggiornamenti importanti.</small></span></div>
-                    <label class="switch-line"><input id="emailNotifications" type="checkbox" data-notification-channel="email" /><span></span></label>
-                  </article>
-                </div>
-              </div>
-              <div class="notification-settings-group">
-                <p class="notification-settings-label">Cosa vuoi ricevere</p>
-                <div class="notification-topic-list" aria-label="Tipi di notifica">
-                  <label><input type="checkbox" data-notification-topic="messages" checked /><span><strong>Chat</strong><small>Nuovi messaggi e conversazioni.</small></span></label>
-                  <label><input type="checkbox" data-notification-topic="requests" checked /><span><strong>Richieste</strong><small>Richieste dirette e candidature.</small></span></label>
-                  <label><input type="checkbox" data-notification-topic="matches" checked /><span><strong>Match</strong><small>Accettazioni e cambi di stato.</small></span></label>
-                  <label><input type="checkbox" data-notification-topic="reviews" checked /><span><strong>Feedback</strong><small>Recensioni ricevute o da completare.</small></span></label>
-                  <label><input type="checkbox" data-notification-topic="availability" checked /><span><strong>Disponibilità</strong><small>Promemoria sul calendario.</small></span></label>
-                </div>
-              </div>
-            </div>
-          </section>
-          <section class="account-danger-zone">
-            <div><p class="eyebrow">Gestione account</p><h2>Cancella account</h2><span>Elimina definitivamente profilo, disponibilità, messaggi e collaborazioni associate.</span></div>
-            <button class="danger-button" type="button" id="openDeleteAccount"><i data-lucide="trash-2" aria-hidden="true"></i>Cancella il mio account</button>
-          </section>
-        </section>
-
-        <section class="view" id="view-admin">
-          <div class="community-search">
-            <i data-lucide="search" aria-hidden="true"></i>
-            <input id="communitySearch" type="search" placeholder="Cerca per nome, ruolo, provincia o specializzazione" aria-label="Cerca nella community" />
-          </div>
-          <div class="admin-grid" id="userDirectory"></div>
-        </section>
-
-        <section class="view" id="view-support">
-          <div class="section-head support-head">
-            <div>
-              <h2>Help Trankui</h2>
-              <span>Chiedi come funziona la piattaforma o apri un ticket se trovi un'anomalia.</span>
-            </div>
-            <div class="support-state-pill"><i data-lucide="sparkles" aria-hidden="true"></i>Guida AI prodotto</div>
-          </div>
-          <div class="support-layout">
-            <section class="support-assistant" aria-label="Chat assistenza Trankui">
-              <header>
-                <div class="support-ai-avatar"><i data-lucide="bot" aria-hidden="true"></i></div>
-                <div><p class="eyebrow">Assistente Trankui</p><h3>Come posso aiutarti?</h3></div>
-              </header>
-              <div class="support-suggestions" aria-label="Domande rapide">
-                <button type="button" data-support-question="Come funziona Trankui?">Come funziona?</button>
-                <button type="button" data-support-question="Come apro una richiesta in bacheca?">Bacheca</button>
-                <button type="button" data-support-question="Come funzionano i feedback blind?">Feedback blind</button>
-                <button type="button" data-support-question="Come collego il calendario?">Calendario</button>
-              </div>
-              <div class="support-chat-log" id="supportChatLog" aria-live="polite"></div>
-              <form class="support-chat-form" id="supportChatForm">
-                <input id="supportQuestion" name="question" autocomplete="off" placeholder="Scrivi una domanda su Trankui" aria-label="Domanda per l'assistente" />
-                <button class="primary-button" type="submit" title="Invia domanda"><i data-lucide="send" aria-hidden="true"></i><span>Invia</span></button>
-              </form>
-            </section>
-            <aside class="support-ticket-panel">
-              <div class="support-ticket-intro">
-                <i data-lucide="ticket-plus" aria-hidden="true"></i>
-                <div><h3>Apri un ticket</h3><p>Usalo per bug, errori, problemi di accesso, profilo, chat, calendario o feedback.</p></div>
-              </div>
-              <form class="support-ticket-form" id="supportTicketForm">
-                <div class="field"><label for="ticketCategory">Area</label><select id="ticketCategory" name="category" required><option value="">Scegli</option><option>Accesso e registrazione</option><option>Profilo</option><option>Ricerca professionisti</option><option>Bacheca</option><option>Chat</option><option>Calendario</option><option>Recensioni</option><option>Pagamenti o dominio</option><option>Altro</option></select></div>
-                <div class="field"><label for="ticketPriority">Priorità</label><select id="ticketPriority" name="priority" required><option>Normale</option><option>Alta</option><option>Bloccante</option></select></div>
-                <div class="field wide"><label for="ticketSubject">Oggetto</label><input id="ticketSubject" name="subject" maxlength="120" placeholder="Es. Non riesco a inviare un feedback" required /></div>
-                <div class="field wide"><label for="ticketDescription">Descrizione</label><textarea id="ticketDescription" name="description" minlength="10" maxlength="2000" placeholder="Spiega cosa è successo, da quale sezione e cosa ti aspettavi." required></textarea><small class="field-help">Più dettagli inserisci, più velocemente possiamo capire il problema.</small></div>
-                <button class="primary-button full-button" type="submit" id="submitTicketButton"><i data-lucide="send" aria-hidden="true"></i>Invia ticket</button>
-              </form>
-            </aside>
-          </div>
-          <section class="support-ticket-history">
-            <div class="section-head">
-              <h2>I tuoi ticket</h2>
-              <span>Qui trovi le segnalazioni aperte da questo account.</span>
-            </div>
-            <div class="support-ticket-list" id="supportTicketList"></div>
-          </section>
-        </section>
-      </main>
-      <footer class="app-footer">
-        <div><img src="./clipboard.png?v=20260706-official-logo" alt="Trankui" /><span>Il modo semplice per costruire crew affidabili.</span></div>
-        <nav aria-label="Link utili"><a href="./trankui.html">Chi è Trankui</a><a href="./faq.html">FAQ</a><a href="./blog.html">Blog</a><a href="./privacy.html">Privacy</a><a href="./termini.html">Termini</a><a href="mailto:welcome@trankui.com">Contatti</a></nav>
-        <span>© 2026 Trankui</span>
       </footer>
-    </div>
-
-    <div class="modal-backdrop hidden" id="reviewBackdrop">
-      <section class="review-dialog" role="dialog" aria-modal="true" aria-labelledby="reviewTitle">
-        <header class="review-head"><div><p class="eyebrow">Feedback blind</p><h2 id="reviewTitle">Com'è andata la collaborazione?</h2><span id="reviewContext"></span></div><button class="close-button" type="button" id="closeReview" title="Chiudi"><i data-lucide="x"></i></button></header>
-        <form id="reviewForm" class="review-form">
-          <div class="blind-review-note"><i data-lucide="eye-off"></i><span>Il feedback sarà pubblicato soltanto quando entrambi avrete lasciato la vostra valutazione.</span></div>
-          <div class="review-scores">
-            <label><span data-review-label="punctuality">Puntualità</span><select name="punctuality"><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></label>
-            <label><span data-review-label="communication">Comunicazione</span><select name="communication"><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></label>
-            <label><span data-review-label="reliability">Affidabilità</span><select name="reliability"><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></label>
-            <label><span data-review-label="organization">Organizzazione</span><select name="organization"><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></label>
-            <label><span data-review-label="problem_solving">Problem solving</span><select name="problem_solving"><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></label>
-          </div>
-          <label class="field">Feedback pubblico<textarea name="public_comment" maxlength="1200" required placeholder="Descrivi in modo utile e rispettoso com'è andata."></textarea></label>
-          <label class="field">Nota privata per Trankui <textarea name="private_note" maxlength="1200" placeholder="Non sarà mostrata sul profilo."></textarea></label>
-          <label class="consent-line"><input type="checkbox" name="recommend" checked /><span>Consiglierei questa persona a un'altra crew.</span></label>
-          <button class="primary-button" type="submit" id="submitReviewButton"><i data-lucide="send"></i><span>Invia feedback</span></button>
-        </form>
-      </section>
-    </div>
-
-    <div class="chat-backdrop hidden" id="chatBackdrop">
-      <section class="chat-dialog" role="dialog" aria-modal="true" aria-labelledby="chatTitle">
-        <header class="chat-head">
-          <button class="close-button" type="button" id="closeChat" title="Chiudi chat"><i data-lucide="x" aria-hidden="true"></i></button>
-          <div class="chat-person"><span class="user-avatar" id="chatAvatar">T</span><div><strong id="chatTitle">Conversazione</strong><span id="chatContext">Collaborazione</span></div></div>
-          <button class="chat-info-button" type="button" id="chatInfoButton" title="Info utente" aria-label="Info utente" aria-controls="chatInfoPanel" aria-expanded="false"><i data-lucide="info" aria-hidden="true"></i></button>
-        </header>
-        <section class="chat-info-panel hidden" id="chatInfoPanel" aria-label="Info utente"></section>
-        <div class="chat-messages" id="chatMessages" aria-live="polite"></div>
-        <form class="chat-compose" id="chatForm">
-          <textarea id="chatInput" rows="1" maxlength="2000" placeholder="Scrivi un messaggio…" aria-label="Messaggio"></textarea>
-          <button class="primary-button" type="submit" title="Invia messaggio"><i data-lucide="send" aria-hidden="true"></i><span>Invia</span></button>
-        </form>
-      </section>
-    </div>
-
-    <div class="modal-backdrop hidden" id="publicProfileBackdrop">
-      <section class="public-profile-dialog" role="dialog" aria-modal="true" aria-label="Profilo professionale">
-        <button class="close-button public-profile-close" type="button" id="closePublicProfile" title="Chiudi"><i data-lucide="x"></i></button>
-        <div id="publicProfileContent"></div>
-      </section>
-    </div>
-
-    <div class="modal-backdrop hidden" id="deletePostBackdrop">
-      <section class="delete-post-dialog" role="dialog" aria-modal="true" aria-labelledby="deletePostTitle" aria-describedby="deletePostCopy">
-        <button class="close-button delete-post-close" type="button" id="closeDeletePost" title="Chiudi"><i data-lucide="x"></i></button>
-        <div class="delete-post-icon"><i data-lucide="trash-2" aria-hidden="true"></i></div>
-        <p class="eyebrow">Rimuovi annuncio</p>
-        <h2 id="deletePostTitle">Vuoi togliere questa richiesta dalla bacheca?</h2>
-        <p id="deletePostCopy">L'annuncio non sara piu visibile nella community. Le candidature collegate verranno rimosse insieme alla richiesta.</p>
-        <div class="delete-post-summary" id="deletePostSummary"></div>
-        <div class="delete-post-actions">
-          <button class="secondary-button" type="button" id="cancelDeletePost">Annulla</button>
-          <button class="danger-button" type="button" id="confirmDeletePost"><i data-lucide="trash-2" aria-hidden="true"></i>Rimuovi annuncio</button>
-        </div>
-      </section>
-    </div>
-
-    <div class="modal-backdrop hidden" id="deleteAccountBackdrop">
-      <section class="delete-account-dialog" role="dialog" aria-modal="true" aria-labelledby="deleteAccountTitle">
-        <header><div><p class="eyebrow">Azione definitiva</p><h2 id="deleteAccountTitle">Cancellare l'account?</h2></div><button class="close-button" type="button" id="closeDeleteAccount" title="Chiudi"><i data-lucide="x"></i></button></header>
-        <p>Il profilo e i dati collegati non potranno essere recuperati. Riceverai una conferma all'indirizzo email del tuo account.</p>
-        <label class="field">Scrivi <strong>CANCELLA</strong> per confermare<input id="deleteAccountConfirmation" autocomplete="off" /></label>
-        <button class="danger-button full-button" type="button" id="confirmDeleteAccount" disabled><i data-lucide="trash-2"></i>Cancella definitivamente</button>
-      </section>
-    </div>
-
-    <aside class="cookie-banner hidden" id="cookieBanner" aria-label="Preferenze cookie">
-      <div><i data-lucide="cookie" aria-hidden="true"></i><p><strong>La tua privacy conta.</strong><span>Trankui usa cookie tecnici necessari per accesso e sicurezza. Gli eventuali cookie facoltativi saranno attivati solo con il tuo consenso.</span></p></div>
-      <div class="cookie-actions"><a href="./privacy.html">Scopri di più</a><button class="secondary-button" type="button" id="essentialCookies">Solo necessari</button><button class="primary-button" type="button" id="acceptCookies">Accetta</button></div>
-    </aside>
-
-    <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./config.js"></script>
-    <script src="./backend.js?v=20260713-menu-calendar-1"></script>
-    <script src="./lucide.min.js"></script>
-    <script src="./cookie-consent.js?v=20260712-delete-account-2"></script>
-    <script src="./app.js?v=20260713-reliability-1"></script>
+    </main>
   </body>
 </html>
