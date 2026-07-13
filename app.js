@@ -869,7 +869,7 @@ function openDeletePostModal(post) {
 function closeDeletePostModal() {
   state.pendingDeletePostId = null;
   qs("#deletePostBackdrop").classList.add("hidden");
-  if (qsa(".modal-backdrop:not(.hidden), .chat-backdrop:not(.hidden)").length === 0) document.body.classList.remove("modal-open");
+  if (qsa(".modal-backdrop:not(.hidden), .chat-backdrop:not(.hidden), .mobile-notification-backdrop:not(.hidden)").length === 0) document.body.classList.remove("modal-open");
 }
 
 async function confirmDeletePost() {
@@ -1164,16 +1164,28 @@ function renderNotificationSettings() {
   if (permission) permission.textContent = notificationPermissionCopy();
 }
 
+function notificationListMarkup(items) {
+  return items.length
+    ? items.map((item) => `<button class="notification-item" type="button" data-notification-type="${item.type}" ${item.collaborationId ? `data-notification-collaboration="${item.collaborationId}"` : ""}>${icon(item.type === "message" ? "message-circle" : item.type === "feedback" || item.type === "review" ? "star" : item.type === "match" ? "handshake" : "user-plus")}<span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.detail)}</small></span></button>`).join("")
+    : `<div class="notification-empty">${icon("bell-check")}<span>Nessuna nuova notifica.</span></div>`;
+}
+
 function renderNotifications() {
   const items = notificationItems();
+  const summary = items.length ? `${items.length} ${items.length === 1 ? "aggiornamento" : "aggiornamenti"}` : "Tutto aggiornato";
+  const listMarkup = notificationListMarkup(items);
   const badge = qs("#notificationBadge");
   badge.textContent = items.length > 99 ? "99+" : String(items.length);
   badge.classList.toggle("hidden", !items.length);
   const mobileBadge = qs("#mobileMenuNotificationBadge");
   mobileBadge.textContent = items.length > 99 ? "99+" : String(items.length);
   mobileBadge.classList.toggle("hidden", !items.length);
-  qs("#notificationSummary").textContent = items.length ? `${items.length} ${items.length === 1 ? "aggiornamento" : "aggiornamenti"}` : "Tutto aggiornato";
-  qs("#notificationList").innerHTML = items.length ? items.map((item) => `<button class="notification-item" type="button" data-notification-type="${item.type}" ${item.collaborationId ? `data-notification-collaboration="${item.collaborationId}"` : ""}>${icon(item.type === "message" ? "message-circle" : item.type === "feedback" || item.type === "review" ? "star" : item.type === "match" ? "handshake" : "user-plus")}<span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.detail)}</small></span></button>`).join("") : `<div class="notification-empty">${icon("bell-check")}<span>Nessuna nuova notifica.</span></div>`;
+  qs("#notificationSummary").textContent = summary;
+  qs("#notificationList").innerHTML = listMarkup;
+  const mobileSummary = qs("#mobileNotificationSummary");
+  if (mobileSummary) mobileSummary.textContent = summary;
+  const mobileList = qs("#mobileNotificationList");
+  if (mobileList) mobileList.innerHTML = listMarkup;
   renderNotificationSettings();
   redrawIcons();
 }
@@ -1838,12 +1850,22 @@ function closeMobileMenu() {
   document.body.classList.remove("mobile-menu-open");
 }
 
-function openMobileNotificationSettings() {
+function openMobileNotifications() {
   closeMobileMenu();
-  switchView("profile");
-  window.setTimeout(() => {
-    qs("#profileNotificationSettings")?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, 70);
+  const backdrop = qs("#mobileNotificationBackdrop");
+  backdrop.classList.remove("hidden");
+  backdrop.setAttribute("aria-hidden", "false");
+  document.body.classList.add("modal-open");
+  renderNotifications();
+  redrawIcons();
+}
+
+function closeMobileNotifications() {
+  const backdrop = qs("#mobileNotificationBackdrop");
+  if (!backdrop || backdrop.classList.contains("hidden")) return;
+  backdrop.classList.add("hidden");
+  backdrop.setAttribute("aria-hidden", "true");
+  if (qsa(".modal-backdrop:not(.hidden), .chat-backdrop:not(.hidden), .mobile-notification-backdrop:not(.hidden)").length === 0) document.body.classList.remove("modal-open");
 }
 
 document.addEventListener("click", async (event) => {
@@ -1926,6 +1948,7 @@ document.addEventListener("click", async (event) => {
   const go = event.target.closest("[data-go]");
   if (go) {
     closeMobileMenu();
+    closeMobileNotifications();
     qs("#notificationPanel")?.classList.add("hidden");
     qs("#notificationButton")?.setAttribute("aria-expanded", "false");
     if (go.dataset.go === "calendar" || go.dataset.go === "profile-availability") return openProfileAvailability();
@@ -2091,6 +2114,7 @@ document.addEventListener("click", async (event) => {
   if (notification) {
     qs("#notificationPanel").classList.add("hidden");
     qs("#notificationButton").setAttribute("aria-expanded", "false");
+    closeMobileNotifications();
     if (notification.dataset.notificationType === "message") return openChat(notification.dataset.notificationCollaboration);
     if (notification.dataset.notificationType === "review") return openReview(notification.dataset.notificationCollaboration);
     return switchView("requests");
@@ -2274,12 +2298,21 @@ qs("#notificationButton").addEventListener("click", handleAccountPanelClick);
 qs("#mobileMenuOpen").addEventListener("click", openMobileMenu);
 qs("#mobileMenuClose").addEventListener("click", closeMobileMenu);
 qs("#mobileMenuBackdrop").addEventListener("click", closeMobileMenu);
-qs("#mobileOpenNotifications").addEventListener("click", openMobileNotificationSettings);
+qs("#mobileOpenNotifications").addEventListener("click", openMobileNotifications);
+qs("#mobileNotificationClose").addEventListener("click", closeMobileNotifications);
+qs("#mobileNotificationBackdrop").addEventListener("click", (event) => {
+  if (event.target === event.currentTarget) closeMobileNotifications();
+});
 qs("#mobileLogoutButton").addEventListener("click", () => {
   closeMobileMenu();
   qs("#logoutButton").click();
 });
 qs("#markNotificationsRead").addEventListener("click", () => {
+  localStorage.setItem(notificationStorageKey(), new Date().toISOString());
+  renderNotifications();
+  rememberCurrentNotifications();
+});
+qs("#mobileMarkNotificationsRead").addEventListener("click", () => {
   localStorage.setItem(notificationStorageKey(), new Date().toISOString());
   renderNotifications();
   rememberCurrentNotifications();
@@ -2330,6 +2363,7 @@ qs("#chatForm").addEventListener("submit", async (event) => {
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;
   closeMobileMenu();
+  closeMobileNotifications();
   if (state.activeChatId) closeChat();
   if (state.activeReviewId) closeReview();
   if (!qs("#publicProfileBackdrop").classList.contains("hidden")) closePublicProfile();

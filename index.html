@@ -13,7 +13,7 @@
     <meta name="theme-color" content="#0068ff" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Trankui" />
-    <link rel="stylesheet" href="./styles.css?v=20260713-mobile-menu-1" />
+    <link rel="stylesheet" href="./styles.css?v=20260713-mobile-notifications-1" />
   </head>
   <body>
     <section class="auth-screen" id="authScreen">
@@ -190,6 +190,23 @@
           <button class="ghost-button full-button" type="button" id="mobileLogoutButton"><i data-lucide="log-out" aria-hidden="true"></i>Esci</button>
         </div>
       </aside>
+      <div class="mobile-notification-backdrop hidden" id="mobileNotificationBackdrop" aria-hidden="true">
+        <section class="mobile-notification-panel" role="dialog" aria-modal="true" aria-labelledby="mobileNotificationTitle">
+          <header>
+            <div>
+              <strong id="mobileNotificationTitle">Notifiche</strong>
+              <span id="mobileNotificationSummary">Tutto aggiornato</span>
+            </div>
+            <button class="mobile-menu-close" type="button" id="mobileNotificationClose" aria-label="Chiudi notifiche"><i data-lucide="x" aria-hidden="true"></i></button>
+          </header>
+          <div class="notification-account-actions mobile-notification-actions">
+            <button class="secondary-button compact-button" type="button" data-go="profile"><i data-lucide="user-round" aria-hidden="true"></i>Il mio profilo</button>
+            <button class="ghost-button compact-button" type="button" data-go="profile-availability"><i data-lucide="calendar-days" aria-hidden="true"></i>Disponibilità</button>
+          </div>
+          <button class="text-button mobile-mark-read" type="button" id="mobileMarkNotificationsRead">Segna come lette</button>
+          <div class="notification-list mobile-notification-list" id="mobileNotificationList"></div>
+        </section>
+      </div>
 
       <main class="main">
         <header class="topbar">
@@ -515,6 +532,6 @@
     <script src="./backend.js?v=20260712-delete-account-2"></script>
     <script src="./lucide.min.js"></script>
     <script src="./cookie-consent.js?v=20260712-delete-account-2"></script>
-    <script src="./app.js?v=20260713-mobile-menu-1"></script>
+    <script src="./app.js?v=20260713-mobile-notifications-1"></script>
   </body>
 </html>

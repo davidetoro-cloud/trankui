@@ -1268,6 +1268,82 @@ body.mobile-menu-open {
   border-top: 1px solid var(--line);
 }
 
+.mobile-notification-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  display: grid;
+  align-items: end;
+  padding: max(18px, env(safe-area-inset-top)) 14px max(18px, env(safe-area-inset-bottom));
+  background: rgba(18, 18, 20, .48);
+  backdrop-filter: blur(2px);
+}
+
+.mobile-notification-panel {
+  width: min(100%, 520px);
+  max-height: min(78dvh, 680px);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 22px 22px 8px 8px;
+  background: var(--surface);
+  box-shadow: 0 24px 70px rgba(15, 23, 42, .26);
+}
+
+.mobile-notification-panel > header {
+  min-height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.mobile-notification-panel > header > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.mobile-notification-panel > header strong {
+  color: var(--ink);
+  font-size: 22px;
+  line-height: 1.1;
+}
+
+.mobile-notification-panel > header span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.mobile-notification-actions {
+  flex: 0 0 auto;
+  grid-template-columns: 1fr 1fr;
+}
+
+.mobile-mark-read {
+  align-self: flex-start;
+  margin: 10px 16px 0;
+  border: 0;
+  background: transparent;
+  color: var(--blue);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.mobile-notification-list {
+  max-height: none;
+  min-height: 180px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .brand {
   display: flex;
   align-items: center;
