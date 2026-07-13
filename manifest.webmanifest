@@ -1,7 +1,7 @@
 {
   "name": "Trankui",
   "short_name": "Trankui",
-  "description": "Il modo semplice per costruire crew audiovisive affidabili.",
+  "description": "Trova professionisti audiovisivi disponibili e costruisci crew affidabili.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -9,13 +9,13 @@
   "theme_color": "#0068ff",
   "icons": [
     {
-      "src": "/clipboard.png?v=20260706-official-logo",
+      "src": "/assets/trankui-icon-192.png?v=20260713-search-presence-1",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/clipboard.png?v=20260706-official-logo",
+      "src": "/assets/trankui-icon-512.png?v=20260713-search-presence-1",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
