@@ -1143,8 +1143,8 @@ function notificationItems() {
   const topics = notificationPreferences().topics;
   const messages = !topics.messages ? [] : state.incomingMessages.filter((item) => item.created_at > lastRead).map((item) => ({
     type: "message", date: item.created_at, collaborationId: item.collaboration_id,
-    title: `Nuovo messaggio da ${item.sender?.full_name || "un professionista"}`,
-    detail: item.body,
+    title: "Nuovo messaggio su Trankui",
+    detail: "Hai ricevuto un nuovo messaggio. Accedi a Trankui per leggerlo.",
   }));
   const requests = !topics.requests ? [] : state.collaborations.filter((item) =>
     item.status === "pending" && item.professional_id === state.session?.user?.id && item.created_at > lastRead
@@ -1208,7 +1208,9 @@ function playNotificationTone() {
 
 function showSystemNotification(item) {
   if (!notificationPreferences().channels.push || !("Notification" in window) || Notification.permission !== "granted" || !document.hidden) return;
-  new Notification(item.title, { body: item.detail, icon: "./clipboard.png?v=20260706-official-logo", badge: "./clipboard.png?v=20260706-official-logo" });
+  const title = item.type === "message" ? "Nuovo messaggio su Trankui" : item.title;
+  const body = item.type === "message" ? "Hai ricevuto un nuovo messaggio. Accedi a Trankui per leggerlo." : item.detail;
+  new Notification(title, { body, icon: "./clipboard.png?v=20260706-official-logo", badge: "./clipboard.png?v=20260706-official-logo" });
 }
 
 function announceNewNotifications(previousSignature) {

@@ -5,9 +5,10 @@ self.addEventListener("push", (event) => {
   } catch (_) {
     payload = { title: "Trankui", body: event.data?.text() || "Hai un nuovo aggiornamento." };
   }
-  const title = payload.title || "Trankui";
+  const isMessageNotification = typeof payload.tag === "string" && (payload.tag === "message" || payload.tag.startsWith("message:"));
+  const title = isMessageNotification ? "Nuovo messaggio su Trankui" : payload.title || "Trankui";
   const options = {
-    body: payload.body || "Hai un nuovo aggiornamento.",
+    body: isMessageNotification ? "Hai ricevuto un nuovo messaggio. Accedi a Trankui per leggerlo." : payload.body || "Hai un nuovo aggiornamento.",
     icon: payload.icon || "/clipboard.png?v=20260706-official-logo",
     badge: payload.badge || "/clipboard.png?v=20260706-official-logo",
     data: { url: payload.url || "/" },

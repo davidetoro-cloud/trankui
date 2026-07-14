@@ -19,6 +19,9 @@ const defaultPreferences = {
   topics: { messages: true, requests: true, matches: true, reviews: true, availability: true },
 };
 
+const MESSAGE_NOTIFICATION_TITLE = "Nuovo messaggio su Trankui";
+const MESSAGE_NOTIFICATION_BODY = "Hai ricevuto un nuovo messaggio. Accedi a Trankui per leggerlo.";
+
 function text(value: unknown, fallback = "") {
   return typeof value === "string" && value.trim() ? value.trim() : fallback;
 }
@@ -88,10 +91,11 @@ Deno.serve(async (request) => {
     let title = "Nuovo aggiornamento su Trankui";
     let messageBody = "Hai un nuovo aggiornamento.";
     const actionUrl = siteUrl;
+    let notificationTag = body.type;
 
     if (body.type === "message") {
       const { data: message, error } = await adminClient.from("messages")
-        .select("id,collaboration_id,sender_id,body,sender:sender_id(full_name),collaboration:collaboration_id(requester_id,professional_id,role:role_id(name),work_date,zone)")
+        .select("id,collaboration_id,sender_id,collaboration:collaboration_id(requester_id,professional_id)")
         .eq("id", body.message_id)
         .single();
       if (error) throw error;
@@ -99,8 +103,9 @@ Deno.serve(async (request) => {
       if (message.sender_id !== user.id || ![collaboration.requester_id, collaboration.professional_id].includes(user.id)) throw new Error("Notifica non consentita");
       recipientId = collaboration.requester_id === user.id ? collaboration.professional_id : collaboration.requester_id;
       topic = "messages";
-      title = `Nuovo messaggio da ${text((message.sender as any)?.full_name, "un professionista")}`;
-      messageBody = truncate(text(message.body, "Apri Trankui per leggere la conversazione."));
+      title = MESSAGE_NOTIFICATION_TITLE;
+      messageBody = MESSAGE_NOTIFICATION_BODY;
+      notificationTag = "message";
     }
 
     if (body.type === "request" || body.type === "match" || body.type === "completion") {
@@ -111,6 +116,7 @@ Deno.serve(async (request) => {
       if (error) throw error;
       if (![collaboration.requester_id, collaboration.professional_id].includes(user.id)) throw new Error("Notifica non consentita");
       recipientId = collaboration.requester_id === user.id ? collaboration.professional_id : collaboration.requester_id;
+      notificationTag = `${body.type}:${body.collaboration_id || ""}`;
       const role = text((collaboration.role as any)?.name, "Collaborazione");
       if (body.type === "request") {
         if (user.id !== collaboration.requester_id) throw new Error("Notifica non consentita");
@@ -137,6 +143,7 @@ Deno.serve(async (request) => {
       if (application.applicant_id !== user.id) throw new Error("Notifica non consentita");
       recipientId = (application.post as any).owner_id;
       topic = "requests";
+      notificationTag = `${body.type}:${body.application_id || ""}`;
       title = `Nuova candidatura da ${text((application.applicant as any)?.full_name, "un professionista")}`;
       messageBody = `${text((application.post as any)?.role?.name, "Richiesta")} · ${text((application.post as any)?.zone)} · ${text((application.post as any)?.work_date)}`;
     }
@@ -150,6 +157,7 @@ Deno.serve(async (request) => {
       if (review.author_id !== user.id) throw new Error("Notifica non consentita");
       recipientId = review.recipient_id;
       topic = "reviews";
+      notificationTag = `${body.type}:${body.review_id || ""}`;
       title = `Nuovo feedback da ${text((review.author as any)?.full_name, "un collaboratore")}`;
       messageBody = text(review.public_comment, "Hai ricevuto un nuovo feedback blind.");
     }
@@ -182,7 +190,7 @@ Deno.serve(async (request) => {
           await webpush.sendNotification({
             endpoint: subscription.endpoint,
             keys: { p256dh: subscription.p256dh, auth: subscription.auth },
-          }, JSON.stringify({ title, body: messageBody, url: actionUrl, tag: `${body.type}:${body.collaboration_id || body.message_id || body.application_id || body.review_id || ""}` }));
+          }, JSON.stringify({ title, body: messageBody, url: actionUrl, tag: notificationTag }));
           pushSent += 1;
         } catch (error) {
           const statusCode = (error as any)?.statusCode;
