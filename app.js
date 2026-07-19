@@ -46,6 +46,7 @@ const state = {
   recentMessages: [],
   calendarConnections: [],
   supportTickets: [],
+  betaFeedbackItems: [],
   supportMessages: [
     { role: "assistant", body: "Ciao, sono l'assistente Trankui. Posso spiegarti come usare profilo, ricerca, bacheca, chat, calendario e recensioni. Se invece hai trovato un'anomalia, puoi aprire un ticket qui accanto." }
   ],
@@ -629,7 +630,7 @@ async function loadAppData() {
     state.profile ||= fallbackProfileFromSession();
     const start = new Date(state.month.getFullYear(), state.month.getMonth(), 1);
     const end = new Date(state.month.getFullYear(), state.month.getMonth() + 1, 0);
-    const [profiles, availability, posts, collaborations, reviews, receivedReviews, incomingMessages, recentMessages, calendarConnections, supportTickets, notificationPrefs] = await Promise.all([
+    const [profiles, availability, posts, collaborations, reviews, receivedReviews, incomingMessages, recentMessages, calendarConnections, supportTickets, betaFeedbackItems, notificationPrefs] = await Promise.all([
       safeLoad("profili pubblici", () => backend.publicProfiles(), []),
       safeLoad("disponibilita", () => backend.availabilityForRange(isoDate(start), isoDate(end)), []),
       safeLoad("bacheca", () => backend.listPosts(), []),
@@ -640,6 +641,7 @@ async function loadAppData() {
       safeLoad("messaggi recenti", () => backend.recentMessages ? backend.recentMessages() : Promise.resolve([]), []),
       safeLoad("calendari collegati", () => backend.calendarConnections(), []),
       safeLoad("ticket assistenza", () => backend.supportTickets ? backend.supportTickets() : Promise.resolve(localSupportTickets()), localSupportTickets()),
+      safeLoad("feedback beta", () => backend.betaFeedback ? backend.betaFeedback() : Promise.resolve([]), []),
       safeLoad("preferenze notifiche", () => backend.notificationPreferences ? backend.notificationPreferences() : Promise.resolve(notificationPreferences()), notificationPreferences()),
     ]);
     state.profiles = profiles.map((profile) => profile.id === state.profile?.id
@@ -655,6 +657,7 @@ async function loadAppData() {
     state.recentMessages = recentMessages;
     state.calendarConnections = calendarConnections;
     state.supportTickets = supportTickets;
+    state.betaFeedbackItems = betaFeedbackItems;
     state.notificationPreferences = notificationPrefs;
     state.search.roleId ||= state.roles[0]?.id || "";
     renderApp();
@@ -672,6 +675,7 @@ async function loadAppData() {
     state.recentMessages ||= [];
     state.calendarConnections ||= [];
     state.supportTickets ||= localSupportTickets();
+    state.betaFeedbackItems ||= [];
     state.notificationPreferences ||= notificationPreferences();
     try {
       renderApp();
@@ -697,6 +701,7 @@ function renderApp() {
   renderIntegrations();
   renderCommunity();
   renderSupport();
+  renderBetaFeedback();
   renderChatPage();
   renderNotifications();
   redrawIcons();
@@ -1870,6 +1875,36 @@ function supportStatusLabel(status) {
   return ({ open: "Aperto", in_review: "In analisi", resolved: "Risolto", closed: "Chiuso" })[status] || status || "Aperto";
 }
 
+function betaFeedbackCategoryLabel(category) {
+  return ({ Funzionalita: "Funzionalità" })[category] || category || "Altro";
+}
+
+function betaFeedbackStatusLabel(status) {
+  return ({ new: "Ricevuto", triaged: "In valutazione", planned: "Pianificato", in_progress: "In lavorazione", resolved: "Risolto", closed: "Chiuso" })[status] || status || "Ricevuto";
+}
+
+function renderBetaFeedback() {
+  const list = qs("#betaFeedbackList");
+  if (!list) return;
+  const items = state.betaFeedbackItems || [];
+  list.innerHTML = items.length ? items.map((item) => {
+    const hasScreenshot = item.screenshot_file_name || item.screenshot_path;
+    return `<article class="beta-feedback-card">
+      <div class="beta-feedback-card-top">
+        <span class="status-chip">${escapeHtml(betaFeedbackStatusLabel(item.status))}</span>
+        <span class="support-priority">${escapeHtml(item.perceived_priority || "Media")}</span>
+      </div>
+      <h3>${escapeHtml(item.title)}</h3>
+      <p>${escapeHtml(item.description)}</p>
+      <footer>
+        <span>${escapeHtml(betaFeedbackCategoryLabel(item.category))}</span>
+        ${hasScreenshot ? `<span>${icon("image")}Screenshot allegato</span>` : ""}
+        <time>${new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(item.created_at))}</time>
+      </footer>
+    </article>`;
+  }).join("") : `<div class="empty-state">${icon("message-square-plus")}<strong>Nessun feedback inviato</strong><span>Quando invii un feedback durante la Beta lo ritroverai qui.</span></div>`;
+}
+
 function supportAnswer(question) {
   const text = question.toLowerCase();
   if (/(cos.?è|come funziona|a cosa serve|trankui|piattaforma)/i.test(text)) {
@@ -1969,6 +2004,54 @@ async function createSupportTicket(event) {
   }
 }
 
+async function createBetaFeedback(event) {
+  event.preventDefault();
+  const formElement = event.currentTarget;
+  const form = new FormData(formElement);
+  const screenshot = form.get("screenshot");
+  const payload = {
+    category: form.get("category"),
+    perceived_priority: form.get("perceived_priority") || "Media",
+    title: String(form.get("title") || "").trim(),
+    description: String(form.get("description") || "").trim(),
+  };
+  if (!payload.category) return showToast("Scegli una categoria per il feedback.", true);
+  if (payload.title.length < 3 || payload.description.length < 10) return showToast("Inserisci un titolo e una descrizione più dettagliata.", true);
+  if (screenshot && screenshot.size) {
+    const allowedTypes = ["image/png", "image/jpeg", "image/webp"];
+    if (!allowedTypes.includes(screenshot.type)) return showToast("Carica uno screenshot in formato PNG, JPG o WebP.", true);
+    if (screenshot.size > 5 * 1024 * 1024) return showToast("Lo screenshot non può superare 5 MB.", true);
+  }
+  const button = qs("#submitBetaFeedbackButton");
+  button.disabled = true;
+  let uploadedScreenshot = null;
+  try {
+    if (!backend.createBetaFeedback) throw new Error("La pagina feedback Beta non e ancora collegata al database.");
+    if (screenshot && screenshot.size) {
+      if (!backend.uploadBetaFeedbackScreenshot) throw new Error("Il caricamento screenshot non e ancora attivo.");
+      uploadedScreenshot = await backend.uploadBetaFeedbackScreenshot(screenshot);
+      payload.screenshot_path = uploadedScreenshot.path;
+      payload.screenshot_file_name = uploadedScreenshot.file_name;
+      payload.screenshot_mime_type = uploadedScreenshot.mime_type;
+      payload.screenshot_size = uploadedScreenshot.size;
+    }
+    const feedback = await backend.createBetaFeedback(payload);
+    state.betaFeedbackItems = [feedback, ...state.betaFeedbackItems.filter((item) => item.id !== feedback.id)];
+    formElement.reset();
+    qs("#betaFeedbackPriority").value = "Media";
+    renderBetaFeedback();
+    showToast("Feedback inviato. Grazie, questo aiuta davvero la Beta.");
+    redrawIcons();
+  } catch (error) {
+    if (uploadedScreenshot?.path && backend.deleteBetaFeedbackScreenshot) {
+      try { await backend.deleteBetaFeedbackScreenshot(uploadedScreenshot.path); } catch (_) { /* Cleanup best effort. */ }
+    }
+    showToast(errorMessage(error), true);
+  } finally {
+    button.disabled = false;
+  }
+}
+
 function switchView(view) {
   closeMobileMenu();
   if (view === "calendar" || view === "profile-availability") return openProfileAvailability();
@@ -1979,7 +2062,7 @@ function switchView(view) {
     search: ["Crew finder", "Trova un collaboratore affidabile in pochi minuti"], board: ["Bacheca", "Richieste aperte della community"],
     requests: ["Attivita", "Collaborazioni, messaggi e feedback in ordine"], chat: ["Chat", "Conversazioni attive e risposte in tempo reale"], calendar: ["Disponibilita", "Aggiorna quando puoi lavorare"],
     profile: ["Profilo", "Racconta come lavori, senza rumore"], admin: ["Community", "La rete professionale Trankui"],
-    support: ["Help", "Risposte rapide e ticket per anomalie"],
+    support: ["Help", "Risposte rapide e ticket per anomalie"], "beta-feedback": ["Beta privata", "Invia feedback per migliorare Trankui"],
   };
   qs("#pageEyebrow").textContent = titles[view][0];
   qs("#pageTitle").textContent = titles[view][1];
@@ -2050,13 +2133,12 @@ function closeMobileNotifications() {
 }
 
 function openBetaFeedback() {
-  switchView("support");
+  switchView("beta-feedback");
   window.setTimeout(() => {
-    qs("#ticketCategory").value = "Altro";
-    qs("#ticketPriority").value = "Normale";
-    qs("#ticketSubject").placeholder = "Es. Suggerimento sulla ricerca crew";
-    qs(".support-ticket-panel")?.scrollIntoView({ behavior: "smooth", block: "center" });
-    qs("#ticketSubject")?.focus();
+    qs("#betaFeedbackCategory").value ||= "Suggerimento";
+    qs("#betaFeedbackPriority").value ||= "Media";
+    qs("#view-beta-feedback")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    qs("#betaFeedbackTitle")?.focus();
   }, 80);
 }
 
@@ -2397,6 +2479,7 @@ qs("#supportChatForm").addEventListener("submit", (event) => {
   input.focus();
 });
 qs("#supportTicketForm").addEventListener("submit", createSupportTicket);
+qs("#betaFeedbackForm").addEventListener("submit", createBetaFeedback);
 qs("#reviewForm").addEventListener("submit", submitReview);
 qs("#closeReview").addEventListener("click", closeReview);
 qs("#reviewBackdrop").addEventListener("click", (event) => { if (event.target === event.currentTarget) closeReview(); });

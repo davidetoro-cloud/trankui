@@ -44,7 +44,7 @@
 
   function isSchemaCompatibilityError(error) {
     const text = [error?.code, error?.message, error?.details, error?.hint].filter(Boolean).join(" ");
-    return /(PGRST204|PGRST205|42703|schema cache|Could not find|column .* does not exist|phone_visibility|show_portfolio|allow_chat_contact|allow_matching_improvement|account_status|deletion_scheduled_for)/i.test(text);
+    return /(PGRST204|PGRST205|42703|schema cache|Could not find|column .* does not exist|phone_visibility|show_portfolio|allow_chat_contact|allow_matching_improvement|account_status|deletion_scheduled_for|beta_feedback)/i.test(text);
   }
 
   function withProfilePrivacyDefaults(profile = {}) {
@@ -600,6 +600,71 @@
     }).select().single());
   }
 
+  async function betaFeedback() {
+    const current = await session();
+    if (!current) return [];
+    try {
+      return unwrap(await client.from("beta_feedback")
+        .select("*")
+        .eq("user_id", current.user.id)
+        .order("created_at", { ascending: false })
+        .limit(30));
+    } catch (error) {
+      if (isSchemaCompatibilityError(error)) return [];
+      throw error;
+    }
+  }
+
+  async function uploadBetaFeedbackScreenshot(file) {
+    const current = await session();
+    if (!current) throw new Error("Sessione scaduta");
+    if (!file) return null;
+    const extension = (file.name.split(".").pop() || "png").toLowerCase();
+    const safeExtension = ["jpg", "jpeg", "png", "webp"].includes(extension) ? extension : "png";
+    const uniqueId = window.crypto?.randomUUID ? window.crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const path = `${current.user.id}/${uniqueId}.${safeExtension}`;
+    unwrap(await client.storage.from("beta-feedback-screenshots").upload(path, file, {
+      upsert: false,
+      contentType: file.type || "image/png",
+    }));
+    return {
+      path,
+      file_name: file.name,
+      mime_type: file.type || "image/png",
+      size: file.size,
+    };
+  }
+
+  async function deleteBetaFeedbackScreenshot(path) {
+    const current = await session();
+    if (!current || !path || !String(path).startsWith(`${current.user.id}/`)) return null;
+    return unwrap(await client.storage.from("beta-feedback-screenshots").remove([path]));
+  }
+
+  async function createBetaFeedback(payload) {
+    const current = await session();
+    if (!current) throw new Error("Sessione scaduta");
+    try {
+      return unwrap(await client.from("beta_feedback").insert({
+        user_id: current.user.id,
+        category: payload.category,
+        title: payload.title,
+        description: payload.description,
+        perceived_priority: payload.perceived_priority,
+        screenshot_path: payload.screenshot_path || null,
+        screenshot_file_name: payload.screenshot_file_name || null,
+        screenshot_mime_type: payload.screenshot_mime_type || null,
+        screenshot_size: payload.screenshot_size || null,
+        status: "new",
+      }).select().single());
+    } catch (error) {
+      if (isSchemaCompatibilityError(error)) {
+        throw new Error("La pagina feedback Beta non e ancora attiva sul database. Applica la migration e riprova.");
+      }
+      throw error;
+    }
+  }
+
   window.trankuiBackend = {
     configured: true,
     client,
@@ -649,5 +714,9 @@
     notifyEvent,
     supportTickets,
     createSupportTicket,
+    betaFeedback,
+    uploadBetaFeedbackScreenshot,
+    deleteBetaFeedbackScreenshot,
+    createBetaFeedback,
   };
 })();

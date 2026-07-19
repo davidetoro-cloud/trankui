@@ -56,6 +56,9 @@ html.theme-night {
 .theme-night .support-assistant,
 .theme-night .support-ticket-panel,
 .theme-night .support-ticket-card,
+.theme-night .beta-feedback-panel,
+.theme-night .beta-feedback-card,
+.theme-night .beta-feedback-guide > div,
 .theme-night .admin-card,
 .theme-night .stat-card {
   background: var(--surface);
@@ -640,6 +643,131 @@ html.theme-night {
 .support-ticket-card footer {
   color: var(--muted);
   font-size: 12px;
+}
+
+.beta-feedback-layout {
+  display: grid;
+  grid-template-columns: minmax(440px, 1fr) minmax(280px, 360px);
+  gap: 16px;
+  align-items: start;
+}
+
+.beta-feedback-panel,
+.beta-feedback-card,
+.beta-feedback-guide > div {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+}
+
+.beta-feedback-panel {
+  padding: 18px;
+}
+
+.beta-feedback-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.beta-feedback-form .wide {
+  grid-column: 1 / -1;
+}
+
+.beta-screenshot-field label span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: none;
+}
+
+.beta-screenshot-field input[type="file"] {
+  min-height: 52px;
+  padding: 13px;
+  border: 1px dashed var(--line);
+  border-radius: 16px;
+  background: var(--surface-soft);
+  cursor: pointer;
+}
+
+.beta-feedback-guide {
+  display: grid;
+  gap: 12px;
+}
+
+.beta-feedback-guide > div {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+}
+
+.beta-feedback-guide svg {
+  width: 22px;
+  height: 22px;
+  color: var(--green);
+}
+
+.beta-feedback-guide h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.beta-feedback-guide p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.beta-feedback-history {
+  margin-top: 30px;
+}
+
+.beta-feedback-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.beta-feedback-card {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+}
+
+.beta-feedback-card-top,
+.beta-feedback-card footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.beta-feedback-card h3 {
+  margin: 0;
+}
+
+.beta-feedback-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.beta-feedback-card footer {
+  color: var(--muted);
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+
+.beta-feedback-card footer span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.beta-feedback-card footer svg {
+  width: 14px;
+  height: 14px;
 }
 
 .support-priority {
@@ -5253,9 +5381,15 @@ textarea {
 	  .search-more-grid,
 	  .role-picker,
 	  .support-ticket-form,
+	  .beta-feedback-form,
 	  .support-chat-form {
 	    grid-template-columns: 1fr;
 	  }
+
+  .beta-feedback-layout,
+  .beta-feedback-list {
+    grid-template-columns: 1fr;
+  }
 
 	  .support-assistant {
 	    min-height: auto;

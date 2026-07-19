@@ -65,7 +65,7 @@
       ]
 }
     </script>
-    <link rel="stylesheet" href="./styles.css?v=20260719-crew-zero-beta-banner-1" />
+    <link rel="stylesheet" href="./styles.css?v=20260719-beta-feedback-1" />
   </head>
   <body>
     <section class="auth-screen" id="authScreen">
@@ -458,6 +458,48 @@
           <div class="admin-grid" id="userDirectory"></div>
         </section>
 
+        <section class="view" id="view-beta-feedback">
+          <div class="section-head beta-feedback-head">
+            <div>
+              <h2>Feedback Beta</h2>
+              <span>Segnala bug, idee e miglioramenti per aiutarci a costruire Trankui prima del lancio pubblico.</span>
+            </div>
+            <div class="support-state-pill"><i data-lucide="sparkles" aria-hidden="true"></i>Crew Zero</div>
+          </div>
+          <div class="beta-feedback-layout">
+            <section class="beta-feedback-panel" aria-label="Invia feedback Beta">
+              <div class="support-ticket-intro">
+                <i data-lucide="message-square-plus" aria-hidden="true"></i>
+                <div><h3>Raccontaci cosa hai notato</h3><p>Ogni feedback viene collegato al tuo account e salvato in modo ordinato per la Beta.</p></div>
+              </div>
+              <form class="beta-feedback-form" id="betaFeedbackForm">
+                <div class="field"><label for="betaFeedbackCategory">Categoria</label><select id="betaFeedbackCategory" name="category" required><option value="">Scegli categoria</option><option value="Bug">Bug</option><option value="Suggerimento">Suggerimento</option><option value="UX">UX</option><option value="Funzionalita">Funzionalità</option><option value="Altro">Altro</option></select></div>
+                <div class="field"><label for="betaFeedbackPriority">Priorità percepita</label><select id="betaFeedbackPriority" name="perceived_priority" required><option>Media</option><option>Bassa</option><option>Alta</option><option>Bloccante</option></select></div>
+                <div class="field wide"><label for="betaFeedbackTitle">Titolo</label><input id="betaFeedbackTitle" name="title" maxlength="140" placeholder="Es. Il calendario non salva più date" required /></div>
+                <div class="field wide"><label for="betaFeedbackDescription">Descrizione</label><textarea id="betaFeedbackDescription" name="description" minlength="10" maxlength="3000" placeholder="Spiega cosa è successo, cosa ti aspettavi e da quale sezione eri partito." required></textarea><small class="field-help">Non inserire dati personali non necessari o contenuti riservati.</small></div>
+                <div class="field wide beta-screenshot-field">
+                  <label for="betaFeedbackScreenshot">Screenshot <span>facoltativo</span></label>
+                  <input id="betaFeedbackScreenshot" name="screenshot" type="file" accept="image/png,image/jpeg,image/webp" />
+                  <small class="field-help">PNG, JPG o WebP. Dimensione massima 5 MB.</small>
+                </div>
+                <button class="primary-button full-button" type="submit" id="submitBetaFeedbackButton"><i data-lucide="send" aria-hidden="true"></i>Invia feedback</button>
+              </form>
+            </section>
+            <aside class="beta-feedback-guide">
+              <div><i data-lucide="lightbulb" aria-hidden="true"></i><h3>Come scrivere un feedback utile</h3><p>Indica dove eri, cosa hai provato a fare e cosa non ha funzionato o cosa miglioreresti.</p></div>
+              <div><i data-lucide="shield-check" aria-hidden="true"></i><h3>Privacy prima di tutto</h3><p>Gli screenshot sono facoltativi. Caricali solo se aiutano a capire il problema.</p></div>
+              <div><i data-lucide="route" aria-hidden="true"></i><h3>Evoluzione futura</h3><p>Questa sezione potrà diventare il centro feedback della community Beta.</p></div>
+            </aside>
+          </div>
+          <section class="beta-feedback-history">
+            <div class="section-head">
+              <h2>I tuoi feedback</h2>
+              <span>Qui trovi le segnalazioni e i suggerimenti inviati durante la Beta.</span>
+            </div>
+            <div class="beta-feedback-list" id="betaFeedbackList"></div>
+          </section>
+        </section>
+
         <section class="view" id="view-support">
           <div class="section-head support-head">
             <div>
@@ -589,9 +631,9 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="./config.js"></script>
-    <script src="./backend.js?v=20260719-crew-zero-1"></script>
+    <script src="./backend.js?v=20260719-beta-feedback-1"></script>
     <script src="./lucide.min.js"></script>
     <script src="./cookie-consent.js?v=20260712-delete-account-2"></script>
-    <script src="./app.js?v=20260719-crew-zero-beta-banner-1"></script>
+    <script src="./app.js?v=20260719-beta-feedback-1"></script>
   </body>
 </html>
