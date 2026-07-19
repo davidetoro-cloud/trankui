@@ -72,6 +72,7 @@ const state = {
   notificationTimer: null,
   lastNotificationSignature: "",
   profileEditing: false,
+  pendingWelcomeSession: null,
 };
 
 const qs = (selector, root = document) => root.querySelector(selector);
@@ -378,6 +379,42 @@ function setAuthStatus(title = "", copy = "", actionHtml = "") {
   status.innerHTML = `<strong>${escapeHtml(title)}</strong>${copy ? `<span>${escapeHtml(copy)}</span>` : ""}${actionHtml}`;
 }
 
+function resetCrewZeroWelcome() {
+  const entry = qs(".auth-entry");
+  entry?.classList.remove("auth-entry-welcome");
+  qs(".auth-mode")?.classList.remove("hidden");
+  qs("#authTitle")?.classList.remove("hidden");
+  qs("#authCopy")?.classList.remove("hidden");
+  qs("#authForm")?.classList.remove("hidden");
+  state.pendingWelcomeSession = null;
+}
+
+function showCrewZeroWelcome(email = "", session = null) {
+  state.pendingWelcomeSession = session;
+  qs(".auth-entry").classList.add("auth-entry-welcome");
+  qs(".auth-mode").classList.add("hidden");
+  qs("#authTitle").classList.add("hidden");
+  qs("#authCopy").classList.add("hidden");
+  qs("#authForm").classList.add("hidden");
+  const emailNote = session
+    ? "Puoi iniziare subito: completa il profilo per renderti trovabile dalla community."
+    : signupConfirmationMessage(email);
+  qs("#authStatus").innerHTML = `<section class="crew-zero-welcome">
+    <div class="crew-zero-mark">${icon("sparkles")}</div>
+    <p class="eyebrow">Beta privata</p>
+    <h2>Benvenuto nella Crew Zero 🎬</h2>
+    <p>Sei tra i primi professionisti che stanno contribuendo alla costruzione di Trankui.</p>
+    <p>Ogni suggerimento, bug segnalato o idea che condividerai contribuirà a migliorare la piattaforma prima del lancio pubblico.</p>
+    <p>Hai già ottenuto il badge esclusivo <strong>“Crew Zero”</strong>, che rimarrà per sempre nel tuo profilo come riconoscimento per aver partecipato alla Beta.</p>
+    <div class="crew-zero-note">${icon("mail-check")}<span>${escapeHtml(emailNote)}</span></div>
+    <div class="crew-zero-actions">
+      <button class="primary-button" type="button" data-crew-zero-complete>${icon("user-round-check")}Completa il tuo profilo</button>
+      <button class="secondary-button" type="button" data-crew-zero-explore>${icon("compass")}Esplora la piattaforma</button>
+    </div>
+  </section>`;
+  redrawIcons();
+}
+
 function errorMessage(error) {
   const rawString = typeof error === "string" ? error.trim() : "";
   const rawMessage = typeof error?.message === "string" ? error.message.trim() : "";
@@ -463,6 +500,7 @@ function syncAuthAccountType() {
 }
 
 function setAuthMode(mode) {
+  resetCrewZeroWelcome();
   state.authMode = mode;
   const signup = mode === "signup";
   const signin = mode === "signin";
@@ -516,9 +554,9 @@ async function handleAuth(event) {
         } catch (consentError) {
           console.warn("Consent record failed", consentError);
         }
-        await enterApp(result.session);
+        showCrewZeroWelcome(email, result.session);
       } else {
-        setAuthStatus("Controlla la tua email", signupConfirmationMessage(email), `<button class="auth-text-button" type="button" id="resendConfirmation">Reinvia email di verifica</button>`);
+        showCrewZeroWelcome(email);
       }
     } else if (state.authMode === "signin") {
       const result = await backend.signIn({ email, password: form.get("password") });
@@ -736,7 +774,7 @@ function renderSearchResults() {
     const primary = profile.roles?.name || profile.primary_other_role_name || (profile.account_type === "company" ? "Agenzia / casa di produzione" : "Professionista");
     return `<article class="result-card ${profile.id === state.selectedProfileId ? "selected" : ""}" data-profile="${profile.id}">
       <div class="avatar">${avatarContent(profile)}</div>
-      <div class="result-main"><div class="result-title"><strong>${escapeHtml(profile.full_name)}</strong>${profile.verified ? icon("badge-check") : ""}</div>
+      <div class="result-main"><div class="result-title"><strong>${escapeHtml(profile.full_name)}</strong>${profile.verified ? icon("badge-check") : ""}${profileBadgeMini(profile)}</div>
       <span>${escapeHtml(primary)} · ${escapeHtml(profile.city)}</span>
       <small>${profile.matchRank === 0 ? "Ruolo principale" : "Competenza secondaria"} · ${profile.years_experience} ${profile.account_type === "company" ? "anni di attività" : "anni di esperienza"}</small></div>
       <span class="availability-pill">Disponibile</span>
@@ -766,7 +804,7 @@ async function renderSelectedProfile() {
   const defaultEyebrow = isCompany ? "Profilo aziendale" : "Profilo professionale";
   qs("#profilePanel").innerHTML = `<article class="professional-profile">
     <header class="profile-hero"><div class="avatar large">${avatarContent(profile)}</div>
-      <div class="profile-identity"><p class="eyebrow" data-profile-eyebrow data-default-label="${escapeHtml(defaultEyebrow)}">${escapeHtml(defaultEyebrow)}</p><h2>${escapeHtml(profile.full_name)}</h2><span>${escapeHtml(primary)}</span><small>${icon("map-pin")}${escapeHtml(profile.city)}, ${escapeHtml(profile.region)}</small></div></header>
+      <div class="profile-identity"><p class="eyebrow" data-profile-eyebrow data-default-label="${escapeHtml(defaultEyebrow)}">${escapeHtml(defaultEyebrow)}</p><h2>${escapeHtml(profile.full_name)}</h2><span>${escapeHtml(primary)}</span><small>${icon("map-pin")}${escapeHtml(profile.city)}, ${escapeHtml(profile.region)}</small>${profileBadgeRow(profile, "public")}</div></header>
     <div class="trust-row"><div class="profile-stat">${icon(isCompany ? "building-2" : "briefcase")}<span><strong>${profile.years_experience}</strong><small>${isCompany ? "anni di attività" : "anni di esperienza"}</small></span></div><div class="profile-stat" data-profile-verification-state>${icon("clock-3")}<span><strong>In verifica</strong><small>0/3 feedback ricevuti</small></span></div></div>
     <section class="profile-section"><h3>Profilo</h3><p class="profile-bio">${escapeHtml(profile.bio || "Bio professionale non ancora inserita.")}</p></section>
     ${isCompany ? `<section class="profile-section"><h3>Dati realtà</h3><dl class="profile-facts"><div>${icon("building-2")}<span><dt>Tipo realtà</dt><dd>${escapeHtml(profile.company_type || "Non indicato")}</dd></span></div><div>${icon("user-round")}<span><dt>Referente</dt><dd>${escapeHtml(profile.contact_name || "Da definire")}</dd></span></div><div>${icon("globe")}<span><dt>Sito</dt><dd>${profile.company_website ? `<a href="${escapeHtml(profile.company_website)}" target="_blank" rel="noopener">Apri sito</a>` : "Non indicato"}</dd></span></div></dl></section>` : ""}
@@ -1513,6 +1551,59 @@ function profileSocialLinks(profile = {}) {
     .filter(([key]) => profile[key] && profile[key] !== "null");
 }
 
+function profileBadges(profile = {}) {
+  return (profile.badges || []).filter((badge) => badge?.slug && badge?.name);
+}
+
+function profileBadgeTooltip(badge = {}) {
+  if (badge.slug === "crew-zero") return "Crew Zero • Primo membro della Beta privata di Trankui";
+  return badge.description || badge.name;
+}
+
+function profileBadgeRow(profile = {}, variant = "") {
+  const badges = profileBadges(profile);
+  if (!badges.length) return "";
+  return `<div class="profile-badge-row ${variant ? `profile-badge-row-${variant}` : ""}">${badges.map((badge) => `<span class="profile-badge-chip" title="${escapeHtml(profileBadgeTooltip(badge))}">${icon(badge.icon || "badge")}${escapeHtml(badge.name)}</span>`).join("")}</div>`;
+}
+
+function profileBadgeMini(profile = {}) {
+  const crewZero = profileBadges(profile).find((badge) => badge.slug === "crew-zero");
+  return crewZero ? `<span class="crew-zero-chip" title="${escapeHtml(profileBadgeTooltip(crewZero))}">${icon(crewZero.icon || "sparkles")}${escapeHtml(crewZero.name)}</span>` : "";
+}
+
+function profileVisibility(profile = {}) {
+  const phoneVisibility = profile.phone_visibility === "match" ? "match" : "never";
+  const legacySocialVisibility = [profile.show_instagram, profile.show_facebook, profile.show_tiktok, profile.show_linkedin]
+    .every((value) => value !== false);
+  const showSocialLinks = profile.show_social_links == null
+    ? legacySocialVisibility
+    : profile.show_social_links !== false;
+  return {
+    show_portfolio: profile.show_portfolio !== false,
+    show_social_links: showSocialLinks,
+    show_instagram: showSocialLinks,
+    show_facebook: showSocialLinks,
+    show_tiktok: showSocialLinks,
+    show_linkedin: showSocialLinks,
+    allow_chat_contact: profile.allow_chat_contact !== false,
+    allow_matching_improvement: profile.allow_matching_improvement !== false,
+    phone_visibility: phoneVisibility,
+  };
+}
+
+function visibleProfileSocialLinks(profile = {}) {
+  const visibility = profileVisibility(profile);
+  return visibility.show_social_links ? profileSocialLinks(profile) : [];
+}
+
+function phoneVisibilityLabel(value) {
+  return value === "match" ? "Mostra solo dopo un match" : "Non mostrare mai";
+}
+
+function privacySwitch(name, title, description, checked, iconName = "") {
+  return `<label class="privacy-toggle">${iconName ? `<span class="privacy-toggle-icon">${icon(iconName)}</span>` : ""}<span class="privacy-toggle-copy"><strong>${escapeHtml(title)}</strong><small>${escapeHtml(description)}</small></span><input type="checkbox" name="${name}" ${checked ? "checked" : ""} /><i></i></label>`;
+}
+
 function profileValue(value, fallback = "Da completare") {
   const clean = value == null || value === "null" || value === "undefined" || value === "" ? "" : String(value);
   if (!clean) return `<span class="profile-empty-value">${fallback}</span>`;
@@ -1647,6 +1738,7 @@ function renderProfileOverview(profile = state.profile || {}) {
         <p class="eyebrow">${isCompany ? "Profilo aziendale" : "Profilo professionale"}</p>
         <h3>${escapeHtml(displayName)}</h3>
         <span>${escapeHtml(primary)}${profile.city ? ` · ${escapeHtml(profile.city)}` : ""}</span>
+        ${profileBadgeRow(profile, "overview")}
       </div>
       <div class="profile-info-list">${profileRows.map(([iconName, label, value]) => `<div class="profile-info-row">${icon(iconName)}<span>${label}</span><strong>${profileValue(value)}</strong></div>`).join("")}</div>
     </div>
@@ -1769,7 +1861,7 @@ function renderCommunity(query = qs("#communitySearch")?.value || "") {
   const totalPages = Math.max(1, Math.ceil(visibleProfiles.length / pageSize));
   state.communityPage = Math.min(Math.max(1, state.communityPage), totalPages);
   const pageProfiles = visibleProfiles.slice((state.communityPage - 1) * pageSize, state.communityPage * pageSize);
-  const cards = pageProfiles.map((profile) => `<button class="community-card" type="button" data-open-profile="${profile.id}"><div class="avatar">${avatarContent(profile)}</div><div><strong>${escapeHtml(profile.full_name)}</strong><span>${escapeHtml(profile.roles?.name || profile.primary_other_role_name || (profile.account_type === "company" ? "Agenzia / casa di produzione" : "Professionista"))} · ${escapeHtml(profile.city)}</span></div>${profile.verified ? icon("badge-check") : ""}</button>`).join("");
+  const cards = pageProfiles.map((profile) => `<button class="community-card" type="button" data-open-profile="${profile.id}"><div class="avatar">${avatarContent(profile)}</div><div><strong>${escapeHtml(profile.full_name)}</strong><span>${escapeHtml(profile.roles?.name || profile.primary_other_role_name || (profile.account_type === "company" ? "Agenzia / casa di produzione" : "Professionista"))} · ${escapeHtml(profile.city)}</span></div><div class="community-card-trust">${profile.verified ? icon("badge-check") : ""}${profileBadgeMini(profile)}</div></button>`).join("");
   const pagination = visibleProfiles.length > pageSize ? `<div class="community-pagination"><button class="ghost-button" type="button" data-community-page="${state.communityPage - 1}" ${state.communityPage === 1 ? "disabled" : ""}>Precedenti</button><span>Pagina ${state.communityPage} di ${totalPages}</span><button class="ghost-button" type="button" data-community-page="${state.communityPage + 1}" ${state.communityPage === totalPages ? "disabled" : ""}>Successivi</button></div>` : "";
   qs("#userDirectory").innerHTML = cards ? `${cards}${pagination}` : `<div class="empty-state">${needle ? "Nessun professionista corrisponde alla ricerca." : "La community inizierà a comparire qui."}</div>`;
 }
@@ -1957,6 +2049,17 @@ function closeMobileNotifications() {
   if (qsa(".modal-backdrop:not(.hidden), .chat-backdrop:not(.hidden), .mobile-notification-backdrop:not(.hidden)").length === 0) document.body.classList.remove("modal-open");
 }
 
+function openBetaFeedback() {
+  switchView("support");
+  window.setTimeout(() => {
+    qs("#ticketCategory").value = "Altro";
+    qs("#ticketPriority").value = "Normale";
+    qs("#ticketSubject").placeholder = "Es. Suggerimento sulla ricerca crew";
+    qs(".support-ticket-panel")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    qs("#ticketSubject")?.focus();
+  }, 80);
+}
+
 document.addEventListener("click", async (event) => {
   const authMode = event.target.closest("[data-auth-mode]");
   if (authMode) return setAuthMode(authMode.dataset.authMode);
@@ -1971,6 +2074,33 @@ document.addEventListener("click", async (event) => {
   }
   if (event.target.closest("#forgotPassword")) return setAuthMode("recovery");
   if (event.target.closest("#backToLogin")) return setAuthMode("signin");
+  if (event.target.closest("[data-beta-feedback]")) return openBetaFeedback();
+  const crewZeroComplete = event.target.closest("[data-crew-zero-complete]");
+  if (crewZeroComplete) {
+    if (state.pendingWelcomeSession) {
+      const session = state.pendingWelcomeSession;
+      state.pendingWelcomeSession = null;
+      await enterApp(session);
+      switchView("profile");
+    } else {
+      const email = qs("#authEmail").value.trim();
+      setAuthMode("signin");
+      setAuthStatus("Conferma la tua email", `${signupConfirmationMessage(email)} Dopo la conferma accedi per completare il profilo.`, `<button class="auth-text-button" type="button" id="resendConfirmation">Reinvia email di verifica</button>`);
+    }
+    return;
+  }
+  const crewZeroExplore = event.target.closest("[data-crew-zero-explore]");
+  if (crewZeroExplore) {
+    if (state.pendingWelcomeSession) {
+      const session = state.pendingWelcomeSession;
+      state.pendingWelcomeSession = null;
+      await enterApp(session);
+      switchView("search");
+    } else {
+      window.location.href = "./trankui.html";
+    }
+    return;
+  }
   if (event.target.closest("#resendConfirmation")) {
     const email = qs("#authEmail").value.trim();
     if (!email) return showToast("Inserisci prima la tua email", true);

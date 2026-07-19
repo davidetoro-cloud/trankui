@@ -42,6 +42,76 @@
     }
   }
 
+  function isSchemaCompatibilityError(error) {
+    const text = [error?.code, error?.message, error?.details, error?.hint].filter(Boolean).join(" ");
+    return /(PGRST204|PGRST205|42703|schema cache|Could not find|column .* does not exist|phone_visibility|show_portfolio|allow_chat_contact|allow_matching_improvement|account_status|deletion_scheduled_for)/i.test(text);
+  }
+
+  function withProfilePrivacyDefaults(profile = {}) {
+    const legacySocialVisibility = [profile.show_instagram, profile.show_facebook, profile.show_tiktok, profile.show_linkedin]
+      .every((value) => value !== false);
+    const showSocialLinks = profile.show_social_links == null
+      ? legacySocialVisibility
+      : profile.show_social_links !== false;
+    return {
+      ...profile,
+      show_portfolio: profile.show_portfolio !== false,
+      show_social_links: showSocialLinks,
+      show_instagram: showSocialLinks,
+      show_facebook: showSocialLinks,
+      show_tiktok: showSocialLinks,
+      show_linkedin: showSocialLinks,
+      allow_chat_contact: profile.allow_chat_contact !== false,
+      allow_matching_improvement: profile.allow_matching_improvement !== false,
+      account_status: profile.account_status || "active",
+      deletion_requested_at: profile.deletion_requested_at || null,
+      deletion_scheduled_for: profile.deletion_scheduled_for || null,
+      phone_visibility: profile.phone_visibility === "match" ? "match" : "never",
+    };
+  }
+
+  async function privateContactFor(profileId) {
+    const extended = await client.from("private_contacts").select("phone,phone_visibility").eq("profile_id", profileId).maybeSingle();
+    if (!extended.error) {
+      return {
+        phone: extended.data?.phone || "",
+        phone_visibility: extended.data?.phone_visibility === "match" ? "match" : "never",
+      };
+    }
+    if (!isSchemaCompatibilityError(extended.error)) throw extended.error;
+    const legacy = await client.from("private_contacts").select("phone").eq("profile_id", profileId).maybeSingle();
+    if (legacy.error) throw legacy.error;
+    return { phone: legacy.data?.phone || "", phone_visibility: "never" };
+  }
+
+  async function badgesForProfiles(profileIds = []) {
+    const ids = [...new Set(profileIds.filter(Boolean))];
+    if (!ids.length) return {};
+    try {
+      const rows = unwrap(await client.from("user_badges")
+        .select("user_id,awarded_at,badge:badge_id(id,name,slug,description,icon)")
+        .in("user_id", ids)
+        .order("awarded_at", { ascending: true }));
+      return rows.reduce((acc, row) => {
+        if (!row.badge) return acc;
+        acc[row.user_id] ||= [];
+        acc[row.user_id].push({ ...row.badge, awarded_at: row.awarded_at });
+        return acc;
+      }, {});
+    } catch (error) {
+      if (isSchemaCompatibilityError(error)) return {};
+      throw error;
+    }
+  }
+
+  async function withProfileBadges(profiles = []) {
+    const badgesByProfile = await badgesForProfiles(profiles.map((profile) => profile.id));
+    return profiles.map((profile) => withProfilePrivacyDefaults({
+      ...profile,
+      badges: badgesByProfile[profile.id] || [],
+    }));
+  }
+
   async function session() {
     const data = unwrap(await client.auth.getSession());
     return data.session;
@@ -130,9 +200,16 @@
     const secondaryRoles = unwrap(await client.from("secondary_roles")
       .select("id,role_id,other_role_name,position,roles(id,name,category,slug)")
       .eq("profile_id", current.user.id).order("position"));
-    const contactResult = await client.from("private_contacts").select("phone").eq("profile_id", current.user.id).maybeSingle();
-    if (contactResult.error) throw contactResult.error;
-    return { ...profile, email: current.user.email, phone: contactResult.data?.phone || "", secondaryRoles };
+    const contact = await privateContactFor(current.user.id);
+    const badgesByProfile = await badgesForProfiles([current.user.id]);
+    return withProfilePrivacyDefaults({
+      ...profile,
+      email: current.user.email,
+      phone: contact.phone,
+      phone_visibility: contact.phone_visibility,
+      secondaryRoles,
+      badges: badgesByProfile[current.user.id] || [],
+    });
   }
 
   async function saveProfile(profile, secondaryRoleIds) {
@@ -191,9 +268,20 @@
   }
 
   async function publicProfiles() {
-    return unwrap(await client.from("profiles")
-      .select("id,full_name,account_type,company_name,company_type,vat_number,contact_name,company_website,primary_role_id,primary_other_role_name,bio,city,region,travel_area,years_experience,portfolio_url,equipment,brands,production_types,avatar_url,instagram_url,facebook_url,tiktok_url,linkedin_url,verified,created_at,roles:primary_role_id(id,name,category,slug),secondary_roles(role_id,other_role_name,position,roles(id,name,category,slug))")
-      .eq("profile_status", "active"));
+    const baseSelect = "id,full_name,account_type,company_name,company_type,vat_number,contact_name,company_website,primary_role_id,primary_other_role_name,bio,city,region,travel_area,years_experience,portfolio_url,equipment,brands,production_types,avatar_url,instagram_url,facebook_url,tiktok_url,linkedin_url,availability_visible,verified,created_at,roles:primary_role_id(id,name,category,slug),secondary_roles(role_id,other_role_name,position,roles(id,name,category,slug))";
+    const privacySelect = `${baseSelect},show_portfolio,show_instagram,show_facebook,show_tiktok,show_linkedin,allow_chat_contact,allow_matching_improvement`;
+    const legacyPrivacySelect = `${baseSelect},show_portfolio,show_instagram,show_facebook,show_tiktok,show_linkedin,allow_chat_contact`;
+    try {
+      return withProfileBadges(unwrap(await client.from("profiles").select(privacySelect).eq("profile_status", "active")));
+    } catch (error) {
+      if (!isSchemaCompatibilityError(error)) throw error;
+      try {
+        return withProfileBadges(unwrap(await client.from("profiles").select(legacyPrivacySelect).eq("profile_status", "active")));
+      } catch (legacyError) {
+        if (!isSchemaCompatibilityError(legacyError)) throw legacyError;
+        return withProfileBadges(unwrap(await client.from("profiles").select(baseSelect).eq("profile_status", "active")));
+      }
+    }
   }
 
   async function availabilityForRange(from, to) {
