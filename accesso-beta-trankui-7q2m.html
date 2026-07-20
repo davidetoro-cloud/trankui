@@ -65,7 +65,7 @@
       ]
 }
     </script>
-    <link rel="stylesheet" href="./styles.css?v=20260719-beta-feedback-1" />
+    <link rel="stylesheet" href="./styles.css?v=20260720-search-footer-faq-1" />
   </head>
   <body>
     <section class="auth-screen" id="authScreen">
@@ -337,6 +337,28 @@
             <section class="results-list" id="resultsList"></section>
             <section class="profile-panel" id="profilePanel"></section>
           </div>
+
+          <section class="search-faq-panel" aria-labelledby="searchFaqTitle">
+            <div>
+              <p class="eyebrow">FAQ operative</p>
+              <h2 id="searchFaqTitle">Prima di contattare una crew.</h2>
+              <a class="text-button" href="./faq.html">FAQ complete</a>
+            </div>
+            <div class="search-faq-list">
+              <details open>
+                <summary>Perché devo scegliere data e zona?</summary>
+                <p>La ricerca parte dalla disponibilità reale. Trankui dà priorità a chi può lavorare nelle date selezionate e nell'area richiesta.</p>
+              </details>
+              <details>
+                <summary>Cosa succede se non trovo nessuno?</summary>
+                <p>Puoi pubblicare una richiesta in bacheca: la community potrà candidarsi e aiutarti a chiudere la crew.</p>
+              </details>
+              <details>
+                <summary>Quando vedo telefono e contatti?</summary>
+                <p>I contatti privati non sono pubblici. Vengono sbloccati solo dopo un match accettato, se l'utente ha scelto di renderli disponibili.</p>
+              </details>
+            </div>
+          </section>
         </section>
 
         <section class="view" id="view-board">
@@ -550,9 +572,25 @@
         </section>
       </main>
       <footer class="app-footer">
-        <div><img src="./clipboard.png?v=20260706-official-logo" alt="Trankui" /><span>Il modo semplice per costruire crew affidabili.</span></div>
-        <nav aria-label="Link utili"><a href="./trankui.html">Chi è Trankui</a><a href="./faq.html">FAQ</a><a href="./blog.html">Blog</a><a href="./privacy.html">Privacy</a><a href="./termini.html">Termini</a><a href="mailto:welcome@trankui.com">Contatti</a></nav>
-        <span>© 2026 Trankui</span>
+        <div class="app-footer-inner">
+          <div class="app-footer-brand">
+            <img src="./assets/brand/trankui-logo-negative.svg?v=20260706-official-logo" alt="Trankui" />
+            <span>Il modo semplice per costruire crew affidabili.</span>
+            <a href="./privacy.html">Privacy e Cookie Policy</a>
+            <a href="./termini.html">Termini di utilizzo</a>
+          </div>
+          <div class="app-footer-contact">
+            <h2>Contatti</h2>
+            <a href="mailto:welcome@trankui.com">welcome@trankui.com</a>
+            <span>Sardegna, Italia</span>
+            <span>Beta privata in corso</span>
+          </div>
+          <div class="app-footer-links">
+            <h2>Trankui</h2>
+            <nav aria-label="Link utili"><a href="./trankui.html">Chi è Trankui</a><a href="./faq.html">FAQ</a><a href="./blog.html">Blog</a><button type="button" data-view="support">Help</button></nav>
+          </div>
+        </div>
+        <p>Copyright 2026 | Trankui</p>
       </footer>
     </div>
 

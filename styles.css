@@ -59,6 +59,8 @@ html.theme-night {
 .theme-night .beta-feedback-panel,
 .theme-night .beta-feedback-card,
 .theme-night .beta-feedback-guide > div,
+.theme-night .search-faq-panel,
+.theme-night .search-faq-list details,
 .theme-night .admin-card,
 .theme-night .stat-card {
   background: var(--surface);
@@ -171,6 +173,10 @@ html.theme-night {
 .theme-night .calendar-day.busy,
 .theme-night .calendar-day.outside {
   color: #626873;
+}
+
+.theme-night .app-footer {
+  background: #050c12;
 }
 
 .theme-night .chat-backdrop,
@@ -2240,6 +2246,83 @@ h3 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   padding: 12px 0 8px;
+}
+
+.search-faq-panel {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.48fr) minmax(0, 1fr);
+  gap: 28px;
+  margin-top: 34px;
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+}
+
+.search-faq-panel h2 {
+  max-width: 360px;
+  margin: 4px 0 14px;
+  color: var(--ink);
+  font-size: clamp(24px, 3vw, 38px);
+  line-height: 1.04;
+  letter-spacing: 0;
+}
+
+.search-faq-list {
+  display: grid;
+  gap: 10px;
+}
+
+.search-faq-list details {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.search-faq-list summary {
+  position: relative;
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  padding: 0 50px 0 18px;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 800;
+  list-style: none;
+}
+
+.search-faq-list summary::-webkit-details-marker {
+  display: none;
+}
+
+.search-faq-list summary::after {
+  content: "+";
+  position: absolute;
+  top: 50%;
+  right: 18px;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--green);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  transform: translateY(-50%);
+}
+
+.search-faq-list details[open] summary::after {
+  content: "-";
+}
+
+.search-faq-list p {
+  margin: -4px 18px 18px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
 }
 
 .field {
@@ -4483,27 +4566,81 @@ textarea {
 .chat-compose .primary-button { min-height: 48px; }
 
 .app-footer {
+  width: 100%;
+  margin: 32px 0 0;
+  background: #07131c;
+  color: rgba(255, 255, 255, .74);
+  font-size: 13px;
+}
+
+.app-footer-inner {
   width: min(1280px, calc(100% - 56px));
-  margin: 32px auto 0;
-  padding: 30px 0;
-  border-top: 1px solid var(--line);
-  color: var(--muted);
   display: grid;
-  grid-template-columns: minmax(230px, 1fr) auto auto;
-  align-items: center;
-  gap: 28px;
-  font-size: 12px;
+  grid-template-columns: 1fr minmax(220px, .7fr) minmax(200px, auto);
+  gap: 58px;
+  margin: 0 auto;
+  padding: 44px 0 46px;
 }
 
-.app-footer > div {
+.app-footer-brand,
+.app-footer-contact,
+.app-footer-links,
+.app-footer-links nav {
   display: grid;
-  gap: 8px;
+  align-content: start;
 }
 
-.app-footer img { width: 120px; height: auto; }
-.app-footer nav { display: flex; flex-wrap: wrap; gap: 16px; }
-.app-footer a { color: var(--ink); font-weight: 700; text-decoration: none; }
-.app-footer a:hover { color: var(--green); }
+.app-footer-brand {
+  gap: 13px;
+}
+
+.app-footer-contact,
+.app-footer-links nav {
+  gap: 10px;
+}
+
+.app-footer img {
+  width: 130px;
+  height: auto;
+  margin-bottom: 6px;
+}
+
+.app-footer h2 {
+  margin: 0 0 12px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.app-footer a,
+.app-footer span,
+.app-footer button {
+  color: rgba(255, 255, 255, .74);
+}
+
+.app-footer a,
+.app-footer button {
+  width: max-content;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font: inherit;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.app-footer a:hover,
+.app-footer button:hover {
+  color: #fff;
+}
+
+.app-footer p {
+  margin: 0;
+  border-top: 1px solid rgba(255, 255, 255, .22);
+  padding: 18px 20px;
+  color: rgba(255, 255, 255, .56);
+  text-align: center;
+}
 
 .cookie-banner {
   position: fixed;
@@ -5017,14 +5154,20 @@ textarea {
 
   .user-name-button strong { display: none; }
 
-  .app-footer { grid-template-columns: 1fr auto; }
-  .app-footer nav { grid-column: 1 / -1; grid-row: 2; }
+  .app-footer-inner {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .app-footer-links {
+    grid-column: 1 / -1;
+  }
 
   .auth-form,
   .search-panel,
 	  .post-form,
 	  .board-list,
 	  .content-grid,
+	  .search-faq-panel,
 	  .mission-strip,
 	  .support-layout,
 	  .support-ticket-list,
@@ -5100,6 +5243,11 @@ textarea {
 
   .search-more {
     grid-column: auto;
+  }
+
+  .search-faq-panel {
+    gap: 18px;
+    padding: 22px;
   }
 }
 
@@ -5308,13 +5456,29 @@ textarea {
   }
 
   .app-footer {
-    width: calc(100% - 28px);
-    grid-template-columns: 1fr;
-    align-items: start;
+    width: 100%;
   }
 
-  .app-footer nav,
-  .app-footer > span { grid-column: auto; grid-row: auto; }
+  .app-footer-inner {
+    width: calc(100% - 28px);
+    grid-template-columns: 1fr;
+    gap: 30px;
+    padding: 36px 0;
+  }
+
+  .app-footer-links {
+    grid-column: auto;
+  }
+
+  .search-faq-list summary {
+    min-height: 56px;
+    padding-left: 15px;
+    font-size: 13px;
+  }
+
+  .search-faq-list p {
+    margin: -2px 15px 16px;
+  }
 
   .cookie-banner {
     align-items: stretch;

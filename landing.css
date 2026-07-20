@@ -76,8 +76,7 @@ a {
   display: block;
 }
 
-.landing-nav nav,
-.landing-footer div {
+.landing-nav nav {
   display: flex;
   align-items: center;
   gap: 22px;
@@ -254,19 +253,188 @@ a {
   line-height: 1.5;
 }
 
-.landing-footer {
+.landing-faq {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.58fr) 1fr;
+  gap: 42px;
+  border-top: 1px solid var(--line);
+  padding: 68px 0 76px;
+}
+
+.landing-faq-head {
+  position: sticky;
+  top: 28px;
+  align-self: start;
+}
+
+.landing-faq-head h2 {
+  max-width: 500px;
+  margin: 0;
+  color: var(--ink);
+  font-size: clamp(32px, 4vw, 54px);
+  line-height: 1.02;
+  letter-spacing: 0;
+}
+
+.landing-faq-head a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 42px;
+  margin-top: 24px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0 18px;
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.landing-faq-head a:hover {
+  border-color: rgba(8, 103, 255, 0.34);
+  color: var(--blue);
+}
+
+.landing-faq-list {
+  display: grid;
+  gap: 12px;
+}
+
+.landing-faq-list details {
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 18px 44px rgba(38, 48, 76, 0.06);
+}
+
+.landing-faq-list summary {
+  position: relative;
+  min-height: 74px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  border-top: 1px solid var(--line);
-  padding: 22px 0 28px;
+  padding: 0 58px 0 24px;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 800;
+  list-style: none;
+}
+
+.landing-faq-list summary::-webkit-details-marker {
+  display: none;
+}
+
+.landing-faq-list summary::after {
+  content: "+";
+  position: absolute;
+  top: 50%;
+  right: 24px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--blue);
+  font-size: 20px;
+  line-height: 1;
+  transform: translateY(-50%);
+}
+
+.landing-faq-list details[open] summary::after {
+  content: "-";
+}
+
+.landing-faq-list p {
+  margin: -6px 24px 24px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.landing-footer {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  background: #07131c;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 15px;
 }
 
 .landing-footer p {
   margin: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.22);
+  padding: 24px 20px;
+  color: rgba(255, 255, 255, 0.64);
+  text-align: center;
+}
+
+.landing-footer-inner {
+  width: min(1180px, calc(100% - 40px));
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 80px;
+  margin: 0 auto;
+  padding: 56px 0 58px;
+}
+
+.landing-footer h2 {
+  margin: 0 0 24px;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.landing-footer-brand,
+.landing-footer-contact,
+.landing-footer-social {
+  display: grid;
+  align-content: start;
+}
+
+.landing-footer-brand {
+  gap: 16px;
+}
+
+.landing-footer-brand img {
+  width: 162px;
+  height: auto;
+  margin-bottom: 10px;
+}
+
+.landing-footer a,
+.landing-footer span {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.landing-footer a:hover {
+  color: #ffffff;
+}
+
+.landing-footer-contact {
+  gap: 12px;
+}
+
+.landing-footer-contact h2 {
+  margin-bottom: 14px;
+}
+
+.landing-footer-social div {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.landing-footer-social span {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #07131c;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
 }
 
 @media (max-width: 860px) {
@@ -298,8 +466,39 @@ a {
     grid-template-columns: 1fr;
   }
 
+  .landing-faq {
+    grid-template-columns: 1fr;
+    gap: 26px;
+    padding: 46px 0 56px;
+  }
+
+  .landing-faq-head {
+    position: static;
+  }
+
+  .landing-faq-list summary {
+    min-height: 68px;
+    padding-left: 18px;
+    font-size: 16px;
+  }
+
+  .landing-faq-list p {
+    margin: -4px 18px 20px;
+    font-size: 14px;
+  }
+
   .landing-footer {
-    align-items: flex-start;
-    flex-direction: column;
+    margin-left: calc(50% - 50vw);
+  }
+
+  .landing-footer-inner {
+    width: min(100% - 28px, 680px);
+    grid-template-columns: 1fr;
+    gap: 34px;
+    padding: 42px 0;
+  }
+
+  .landing-footer-social div {
+    gap: 14px;
   }
 }
