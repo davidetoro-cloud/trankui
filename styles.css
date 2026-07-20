@@ -234,6 +234,23 @@ html.theme-night {
   z-index: 1;
 }
 
+.user-avatar:has(img),
+.avatar:has(img) {
+  background: #f3f5f8;
+  color: transparent;
+}
+
+.avatar:has(img)::after {
+  display: none;
+}
+
+.profile-overview-avatar:has(img),
+.profile-photo-preview:has(img) {
+  box-shadow: 0 14px 34px rgba(18, 28, 45, 0.10);
+  outline: 1px solid rgba(18, 28, 45, 0.08);
+  outline-offset: -1px;
+}
+
 .avatar-button, .profile-name-button { border: 0; padding: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; text-align: left; }
 .profile-name-button:hover { text-decoration: underline; }
 .community-card { width: 100%; min-height: 84px; padding: 14px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: inherit; font: inherit; text-align: left; cursor: pointer; }
@@ -2250,44 +2267,58 @@ h3 {
 
 .search-faq-panel {
   display: grid;
-  grid-template-columns: minmax(220px, 0.48fr) minmax(0, 1fr);
-  gap: 28px;
-  margin-top: 34px;
-  padding: 28px;
-  border: 1px solid var(--line);
-  border-radius: 24px;
-  background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+  justify-items: center;
+  gap: 24px;
+  margin-top: 36px;
+  padding: 40px 0 14px;
 }
 
 .search-faq-panel h2 {
-  max-width: 360px;
-  margin: 4px 0 14px;
+  max-width: 760px;
+  margin: 4px 0 10px;
   color: var(--ink);
-  font-size: clamp(24px, 3vw, 38px);
-  line-height: 1.04;
+  font-size: clamp(26px, 3vw, 42px);
+  line-height: 1.08;
   letter-spacing: 0;
+  text-align: center;
+}
+
+.search-faq-panel h2 span {
+  background: linear-gradient(135deg, var(--green), #9d55ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.search-faq-panel > div:first-child {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
 }
 
 .search-faq-list {
+  width: min(980px, 100%);
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
 .search-faq-list details {
-  border: 1px solid var(--line);
-  border-radius: 16px;
+  border: 0;
+  border-radius: 22px;
   background: var(--surface);
+  box-shadow: 0 18px 54px rgba(28, 37, 60, 0.08);
+  overflow: hidden;
 }
 
 .search-faq-list summary {
   position: relative;
-  min-height: 58px;
+  min-height: 70px;
   display: flex;
   align-items: center;
-  padding: 0 50px 0 18px;
+  padding: 0 66px 0 26px;
   color: var(--ink);
   cursor: pointer;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 800;
   list-style: none;
 }
@@ -2297,31 +2328,31 @@ h3 {
 }
 
 .search-faq-list summary::after {
-  content: "+";
+  content: "›";
   position: absolute;
   top: 50%;
-  right: 18px;
-  width: 26px;
-  height: 26px;
+  right: 28px;
+  width: auto;
+  height: auto;
   display: grid;
   place-items: center;
-  border: 1px solid var(--line);
-  border-radius: 999px;
+  border: 0;
   color: var(--green);
-  font-size: 18px;
+  font-size: 30px;
   font-weight: 700;
   line-height: 1;
   transform: translateY(-50%);
+  transition: transform .18s ease;
 }
 
 .search-faq-list details[open] summary::after {
-  content: "-";
+  transform: translateY(-50%) rotate(90deg);
 }
 
 .search-faq-list p {
-  margin: -4px 18px 18px;
+  margin: -6px 66px 24px 26px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.55;
 }
 
@@ -4992,24 +5023,61 @@ textarea {
 }
 
 .faq-main {
-  max-width: 900px;
+  width: min(1220px, calc(100% - 48px));
+  max-width: none;
+}
+
+.faq-main .public-hero {
+  min-height: 260px;
+  align-items: center;
+  border-bottom: 0;
+  text-align: center;
+}
+
+.faq-main .public-hero h1 {
+  max-width: 980px;
+  margin-bottom: 18px;
+  font-size: clamp(38px, 4vw, 58px);
+  line-height: 1.08;
+}
+
+.faq-main .public-hero h1 span {
+  background: linear-gradient(135deg, var(--green), #9d55ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.faq-main .public-hero p:last-child {
+  max-width: 680px;
+  font-size: 17px;
 }
 
 .faq-list {
-  padding: 24px 0 80px;
+  display: grid;
+  gap: 16px;
+  padding: 24px 0 92px;
 }
 
 .faq-list details {
-  border-bottom: 1px solid var(--line);
+  border: 0;
+  border-radius: 26px;
+  background: #ffffff;
+  box-shadow: 0 20px 62px rgba(38, 48, 76, 0.08);
+  overflow: hidden;
 }
 
 .faq-list summary {
   position: relative;
-  padding: 24px 44px 24px 0;
+  min-height: 78px;
+  display: flex;
+  align-items: center;
+  padding: 0 76px 0 34px;
   cursor: pointer;
+  color: #090b11;
   list-style: none;
-  font-size: 17px;
-  font-weight: 700;
+  font-size: clamp(17px, 1.8vw, 21px);
+  font-weight: 800;
 }
 
 .faq-list summary::-webkit-details-marker {
@@ -5017,22 +5085,26 @@ textarea {
 }
 
 .faq-list summary::after {
-  content: "+";
+  content: "›";
   position: absolute;
-  right: 4px;
-  color: var(--green);
-  font-size: 24px;
-  font-weight: 500;
+  top: 50%;
+  right: 34px;
+  color: #7b55ff;
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1;
+  transform: translateY(-50%);
+  transition: transform .18s ease;
 }
 
 .faq-list details[open] summary::after {
-  content: "−";
+  transform: translateY(-50%) rotate(90deg);
 }
 
 .faq-list details p {
-  max-width: 760px;
-  padding: 0 44px 24px 0;
-  margin-bottom: 0;
+  max-width: 860px;
+  padding: 0;
+  margin: -4px 76px 28px 34px;
   color: var(--muted);
   line-height: 1.7;
 }
@@ -5247,7 +5319,7 @@ textarea {
 
   .search-faq-panel {
     gap: 18px;
-    padding: 22px;
+    padding: 30px 0 10px;
   }
 }
 
@@ -5438,6 +5510,41 @@ textarea {
     font-size: 16px;
   }
 
+  .faq-main {
+    width: min(100% - 28px, 680px);
+  }
+
+  .faq-main .public-hero {
+    min-height: 220px;
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .faq-main .public-hero h1 {
+    font-size: 34px;
+  }
+
+  .faq-list {
+    gap: 12px;
+    padding-bottom: 58px;
+  }
+
+  .faq-list summary {
+    min-height: 68px;
+    padding: 0 54px 0 20px;
+    font-size: 16px;
+  }
+
+  .faq-list summary::after {
+    right: 22px;
+    font-size: 28px;
+  }
+
+  .faq-list details p {
+    margin: -4px 54px 20px 20px;
+    font-size: 14px;
+  }
+
   .story-section {
     grid-template-columns: 1fr;
     gap: 18px;
@@ -5471,13 +5578,18 @@ textarea {
   }
 
   .search-faq-list summary {
-    min-height: 56px;
-    padding-left: 15px;
-    font-size: 13px;
+    min-height: 62px;
+    padding: 0 48px 0 18px;
+    font-size: 14px;
+  }
+
+  .search-faq-list summary::after {
+    right: 20px;
+    font-size: 26px;
   }
 
   .search-faq-list p {
-    margin: -2px 15px 16px;
+    margin: -2px 48px 18px 18px;
   }
 
   .cookie-banner {
