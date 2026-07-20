@@ -1779,38 +1779,74 @@ function renderProfileForm() {
     return;
   }
   qs("#profileForm").innerHTML = `<div class="profile-edit-header"><div><p class="eyebrow">Modifica profilo</p><h3>Aggiorna le informazioni pubbliche</h3><span>Salva quando hai finito: tornerai alla vista ordinata del profilo.</span></div><button class="ghost-button" type="button" data-profile-cancel>${icon("x")}Annulla</button></div>
-    <div class="profile-photo-editor"><div class="avatar profile-photo-preview">${profile.avatar_url ? `<img src="${escapeHtml(profile.avatar_url)}" alt="Foto profilo" />` : initials(displayName)}</div><div><strong>${isCompany ? "Logo o immagine aziendale" : "Foto profilo"}</strong><span>JPG, PNG o WebP, massimo 5 MB. Usa un'immagine quadrata, centrata e senza bordi trasparenti.</span><label class="secondary-button" for="avatarFile">${icon("camera")}Carica foto</label><input class="visually-hidden" id="avatarFile" type="file" accept="image/jpeg,image/png,image/webp" data-avatar-file /><input type="hidden" name="avatar_url" value="${escapeHtml(profile.avatar_url)}" /></div></div>
-    <fieldset class="account-type-selector profile-account-type">
-      <legend>Tipo account</legend>
-      <label><input type="radio" name="account_type" value="freelance" ${!isCompany ? "checked" : ""} /><span><strong>Freelance</strong><small>Profilo personale ricercabile per ruolo e disponibilità.</small></span></label>
-      <label><input type="radio" name="account_type" value="company" ${isCompany ? "checked" : ""} /><span><strong>Agenzia / casa di produzione</strong><small>Account B2B per cercare collaboratori e costruire crew.</small></span></label>
-    </fieldset>
-    <div class="form-section"><div class="field ${isCompany ? "hidden" : ""}" data-freelance-field><label>Nome e cognome *</label><input name="full_name" value="${escapeHtml(profile.full_name)}" ${!isCompany ? "required" : ""} /></div>
-    <div class="field ${!isCompany ? "hidden" : ""}" data-company-field><label>Nome agenzia / casa di produzione *</label><input name="company_name" value="${escapeHtml(profile.company_name || profile.full_name)}" ${isCompany ? "required" : ""} /></div>
-    <div class="field ${!isCompany ? "hidden" : ""}" data-company-field><label>Referente *</label><input name="contact_name" value="${escapeHtml(profile.contact_name)}" placeholder="Nome e cognome" ${isCompany ? "required" : ""} /></div>
-    <div class="field ${!isCompany ? "hidden" : ""}" data-company-field><label>Tipo realtà *</label><select name="company_type" ${isCompany ? "required" : ""}><option value="">Scegli</option>${optionList(["Agenzia creativa", "Casa di produzione", "Studio video", "Brand / azienda", "Organizzatore eventi", "Altro"], profile.company_type)}</select></div>
-    <div class="field ${!isCompany ? "hidden" : ""}" data-company-field><label>Partita IVA</label><input name="vat_number" value="${escapeHtml(profile.vat_number)}" placeholder="IT..." /></div>
-    <div class="field ${!isCompany ? "hidden" : ""}" data-company-field><label>Sito aziendale</label><input name="company_website" type="url" value="${escapeHtml(profile.company_website)}" placeholder="https://" /></div>
-    <div class="field"><label>${isCompany ? "Ruolo che cerchi più spesso" : "Ruolo principale *"}</label><select name="primary_role_id" ${isCompany ? "" : "required"}>${isCompany ? `<option value="">Opzionale</option>${groupedRoleOptions(profile.primary_role_id, false)}` : groupedRoleOptions(profile.primary_role_id)}</select></div>
-    <div class="field"><label>Regione *</label><select name="region" data-profile-region required>${optionList(Object.keys(italianAreas), profileRegion)}</select></div>
-    <div class="field"><label>Provincia *</label><select name="city" data-profile-province required><option value="">Scegli</option>${optionList(provincesFor(profileRegion), profile.city)}</select></div>
-    <div class="field"><label>${isCompany ? "Anni di attività" : "Anni di esperienza"}</label><input name="years_experience" type="number" min="0" max="80" value="${profile.years_experience || 0}" /></div>
-    <div class="field full"><label>${isCompany ? "Descrizione realtà" : "Bio"}</label><textarea name="bio" maxlength="1200">${escapeHtml(profile.bio)}</textarea></div>
-    <div class="field"><label>${isCompany ? "Area in cui lavori" : "Disponibilita a trasferte"}</label><input name="travel_area" value="${escapeHtml(profile.travel_area)}" placeholder="${isCompany ? "Es. Sardegna, Italia, Europa" : "Es. Tutta la Sardegna"}" /></div>
-    <div class="field"><label>${isCompany ? "Telefono referente" : "Telefono privato"}</label><input name="phone" value="${escapeHtml(profile.phone)}" placeholder="Visibile solo dopo un match" /></div>
-    <div class="field"><label>${isCompany ? "Portfolio / showreel aziendale" : "Portfolio"}</label><input name="portfolio_url" type="url" value="${escapeHtml(profile.portfolio_url)}" placeholder="https://" /></div>
-    <div class="field"><label>Brand utilizzati</label><input name="brands" value="${escapeHtml((profile.brands || []).join(", "))}" placeholder="Sony, ARRI, Aputure" /></div>
-    <div class="field full"><label>Attrezzatura principale</label><textarea name="equipment">${escapeHtml(profile.equipment)}</textarea></div>
-    <div class="field social-field"><label>${socialIcon("instagram")}Instagram</label><input name="instagram_url" value="${escapeHtml(profile.instagram_url)}" placeholder="Link o nome utente" /></div>
-    <div class="field social-field"><label>${socialIcon("facebook")}Facebook</label><input name="facebook_url" value="${escapeHtml(profile.facebook_url)}" placeholder="Link o nome utente" /></div>
-    <div class="field social-field"><label>${socialIcon("tiktok")}TikTok</label><input name="tiktok_url" value="${escapeHtml(profile.tiktok_url)}" placeholder="Link o @nomeutente" /></div>
-    <div class="field social-field"><label>${socialIcon("linkedin")}LinkedIn</label><input name="linkedin_url" value="${escapeHtml(profile.linkedin_url)}" placeholder="Link o nome profilo" /></div></div>
-    <details class="compact-multiselect"><summary><span><strong>Competenze secondarie</strong><small>Opzionali · massimo 5</small></span><span class="multiselect-summary" data-secondary-summary>${secondaryNames.length ? escapeHtml(secondaryNames.join(", ")) : "Nessuna selezionata"}</span>${icon("chevron-down")}</summary><div class="multiselect-popover"><input type="search" placeholder="Cerca un ruolo" data-role-search />
-      <div class="multiselect-list">${state.roles.map((role) => `<label data-role-label="${escapeHtml(role.name.toLowerCase())}"><span>${escapeHtml(role.name)}</span><input type="checkbox" name="secondary_roles" value="${role.id}" data-label="${escapeHtml(role.name)}" ${selectedSecondary.has(role.id) ? "checked" : ""} ${role.id === profile.primary_role_id ? "disabled" : ""}/></label>`).join("")}</div></div></details>
-    <details class="compact-multiselect"><summary><span><strong>Ambiti di specializzazione</strong><small>Opzionali · massimo 5</small></span><span class="multiselect-summary" data-specialization-summary>${selectedSpecializations.size ? escapeHtml([...selectedSpecializations].join(", ")) : "Nessuno selezionato"}</span>${icon("chevron-down")}</summary><div class="multiselect-popover"><p class="multiselect-help">Seleziona gli ambiti in cui lavori più frequentemente o in cui ritieni di avere maggiore esperienza. Queste informazioni aiuteranno gli altri professionisti a trovarti per produzioni specifiche.</p><input type="search" placeholder="Cerca un ambito" data-specialization-search />
-      <div class="multiselect-list grouped">${Object.entries(specializationGroups).map(([category, items]) => `<div class="multiselect-group"><strong>${escapeHtml(category)}</strong>${items.map((item) => `<label data-specialization-label="${escapeHtml(item.toLowerCase())}"><span>${escapeHtml(item)}</span><input type="checkbox" name="specializations" value="${escapeHtml(item)}" data-label="${escapeHtml(item)}" ${selectedSpecializations.has(item) ? "checked" : ""}/></label>`).join("")}</div>`).join("")}</div></div></details>
-    <label class="consent-line"><input name="availability_visible" type="checkbox" ${profile.availability_visible ? "checked" : ""}/><span>Mostra il mio profilo nelle ricerche quando risulto disponibile.</span></label>
-    <button class="primary-button" type="submit">${icon("save")}Salva profilo</button>`;
+    <div class="profile-edit-layout">
+      <section class="profile-edit-card profile-identity-card">
+        <div class="profile-edit-card-head">
+          <span class="profile-edit-card-icon">${icon("user-round")}</span>
+          <div><h4>Identità del profilo</h4><p>Foto, tipo account e dati principali con cui sarai riconosciuto dagli altri professionisti.</p></div>
+        </div>
+        <div class="profile-photo-editor"><div class="avatar profile-photo-preview">${profile.avatar_url ? `<img src="${escapeHtml(profile.avatar_url)}" alt="Foto profilo" />` : initials(displayName)}</div><div><strong>${isCompany ? "Logo o immagine aziendale" : "Foto profilo"}</strong><span>JPG, PNG o WebP, massimo 5 MB. Usa un'immagine quadrata, centrata e senza bordi trasparenti.</span><label class="secondary-button" for="avatarFile">${icon("camera")}Carica foto</label><input class="visually-hidden" id="avatarFile" type="file" accept="image/jpeg,image/png,image/webp" data-avatar-file /><input type="hidden" name="avatar_url" value="${escapeHtml(profile.avatar_url)}" /></div></div>
+        <fieldset class="account-type-selector profile-account-type">
+          <legend>Tipo account</legend>
+          <label><input type="radio" name="account_type" value="freelance" ${!isCompany ? "checked" : ""} /><span><strong>Freelance</strong><small>Profilo personale ricercabile per ruolo e disponibilità.</small></span></label>
+          <label><input type="radio" name="account_type" value="company" ${isCompany ? "checked" : ""} /><span><strong>Agenzia / casa di produzione</strong><small>Account B2B per cercare collaboratori e costruire crew.</small></span></label>
+        </fieldset>
+      </section>
+      <section class="profile-edit-card">
+        <div class="profile-edit-card-head">
+          <span class="profile-edit-card-icon">${icon("badge-check")}</span>
+          <div><h4>Dati professionali</h4><p>Le informazioni che aiutano Trankui a posizionarti nelle ricerche giuste.</p></div>
+        </div>
+        <div class="form-section profile-fields-grid"><div class="field ${isCompany ? "hidden" : ""}" data-freelance-field><label>Nome e cognome *</label><input name="full_name" value="${escapeHtml(profile.full_name)}" ${!isCompany ? "required" : ""} /></div>
+        <div class="field ${!isCompany ? "hidden" : ""}" data-company-field><label>Nome agenzia / casa di produzione *</label><input name="company_name" value="${escapeHtml(profile.company_name || profile.full_name)}" ${isCompany ? "required" : ""} /></div>
+        <div class="field ${!isCompany ? "hidden" : ""}" data-company-field><label>Referente *</label><input name="contact_name" value="${escapeHtml(profile.contact_name)}" placeholder="Nome e cognome" ${isCompany ? "required" : ""} /></div>
+        <div class="field ${!isCompany ? "hidden" : ""}" data-company-field><label>Tipo realtà *</label><select name="company_type" ${isCompany ? "required" : ""}><option value="">Scegli</option>${optionList(["Agenzia creativa", "Casa di produzione", "Studio video", "Brand / azienda", "Organizzatore eventi", "Altro"], profile.company_type)}</select></div>
+        <div class="field ${!isCompany ? "hidden" : ""}" data-company-field><label>Partita IVA</label><input name="vat_number" value="${escapeHtml(profile.vat_number)}" placeholder="IT..." /></div>
+        <div class="field ${!isCompany ? "hidden" : ""}" data-company-field><label>Sito aziendale</label><input name="company_website" type="url" value="${escapeHtml(profile.company_website)}" placeholder="https://" /></div>
+        <div class="field"><label>${isCompany ? "Ruolo che cerchi più spesso" : "Ruolo principale *"}</label><select name="primary_role_id" ${isCompany ? "" : "required"}>${isCompany ? `<option value="">Opzionale</option>${groupedRoleOptions(profile.primary_role_id, false)}` : groupedRoleOptions(profile.primary_role_id)}</select></div>
+        <div class="field"><label>Regione *</label><select name="region" data-profile-region required>${optionList(Object.keys(italianAreas), profileRegion)}</select></div>
+        <div class="field"><label>Provincia *</label><select name="city" data-profile-province required><option value="">Scegli</option>${optionList(provincesFor(profileRegion), profile.city)}</select></div>
+        <div class="field"><label>${isCompany ? "Anni di attività" : "Anni di esperienza"}</label><input name="years_experience" type="number" min="0" max="80" value="${profile.years_experience || 0}" /></div></div>
+      </section>
+      <section class="profile-edit-card">
+        <div class="profile-edit-card-head">
+          <span class="profile-edit-card-icon">${icon("sparkles")}</span>
+          <div><h4>Presentazione e contatti</h4><p>Racconta come lavori e lascia solo i contatti necessari alla collaborazione.</p></div>
+        </div>
+        <div class="form-section profile-fields-grid"><div class="field full"><label>${isCompany ? "Descrizione realtà" : "Bio"}</label><textarea name="bio" maxlength="1200">${escapeHtml(profile.bio)}</textarea></div>
+        <div class="field"><label>${isCompany ? "Area in cui lavori" : "Disponibilità a trasferte"}</label><input name="travel_area" value="${escapeHtml(profile.travel_area)}" placeholder="${isCompany ? "Es. Sardegna, Italia, Europa" : "Es. Tutta la Sardegna"}" /></div>
+        <div class="field"><label>${isCompany ? "Telefono referente" : "Telefono privato"}</label><input name="phone" value="${escapeHtml(profile.phone)}" placeholder="Visibile solo dopo un match" /></div></div>
+      </section>
+      <section class="profile-edit-card">
+        <div class="profile-edit-card-head">
+          <span class="profile-edit-card-icon">${icon("link")}</span>
+          <div><h4>Portfolio, brand e social</h4><p>Link facoltativi: inserisci solo ciò che vuoi usare per valorizzare il tuo profilo professionale.</p></div>
+        </div>
+        <div class="form-section profile-fields-grid"><div class="field"><label>${isCompany ? "Portfolio / showreel aziendale" : "Portfolio"}</label><input name="portfolio_url" type="url" value="${escapeHtml(profile.portfolio_url)}" placeholder="https://" /></div>
+        <div class="field"><label>Brand utilizzati</label><input name="brands" value="${escapeHtml((profile.brands || []).join(", "))}" placeholder="Sony, ARRI, Aputure" /></div>
+        <div class="field full"><label>Attrezzatura principale</label><textarea name="equipment">${escapeHtml(profile.equipment)}</textarea></div>
+        <div class="field social-field"><label>${socialIcon("instagram")}Instagram</label><input name="instagram_url" value="${escapeHtml(profile.instagram_url)}" placeholder="Link o nome utente" /></div>
+        <div class="field social-field"><label>${socialIcon("facebook")}Facebook</label><input name="facebook_url" value="${escapeHtml(profile.facebook_url)}" placeholder="Link o nome utente" /></div>
+        <div class="field social-field"><label>${socialIcon("tiktok")}TikTok</label><input name="tiktok_url" value="${escapeHtml(profile.tiktok_url)}" placeholder="Link o @nomeutente" /></div>
+        <div class="field social-field"><label>${socialIcon("linkedin")}LinkedIn</label><input name="linkedin_url" value="${escapeHtml(profile.linkedin_url)}" placeholder="Link o nome profilo" /></div></div>
+      </section>
+      <section class="profile-edit-card">
+        <div class="profile-edit-card-head">
+          <span class="profile-edit-card-icon">${icon("list-checks")}</span>
+          <div><h4>Competenze e matching</h4><p>Seleziona solo le competenze concrete e gli ambiti in cui vuoi essere trovato.</p></div>
+        </div>
+        <div class="profile-select-stack">
+          <details class="compact-multiselect"><summary><span><strong>Competenze secondarie</strong><small>Opzionali · massimo 5</small></span><span class="multiselect-summary" data-secondary-summary>${secondaryNames.length ? escapeHtml(secondaryNames.join(", ")) : "Nessuna selezionata"}</span>${icon("chevron-down")}</summary><div class="multiselect-popover"><input type="search" placeholder="Cerca un ruolo" data-role-search />
+            <div class="multiselect-list">${state.roles.map((role) => `<label data-role-label="${escapeHtml(role.name.toLowerCase())}"><span>${escapeHtml(role.name)}</span><input type="checkbox" name="secondary_roles" value="${role.id}" data-label="${escapeHtml(role.name)}" ${selectedSecondary.has(role.id) ? "checked" : ""} ${role.id === profile.primary_role_id ? "disabled" : ""}/></label>`).join("")}</div></div></details>
+          <details class="compact-multiselect"><summary><span><strong>Ambiti di specializzazione</strong><small>Opzionali · massimo 5</small></span><span class="multiselect-summary" data-specialization-summary>${selectedSpecializations.size ? escapeHtml([...selectedSpecializations].join(", ")) : "Nessuno selezionato"}</span>${icon("chevron-down")}</summary><div class="multiselect-popover"><p class="multiselect-help">Seleziona gli ambiti in cui lavori più frequentemente o in cui ritieni di avere maggiore esperienza. Queste informazioni aiuteranno gli altri professionisti a trovarti per produzioni specifiche.</p><input type="search" placeholder="Cerca un ambito" data-specialization-search />
+            <div class="multiselect-list grouped">${Object.entries(specializationGroups).map(([category, items]) => `<div class="multiselect-group"><strong>${escapeHtml(category)}</strong>${items.map((item) => `<label data-specialization-label="${escapeHtml(item.toLowerCase())}"><span>${escapeHtml(item)}</span><input type="checkbox" name="specializations" value="${escapeHtml(item)}" data-label="${escapeHtml(item)}" ${selectedSpecializations.has(item) ? "checked" : ""}/></label>`).join("")}</div>`).join("")}</div></div></details>
+        </div>
+      </section>
+      <section class="profile-edit-card profile-edit-privacy-card">
+        <label class="consent-line"><input name="availability_visible" type="checkbox" ${profile.availability_visible ? "checked" : ""}/><span><strong>Visibilità in ricerca</strong>Mostra il mio profilo nelle ricerche quando risulto disponibile.</span></label>
+      </section>
+      <div class="profile-sticky-save"><button class="primary-button" type="submit">${icon("save")}Salva profilo</button></div>
+    </div>`;
 }
 
 async function saveProfile(event) {
