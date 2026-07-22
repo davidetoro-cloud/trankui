@@ -1684,6 +1684,18 @@ function profileModeChips(profile = {}) {
 
 function syncWorkspaceSwitch() {
   const modes = profileUsageModes(state.profile || {});
+  const shortcut = qs("#workspaceModeShortcut");
+  if (shortcut) {
+    const target = state.workspaceMode === "builder" && modes.includes("member") ? "member" : modes.includes("builder") ? "builder" : modes.find((mode) => mode !== state.workspaceMode);
+    const enabled = Boolean(target && target !== state.workspaceMode && modes.includes(target));
+    shortcut.hidden = !enabled;
+    shortcut.disabled = !enabled;
+    if (target) {
+      shortcut.dataset.workspaceMode = target;
+      shortcut.textContent = `Passa a ${modeLabel(target)}`;
+      shortcut.title = `Passa a ${modeLabel(target)}`;
+    }
+  }
   qsa("button[data-workspace-mode]").forEach((button) => {
     const enabled = modes.includes(button.dataset.workspaceMode);
     button.classList.toggle("active", button.dataset.workspaceMode === state.workspaceMode);
@@ -2415,7 +2427,13 @@ document.addEventListener("click", async (event) => {
     return;
   }
   const nav = event.target.closest("button[data-view], a[data-view]");
-  if (nav) return switchView(nav.dataset.view);
+  if (nav) {
+    closeMobileMenu();
+    closeMobileNotifications();
+    qs("#notificationPanel")?.classList.add("hidden");
+    qs("#notificationButton")?.setAttribute("aria-expanded", "false");
+    return switchView(nav.dataset.view);
+  }
   const boardRequest = event.target.closest("[data-open-board-request]");
   if (boardRequest) return openBoardComposer(true);
   const go = event.target.closest("button[data-go], a[data-go]");
@@ -2795,6 +2813,11 @@ qs("#mobileNotificationBackdrop").addEventListener("click", (event) => {
 });
 qs("#mobileLogoutButton").addEventListener("click", () => {
   closeMobileMenu();
+  qs("#logoutButton").click();
+});
+qs("#accountPanelLogout").addEventListener("click", () => {
+  qs("#notificationPanel")?.classList.add("hidden");
+  qs("#notificationButton")?.setAttribute("aria-expanded", "false");
   qs("#logoutButton").click();
 });
 qs("#markNotificationsRead").addEventListener("click", () => {

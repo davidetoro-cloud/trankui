@@ -183,18 +183,27 @@
         </nav>
 
         <div class="utility-links"><a href="./trankui.html">Trankui</a><a href="./faq.html">FAQ</a><a href="./blog.html">Blog</a><button type="button" data-view="support">Help</button></div>
+        <button class="workspace-mode-shortcut" type="button" id="workspaceModeShortcut" data-workspace-mode="builder">Passa a Crew Builder</button>
 
         <div class="sidebar-note">
           <div class="sidebar-user-row">
             <div class="notification-center sidebar-notification-center">
               <button class="avatar-notification-button" type="button" id="notificationButton" title="Apri profilo e notifiche" aria-label="Apri profilo e notifiche" aria-expanded="false">
-                <span class="user-avatar" id="sidebarAvatar">T</span><span class="notification-badge hidden" id="notificationBadge">0</span>
+                <i class="account-menu-icon" data-lucide="menu" aria-hidden="true"></i><span class="user-avatar" id="sidebarAvatar">T</span><span class="notification-badge hidden" id="notificationBadge">0</span>
               </button>
               <section class="notification-panel hidden" id="notificationPanel" aria-label="Notifiche recenti">
-                <header><div><strong>Account</strong><span id="notificationSummary">Nessun aggiornamento</span></div><button class="text-button" type="button" id="markNotificationsRead">Segna come lette</button></header>
-                <div class="notification-account-actions">
-                  <button class="secondary-button compact-button" type="button" data-go="profile"><i data-lucide="user-round" aria-hidden="true"></i>Il mio profilo</button>
-                  <button class="ghost-button compact-button" type="button" data-go="profile-availability"><i data-lucide="calendar-days" aria-hidden="true"></i>Disponibilità</button>
+                <header><div><strong>Menu</strong><span id="notificationSummary">Nessun aggiornamento</span></div><button class="text-button" type="button" id="markNotificationsRead">Segna come lette</button></header>
+                <div class="notification-account-actions account-menu-actions">
+                  <button class="account-menu-item" type="button" data-go="profile"><i data-lucide="user-round" aria-hidden="true"></i><span>Profilo</span></button>
+                  <button class="account-menu-item" type="button" data-view="chat"><i data-lucide="message-circle" aria-hidden="true"></i><span>Chat</span></button>
+                  <button class="account-menu-item" type="button" data-view="requests"><i data-lucide="activity" aria-hidden="true"></i><span>Attività</span></button>
+                  <button class="account-menu-item" type="button" data-go="profile-availability"><i data-lucide="calendar-days" aria-hidden="true"></i><span>Disponibilità</span></button>
+                </div>
+                <div class="notification-account-actions account-menu-actions account-menu-secondary">
+                  <button class="account-menu-item" type="button" data-view="support"><i data-lucide="life-buoy" aria-hidden="true"></i><span>Centro assistenza</span></button>
+                  <a class="account-menu-item" href="./faq.html"><i data-lucide="circle-help" aria-hidden="true"></i><span>FAQ</span></a>
+                  <a class="account-menu-item" href="./blog.html"><i data-lucide="newspaper" aria-hidden="true"></i><span>Blog</span></a>
+                  <button class="account-menu-item danger" type="button" id="accountPanelLogout"><i data-lucide="log-out" aria-hidden="true"></i><span>Esci</span></button>
                 </div>
                 <div class="notification-list" id="notificationList"></div>
               </section>
@@ -665,6 +674,6 @@
     <script src="./backend.js?v=20260722-crew-modes-1"></script>
     <script src="./lucide.min.js"></script>
     <script src="./cookie-consent.js?v=20260712-delete-account-2"></script>
-    <script src="./app.js?v=20260722-click-guard-1"></script>
-  </body>
+  <script src="./app.js?v=20260722-airbnb-menu-1"></script>
+</body>
 </html>
