@@ -2765,13 +2765,6 @@ qsa("[data-notification-topic]").forEach((input) => {
     rememberCurrentNotifications();
   });
 });
-function toggleAccountPanel(event) {
-  event?.preventDefault();
-  event?.stopPropagation();
-  const panel = qs("#notificationPanel");
-  setAccountPanelOpen(panel.classList.contains("hidden"));
-}
-
 function setAccountPanelOpen(open) {
   const panel = qs("#notificationPanel");
   panel.classList.toggle("hidden", !open);
@@ -2782,19 +2775,15 @@ let accountPanelTouchHandledAt = 0;
 
 function handleAccountPanelPointer(event) {
   accountPanelTouchHandledAt = Date.now();
-  toggleAccountPanel(event);
+  event?.preventDefault();
+  event?.stopPropagation();
+  setAccountPanelOpen(true);
 }
 
 function handleAccountPanelClick(event) {
-  if (Date.now() - accountPanelTouchHandledAt < 700) {
-    event?.preventDefault();
-    event?.stopPropagation();
-    if (qs("#notificationPanel").classList.contains("hidden")) setAccountPanelOpen(true);
-    return;
-  }
   event?.preventDefault();
   event?.stopPropagation();
-  toggleAccountPanel(event);
+  setAccountPanelOpen(true);
 }
 
 function openDeleteAccountModal(event) {
