@@ -2745,6 +2745,8 @@ function handleAccountPanelPointer(event) {
 }
 
 function handleAccountPanelClick(event) {
+  event?.preventDefault();
+  event?.stopPropagation();
   if (event.detail > 0 && Date.now() - lastAccountPanelPointerAt < 700) return;
   toggleAccountPanel(event);
 }
