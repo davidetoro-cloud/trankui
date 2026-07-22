@@ -2277,7 +2277,10 @@ function openProfileAvailability() {
   openOwnProfile(null, { scrollTarget: "#profileAvailabilitySection", delay: 60 });
 }
 
+let mobileMenuOpenedAt = 0;
+
 function openMobileMenu() {
+  mobileMenuOpenedAt = Date.now();
   qs("#mobileMenuBackdrop").classList.remove("hidden");
   qs("#mobileMenuPanel").classList.remove("hidden");
   qs("#mobileMenuPanel").setAttribute("aria-hidden", "false");
@@ -2286,10 +2289,18 @@ function openMobileMenu() {
 }
 
 function handleMobileMenuPointer(event) {
-  if (event.pointerType && !["touch", "pen"].includes(event.pointerType)) return;
   event.preventDefault();
   event.stopPropagation();
   openMobileMenu();
+}
+
+function handleMobileMenuBackdropClick(event) {
+  if (Date.now() - mobileMenuOpenedAt < 600) {
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
+  closeMobileMenu();
 }
 
 function closeMobileMenu() {
@@ -2770,7 +2781,6 @@ function setAccountPanelOpen(open) {
 let accountPanelTouchHandledAt = 0;
 
 function handleAccountPanelPointer(event) {
-  if (event.pointerType && !["touch", "pen"].includes(event.pointerType)) return;
   accountPanelTouchHandledAt = Date.now();
   toggleAccountPanel(event);
 }
@@ -2779,6 +2789,7 @@ function handleAccountPanelClick(event) {
   if (Date.now() - accountPanelTouchHandledAt < 700) {
     event?.preventDefault();
     event?.stopPropagation();
+    if (qs("#notificationPanel").classList.contains("hidden")) setAccountPanelOpen(true);
     return;
   }
   event?.preventDefault();
@@ -2822,7 +2833,7 @@ qs("#notificationButton").addEventListener("click", handleAccountPanelClick);
 qs("#mobileMenuOpen").addEventListener("pointerdown", handleMobileMenuPointer);
 qs("#mobileMenuOpen").addEventListener("click", openMobileMenu);
 qs("#mobileMenuClose").addEventListener("click", closeMobileMenu);
-qs("#mobileMenuBackdrop").addEventListener("click", closeMobileMenu);
+qs("#mobileMenuBackdrop").addEventListener("click", handleMobileMenuBackdropClick);
 qs("#mobileOpenNotifications").addEventListener("click", openMobileNotifications);
 qs("#mobileNotificationClose").addEventListener("click", closeMobileNotifications);
 qs("#mobileNotificationBackdrop").addEventListener("click", (event) => {
