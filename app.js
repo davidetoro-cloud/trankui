@@ -1684,7 +1684,7 @@ function profileModeChips(profile = {}) {
 
 function syncWorkspaceSwitch() {
   const modes = profileUsageModes(state.profile || {});
-  qsa("[data-workspace-mode]").forEach((button) => {
+  qsa("button[data-workspace-mode]").forEach((button) => {
     const enabled = modes.includes(button.dataset.workspaceMode);
     button.classList.toggle("active", button.dataset.workspaceMode === state.workspaceMode);
     button.disabled = !enabled;
@@ -2409,16 +2409,16 @@ document.addEventListener("click", async (event) => {
     return;
   }
   if (!event.target.closest("#chatInfoPanel")) setChatInfoOpen(false);
-  const workspaceMode = event.target.closest("[data-workspace-mode]");
+  const workspaceMode = event.target.closest("button[data-workspace-mode]");
   if (workspaceMode) {
     setWorkspaceMode(workspaceMode.dataset.workspaceMode, { navigate: true });
     return;
   }
-  const nav = event.target.closest("[data-view]");
+  const nav = event.target.closest("button[data-view], a[data-view]");
   if (nav) return switchView(nav.dataset.view);
   const boardRequest = event.target.closest("[data-open-board-request]");
   if (boardRequest) return openBoardComposer(true);
-  const go = event.target.closest("[data-go]");
+  const go = event.target.closest("button[data-go], a[data-go]");
   if (go) {
     closeMobileMenu();
     closeMobileNotifications();
