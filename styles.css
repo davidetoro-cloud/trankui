@@ -2023,14 +2023,16 @@ body.mobile-menu-open {
 }
 
 .avatar-notification-button {
+  -webkit-tap-highlight-color: transparent;
+  appearance: none;
   position: relative;
-  min-width: 74px;
-  height: 46px;
+  min-width: 86px;
+  height: 52px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 0 7px 0 13px;
+  gap: 11px;
+  padding: 0 8px 0 15px;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--surface);
@@ -2050,9 +2052,15 @@ body.mobile-menu-open {
   transform: translateY(-1px);
 }
 
+.avatar-notification-button:focus-visible,
+.user-name-button:focus-visible {
+  outline: 3px solid rgba(0, 104, 255, .22);
+  outline-offset: 3px;
+}
+
 .account-menu-icon {
-  width: 19px;
-  height: 19px;
+  width: 21px;
+  height: 21px;
   color: var(--ink);
   stroke-width: 2.2;
 }

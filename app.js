@@ -2415,6 +2415,7 @@ document.addEventListener("click", async (event) => {
     qs("#searchDatePopover")?.classList.add("hidden");
     qs("#searchDateButton")?.setAttribute("aria-expanded", "false");
   }
+  if (!event.target.closest(".sidebar-user-row")) setAccountPanelOpen(false);
   if (event.target.closest("#chatInfoButton")) {
     toggleChatInfoPanel();
     redrawIcons();
@@ -2750,22 +2751,18 @@ function toggleAccountPanel(event) {
   event?.preventDefault();
   event?.stopPropagation();
   const panel = qs("#notificationPanel");
-  panel.classList.toggle("hidden");
-  qs("#notificationButton").setAttribute("aria-expanded", String(!panel.classList.contains("hidden")));
+  setAccountPanelOpen(panel.classList.contains("hidden"));
 }
 
-let lastAccountPanelPointerAt = 0;
-function handleAccountPanelPointer(event) {
-  const now = Date.now();
-  if (now - lastAccountPanelPointerAt < 350) return;
-  lastAccountPanelPointerAt = now;
-  toggleAccountPanel(event);
+function setAccountPanelOpen(open) {
+  const panel = qs("#notificationPanel");
+  panel.classList.toggle("hidden", !open);
+  qs("#notificationButton").setAttribute("aria-expanded", String(open));
 }
 
 function handleAccountPanelClick(event) {
   event?.preventDefault();
   event?.stopPropagation();
-  if (event.detail > 0 && Date.now() - lastAccountPanelPointerAt < 700) return;
   toggleAccountPanel(event);
 }
 
@@ -2800,8 +2797,6 @@ async function confirmDeleteAccount() {
   }
 }
 
-qs("#notificationButton").addEventListener("pointerup", handleAccountPanelPointer);
-qs("#notificationButton").addEventListener("touchend", handleAccountPanelPointer, { passive: false });
 qs("#notificationButton").addEventListener("click", handleAccountPanelClick);
 qs("#mobileMenuOpen").addEventListener("click", openMobileMenu);
 qs("#mobileMenuClose").addEventListener("click", closeMobileMenu);
