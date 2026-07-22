@@ -44,7 +44,19 @@
 
   function isSchemaCompatibilityError(error) {
     const text = [error?.code, error?.message, error?.details, error?.hint].filter(Boolean).join(" ");
-    return /(PGRST204|PGRST205|42703|schema cache|Could not find|column .* does not exist|phone_visibility|show_portfolio|allow_chat_contact|allow_matching_improvement|account_status|deletion_scheduled_for|beta_feedback)/i.test(text);
+    return /(PGRST204|PGRST205|42703|schema cache|Could not find|column .* does not exist|phone_visibility|show_portfolio|allow_chat_contact|allow_matching_improvement|can_work_as_member|can_work_as_builder|account_status|deletion_scheduled_for|beta_feedback)/i.test(text);
+  }
+
+  function profileModesFromValue(value, accountType = "freelance") {
+    const rawModes = Array.isArray(value)
+      ? value
+      : String(value || "").split(",").map((item) => item.trim()).filter(Boolean);
+    const normalized = rawModes.map((item) => item.toLowerCase());
+    if (!normalized.length) return ["member", "builder"];
+    const modes = [];
+    if (normalized.includes("member") || normalized.includes("crew_member")) modes.push("member");
+    if (normalized.includes("builder") || normalized.includes("crew_builder")) modes.push("builder");
+    return modes.length ? [...new Set(modes)] : ["member", "builder"];
   }
 
   function withProfilePrivacyDefaults(profile = {}) {
@@ -63,6 +75,8 @@
       show_linkedin: showSocialLinks,
       allow_chat_contact: profile.allow_chat_contact !== false,
       allow_matching_improvement: profile.allow_matching_improvement !== false,
+      can_work_as_member: profile.can_work_as_member !== false,
+      can_work_as_builder: profile.can_work_as_builder !== false,
       account_status: profile.account_status || "active",
       deletion_requested_at: profile.deletion_requested_at || null,
       deletion_scheduled_for: profile.deletion_scheduled_for || null,
@@ -117,12 +131,22 @@
     return data.session;
   }
 
-  async function signUp({ name, email, password, account_type = "freelance", company_name = "", company_type = "", contact_name = "" }) {
+  async function signUp({ name, email, password, account_type = "freelance", profile_modes = ["member", "builder"], company_name = "", company_type = "", contact_name = "" }) {
+    const modes = profileModesFromValue(profile_modes, account_type);
     return unwrap(await client.auth.signUp({
       email,
       password,
       options: {
-        data: { full_name: name, account_type, company_name, company_type, contact_name },
+        data: {
+          full_name: name,
+          account_type,
+          profile_modes: modes,
+          can_work_as_member: modes.includes("member"),
+          can_work_as_builder: modes.includes("builder"),
+          company_name,
+          company_type,
+          contact_name,
+        },
         emailRedirectTo: authRedirectUrl(),
       },
     }));
@@ -178,7 +202,8 @@
     if (!profile) {
       const metadata = current.user.user_metadata || {};
       const fallbackName = metadata.full_name || metadata.name || current.user.email?.split("@")[0] || "Profilo Trankui";
-      profile = unwrap(await client.from("profiles").insert({
+      const modes = profileModesFromValue(metadata.profile_modes, metadata.account_type || "freelance");
+      const profileInsertPayload = {
         id: current.user.id,
         full_name: fallbackName,
         account_type: metadata.account_type || "freelance",
@@ -194,8 +219,17 @@
         brands: [],
         production_types: [],
         availability_visible: false,
+        can_work_as_member: metadata.can_work_as_member ?? modes.includes("member"),
+        can_work_as_builder: metadata.can_work_as_builder ?? modes.includes("builder"),
         profile_status: "draft",
-      }).select("*").single());
+      };
+      try {
+        profile = unwrap(await client.from("profiles").insert(profileInsertPayload).select("*").single());
+      } catch (error) {
+        if (!isSchemaCompatibilityError(error)) throw error;
+        const { can_work_as_member, can_work_as_builder, ...legacyInsertPayload } = profileInsertPayload;
+        profile = unwrap(await client.from("profiles").insert(legacyInsertPayload).select("*").single());
+      }
     }
     const secondaryRoles = unwrap(await client.from("secondary_roles")
       .select("id,role_id,other_role_name,position,roles(id,name,category,slug)")
@@ -241,9 +275,17 @@
       tiktok_url: profile.tiktok_url || null,
       linkedin_url: profile.linkedin_url || null,
       availability_visible: Boolean(profile.availability_visible),
+      can_work_as_member: profile.can_work_as_member !== false,
+      can_work_as_builder: profile.can_work_as_builder !== false,
       profile_status: profile.profile_status || "draft",
     };
-    unwrap(await client.from("profiles").update(profilePayload).eq("id", id).select("id").single());
+    try {
+      unwrap(await client.from("profiles").update(profilePayload).eq("id", id).select("id").single());
+    } catch (error) {
+      if (!isSchemaCompatibilityError(error)) throw error;
+      const { can_work_as_member, can_work_as_builder, ...legacyProfilePayload } = profilePayload;
+      unwrap(await client.from("profiles").update(legacyProfilePayload).eq("id", id).select("id").single());
+    }
     unwrap(await client.from("private_contacts").upsert({ profile_id: id, phone: profile.phone || null }));
     unwrap(await client.from("secondary_roles").delete().eq("profile_id", id));
     if (secondaryRoleIds.length) {
@@ -269,8 +311,9 @@
 
   async function publicProfiles() {
     const baseSelect = "id,full_name,account_type,company_name,company_type,vat_number,contact_name,company_website,primary_role_id,primary_other_role_name,bio,city,region,travel_area,years_experience,portfolio_url,equipment,brands,production_types,avatar_url,instagram_url,facebook_url,tiktok_url,linkedin_url,availability_visible,verified,created_at,roles:primary_role_id(id,name,category,slug),secondary_roles(role_id,other_role_name,position,roles(id,name,category,slug))";
-    const privacySelect = `${baseSelect},show_portfolio,show_instagram,show_facebook,show_tiktok,show_linkedin,allow_chat_contact,allow_matching_improvement`;
-    const legacyPrivacySelect = `${baseSelect},show_portfolio,show_instagram,show_facebook,show_tiktok,show_linkedin,allow_chat_contact`;
+    const modeSelect = `${baseSelect},can_work_as_member,can_work_as_builder`;
+    const privacySelect = `${modeSelect},show_portfolio,show_instagram,show_facebook,show_tiktok,show_linkedin,allow_chat_contact,allow_matching_improvement`;
+    const legacyPrivacySelect = `${modeSelect},show_portfolio,show_instagram,show_facebook,show_tiktok,show_linkedin,allow_chat_contact`;
     try {
       return withProfileBadges(unwrap(await client.from("profiles").select(privacySelect).eq("profile_status", "active")));
     } catch (error) {

@@ -295,6 +295,36 @@ html.theme-night {
   width: 13px;
   height: 13px;
 }
+.mode-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.mode-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+  padding: 5px 9px;
+  border: 1px solid rgba(18, 28, 45, .09);
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: #4f5661;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+.mode-chip svg {
+  width: 13px;
+  height: 13px;
+  color: var(--blue);
+}
+.mode-chip-builder svg {
+  color: var(--green);
+}
 .result-title {
   display: flex;
   flex-wrap: wrap;
@@ -1260,6 +1290,21 @@ button {
   background: rgba(0, 104, 255, .06);
 }
 
+.optional-label {
+  color: var(--muted);
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.profile-mode-selector label {
+  align-items: center;
+}
+
+.profile-mode-selector input {
+  border-radius: 6px;
+}
+
 .profile-account-type {
   padding: 16px;
   border: 1px solid var(--line);
@@ -1793,6 +1838,67 @@ body.mobile-menu-open {
   border-color: rgba(0, 104, 255, .34);
   background: rgba(0, 104, 255, .08);
   color: var(--green);
+}
+
+.workspace-switch,
+.mobile-mode-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-soft);
+}
+
+.workspace-switch button,
+.mobile-mode-switch button {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.workspace-switch button.active,
+.mobile-mode-switch button.active {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 6px 20px rgba(18, 28, 45, .08);
+}
+
+.workspace-switch button:disabled,
+.mobile-mode-switch button:disabled {
+  opacity: .38;
+  cursor: not-allowed;
+}
+
+.workspace-switch svg,
+.mobile-mode-switch svg {
+  width: 15px;
+  height: 15px;
+  color: var(--blue);
+}
+
+.mobile-mode-switch {
+  width: 100%;
+  display: flex;
+}
+
+.mobile-mode-switch button {
+  flex: 1;
+  justify-content: center;
+  min-height: 44px;
+  font-size: 13px;
 }
 
 .nav-list {
@@ -4026,6 +4132,28 @@ textarea {
   background: var(--surface-soft);
 }
 
+.profile-usage-selector {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.profile-usage-selector legend {
+  grid-column: 1 / -1;
+  margin-bottom: 0;
+}
+
+.profile-usage-selector label {
+  min-height: 82px;
+  padding: 16px;
+  border-radius: 18px;
+  background: var(--surface-soft);
+}
+
 .profile-select-stack {
   display: grid;
   gap: 12px;
@@ -5565,7 +5693,8 @@ textarea {
 	  .onboarding-slide,
 	  .profile-overview-shell,
 	  .profile-info-list,
-	  .profile-read-grid {
+	  .profile-read-grid,
+	  .profile-usage-selector {
 	    grid-template-columns: 1fr;
 	  }
 
@@ -5681,6 +5810,7 @@ textarea {
   }
 
   .brand-chat-button,
+  .workspace-switch,
   .nav-list,
   .utility-links,
   .sidebar-note {

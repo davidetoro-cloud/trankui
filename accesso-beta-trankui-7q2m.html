@@ -97,40 +97,25 @@
             <h2 id="authTitle">Crea il tuo profilo</h2>
             <p class="auth-copy" id="authCopy">Inizia a farti trovare per ruolo, zona e disponibilità.</p>
             <form class="auth-form" id="authForm">
-              <fieldset class="account-type-selector" id="accountTypeSelector">
-                <legend>Che tipo di account vuoi creare?</legend>
+              <input type="hidden" name="account_type" value="freelance" />
+              <fieldset class="account-type-selector profile-mode-selector" id="profileModeSelector">
+                <legend>Come vuoi usare Trankui?</legend>
                 <label>
-                  <input type="radio" name="account_type" value="freelance" checked />
-                  <span><strong>Freelance</strong><small>Se lavori come professionista e vuoi essere trovato o collaborare.</small></span>
+                  <input type="checkbox" name="profile_modes" value="member" checked />
+                  <span><strong>Crew Member</strong><small>Puoi essere trovato, contattato e candidarti alle opportunità.</small></span>
                 </label>
                 <label>
-                  <input type="radio" name="account_type" value="company" />
-                  <span><strong>Agenzia / casa di produzione</strong><small>Se cerchi collaboratori e costruisci crew per produzioni.</small></span>
+                  <input type="checkbox" name="profile_modes" value="builder" checked />
+                  <span><strong>Crew Builder</strong><small>Puoi cercare collaboratori, pubblicare richieste e costruire crew.</small></span>
                 </label>
               </fieldset>
               <div class="field">
                 <label for="authName">Nome e cognome</label>
                 <input id="authName" name="name" placeholder="Es. Davide Toro" required />
               </div>
-              <div class="field hidden" id="authCompanyNameField">
-                <label for="authCompanyName">Nome agenzia / casa di produzione</label>
+              <div class="field" id="authCompanyNameField">
+                <label for="authCompanyName">Agenzia / casa di produzione <span class="optional-label">facoltativo</span></label>
                 <input id="authCompanyName" name="company_name" placeholder="Es. Trankui Studio" />
-              </div>
-              <div class="field hidden" id="authContactNameField">
-                <label for="authContactName">Referente</label>
-                <input id="authContactName" name="contact_name" placeholder="Es. Davide Toro" />
-              </div>
-              <div class="field hidden" id="authCompanyTypeField">
-                <label for="authCompanyType">Tipo realtà</label>
-                <select id="authCompanyType" name="company_type">
-                  <option value="">Scegli</option>
-                  <option>Agenzia creativa</option>
-                  <option>Casa di produzione</option>
-                  <option>Studio video</option>
-                  <option>Brand / azienda</option>
-                  <option>Organizzatore eventi</option>
-                  <option>Altro</option>
-                </select>
               </div>
               <div class="field">
                 <label for="authEmail">Email</label>
@@ -179,6 +164,10 @@
           <img class="brand-logo" src="./clipboard.png?v=20260706-official-logo" alt="Trankui" />
           <button class="brand-chat-button" type="button" data-view="chat" title="Apri chat" aria-label="Apri chat"><i data-lucide="message-circle" aria-hidden="true"></i></button>
         </div>
+        <div class="workspace-switch" id="workspaceSwitch" role="group" aria-label="Modalità Trankui">
+          <button class="active" type="button" data-workspace-mode="member"><i data-lucide="user-round-check" aria-hidden="true"></i><span>Crew Member</span></button>
+          <button type="button" data-workspace-mode="builder"><i data-lucide="users-round" aria-hidden="true"></i><span>Crew Builder</span></button>
+        </div>
         <div class="mobile-search-shell">
           <button class="mobile-search-trigger" type="button" data-view="search" aria-label="Vai alla ricerca crew">
             <i data-lucide="search" aria-hidden="true"></i>
@@ -222,6 +211,10 @@
           <div><strong id="mobileMenuUser">Profilo Trankui</strong><small>Account Trankui</small></div>
           <button class="mobile-menu-close" type="button" id="mobileMenuClose" aria-label="Chiudi menu"><i data-lucide="x" aria-hidden="true"></i></button>
         </header>
+        <div class="mobile-mode-switch" id="mobileWorkspaceSwitch" role="group" aria-label="Modalità Trankui">
+          <button class="active" type="button" data-workspace-mode="member"><i data-lucide="user-round-check" aria-hidden="true"></i><span>Crew Member</span></button>
+          <button type="button" data-workspace-mode="builder"><i data-lucide="users-round" aria-hidden="true"></i><span>Crew Builder</span></button>
+        </div>
         <nav class="mobile-menu-links">
           <button type="button" data-view="search"><i data-lucide="search" aria-hidden="true"></i>Trova crew</button>
           <button type="button" data-view="board"><i data-lucide="clipboard-list" aria-hidden="true"></i>Bacheca</button>
@@ -672,6 +665,6 @@
     <script src="./backend.js?v=20260719-beta-feedback-1"></script>
     <script src="./lucide.min.js"></script>
     <script src="./cookie-consent.js?v=20260712-delete-account-2"></script>
-    <script src="./app.js?v=20260720-profile-layout-1"></script>
+    <script src="./app.js?v=20260722-crew-modes-1"></script>
   </body>
 </html>
