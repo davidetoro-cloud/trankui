@@ -2830,7 +2830,7 @@ qs("#mobileMarkNotificationsRead").addEventListener("click", () => {
   renderNotifications();
   rememberCurrentNotifications();
 });
-qs("#openProfile").addEventListener("click", openOwnProfile);
+qs("#openProfile").addEventListener("click", handleAccountPanelClick);
 qs("#openDeleteAccount").addEventListener("pointerup", openDeleteAccountModal);
 qs("#openDeleteAccount").addEventListener("click", (event) => {
   if (event.detail > 0 && "PointerEvent" in window) return;

@@ -65,7 +65,7 @@
       ]
 }
     </script>
-    <link rel="stylesheet" href="./styles.css?v=20260722-crew-modes-1" />
+    <link rel="stylesheet" href="./styles.css?v=20260722-airbnb-menu-2" />
   </head>
   <body>
     <section class="auth-screen" id="authScreen">
@@ -194,13 +194,19 @@
               <section class="notification-panel hidden" id="notificationPanel" aria-label="Notifiche recenti">
                 <header><div><strong>Menu</strong><span id="notificationSummary">Nessun aggiornamento</span></div><button class="text-button" type="button" id="markNotificationsRead">Segna come lette</button></header>
                 <div class="notification-account-actions account-menu-actions">
-                  <button class="account-menu-item" type="button" data-go="profile"><i data-lucide="user-round" aria-hidden="true"></i><span>Profilo</span></button>
-                  <button class="account-menu-item" type="button" data-view="chat"><i data-lucide="message-circle" aria-hidden="true"></i><span>Chat</span></button>
+                  <button class="account-menu-item" type="button" data-view="search"><i data-lucide="search" aria-hidden="true"></i><span>Trova crew</span></button>
+                  <button class="account-menu-item" type="button" data-view="board"><i data-lucide="clipboard-list" aria-hidden="true"></i><span>Bacheca</span></button>
                   <button class="account-menu-item" type="button" data-view="requests"><i data-lucide="activity" aria-hidden="true"></i><span>Attività</span></button>
-                  <button class="account-menu-item" type="button" data-go="profile-availability"><i data-lucide="calendar-days" aria-hidden="true"></i><span>Disponibilità</span></button>
+                  <button class="account-menu-item" type="button" data-view="chat"><i data-lucide="message-circle" aria-hidden="true"></i><span>Chat</span></button>
+                  <button class="account-menu-item" type="button" data-view="admin"><i data-lucide="users-round" aria-hidden="true"></i><span>Community</span></button>
                 </div>
                 <div class="notification-account-actions account-menu-actions account-menu-secondary">
+                  <button class="account-menu-item" type="button" data-go="profile"><i data-lucide="user-round" aria-hidden="true"></i><span>Profilo</span></button>
+                  <button class="account-menu-item" type="button" data-go="profile-availability"><i data-lucide="calendar-days" aria-hidden="true"></i><span>Disponibilità</span></button>
                   <button class="account-menu-item" type="button" data-view="support"><i data-lucide="life-buoy" aria-hidden="true"></i><span>Centro assistenza</span></button>
+                </div>
+                <div class="notification-account-actions account-menu-actions account-menu-secondary">
+                  <a class="account-menu-item" href="./trankui.html"><i data-lucide="info" aria-hidden="true"></i><span>Trankui</span></a>
                   <a class="account-menu-item" href="./faq.html"><i data-lucide="circle-help" aria-hidden="true"></i><span>FAQ</span></a>
                   <a class="account-menu-item" href="./blog.html"><i data-lucide="newspaper" aria-hidden="true"></i><span>Blog</span></a>
                   <button class="account-menu-item danger" type="button" id="accountPanelLogout"><i data-lucide="log-out" aria-hidden="true"></i><span>Esci</span></button>
@@ -208,7 +214,7 @@
                 <div class="notification-list" id="notificationList"></div>
               </section>
             </div>
-            <button class="user-name-button" type="button" id="openProfile" title="Apri il profilo"><strong id="sidebarUser">-</strong></button>
+            <button class="user-name-button" type="button" id="openProfile" title="Apri menu account"><strong id="sidebarUser">-</strong></button>
           </div>
           <button class="tiny-button" type="button" id="logoutButton">Esci</button>
         </div>
@@ -674,6 +680,6 @@
     <script src="./backend.js?v=20260722-crew-modes-1"></script>
     <script src="./lucide.min.js"></script>
     <script src="./cookie-consent.js?v=20260712-delete-account-2"></script>
-  <script src="./app.js?v=20260722-airbnb-menu-1"></script>
+  <script src="./app.js?v=20260722-airbnb-menu-2"></script>
 </body>
 </html>
