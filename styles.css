@@ -1599,6 +1599,11 @@ button {
   display: none;
 }
 
+.mobile-menu-button {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
 .mobile-menu-backdrop {
   position: fixed;
   inset: 0;
@@ -2050,6 +2055,14 @@ body.mobile-menu-open {
   border-color: rgba(18, 28, 45, .18);
   box-shadow: 0 8px 26px rgba(18, 28, 45, .12);
   transform: translateY(-1px);
+}
+
+@media (hover: none), (pointer: coarse) {
+  .avatar-notification-button:hover {
+    border-color: var(--line);
+    box-shadow: 0 2px 10px rgba(18, 28, 45, .04);
+    transform: none;
+  }
 }
 
 .avatar-notification-button:focus-visible,

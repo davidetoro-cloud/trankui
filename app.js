@@ -2285,6 +2285,13 @@ function openMobileMenu() {
   document.body.classList.add("mobile-menu-open");
 }
 
+function handleMobileMenuPointer(event) {
+  if (event.pointerType && !["touch", "pen"].includes(event.pointerType)) return;
+  event.preventDefault();
+  event.stopPropagation();
+  openMobileMenu();
+}
+
 function closeMobileMenu() {
   qs("#mobileMenuBackdrop")?.classList.add("hidden");
   qs("#mobileMenuPanel")?.classList.add("hidden");
@@ -2760,7 +2767,20 @@ function setAccountPanelOpen(open) {
   qs("#notificationButton").setAttribute("aria-expanded", String(open));
 }
 
+let accountPanelTouchHandledAt = 0;
+
+function handleAccountPanelPointer(event) {
+  if (event.pointerType && !["touch", "pen"].includes(event.pointerType)) return;
+  accountPanelTouchHandledAt = Date.now();
+  toggleAccountPanel(event);
+}
+
 function handleAccountPanelClick(event) {
+  if (Date.now() - accountPanelTouchHandledAt < 700) {
+    event?.preventDefault();
+    event?.stopPropagation();
+    return;
+  }
   event?.preventDefault();
   event?.stopPropagation();
   toggleAccountPanel(event);
@@ -2797,7 +2817,9 @@ async function confirmDeleteAccount() {
   }
 }
 
+qs("#notificationButton").addEventListener("pointerdown", handleAccountPanelPointer);
 qs("#notificationButton").addEventListener("click", handleAccountPanelClick);
+qs("#mobileMenuOpen").addEventListener("pointerdown", handleMobileMenuPointer);
 qs("#mobileMenuOpen").addEventListener("click", openMobileMenu);
 qs("#mobileMenuClose").addEventListener("click", closeMobileMenu);
 qs("#mobileMenuBackdrop").addEventListener("click", closeMobileMenu);
@@ -2825,6 +2847,7 @@ qs("#mobileMarkNotificationsRead").addEventListener("click", () => {
   renderNotifications();
   rememberCurrentNotifications();
 });
+qs("#openProfile").addEventListener("pointerdown", handleAccountPanelPointer);
 qs("#openProfile").addEventListener("click", handleAccountPanelClick);
 qs("#openDeleteAccount").addEventListener("pointerup", openDeleteAccountModal);
 qs("#openDeleteAccount").addEventListener("click", (event) => {
