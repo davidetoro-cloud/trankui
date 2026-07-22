@@ -2225,6 +2225,22 @@ function switchView(view) {
   redrawIcons();
 }
 
+function openOwnProfile(event, options = {}) {
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
+  closeMobileMenu();
+  closeMobileNotifications();
+  qs("#notificationPanel")?.classList.add("hidden");
+  qs("#notificationButton")?.setAttribute("aria-expanded", "false");
+  switchView("profile");
+  renderProfileOnboarding();
+  renderProfileForm();
+  window.setTimeout(() => {
+    qs(options.scrollTarget || "#view-profile")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, options.delay ?? 40);
+  redrawIcons();
+}
+
 function prefillPostFromSearch() {
   if (state.search.roleId) qs("#postRole").value = state.search.roleId;
   if (state.search.date) qs("#postDate").value = state.search.date;
@@ -2246,10 +2262,7 @@ function openBoardComposer(prefill = false) {
 }
 
 function openProfileAvailability() {
-  switchView("profile");
-  window.setTimeout(() => {
-    qs("#profileAvailabilitySection")?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, 60);
+  openOwnProfile(null, { scrollTarget: "#profileAvailabilitySection", delay: 60 });
 }
 
 function openMobileMenu() {
@@ -2411,6 +2424,7 @@ document.addEventListener("click", async (event) => {
     closeMobileNotifications();
     qs("#notificationPanel")?.classList.add("hidden");
     qs("#notificationButton")?.setAttribute("aria-expanded", "false");
+    if (go.dataset.go === "profile") return openOwnProfile(event);
     if (go.dataset.go === "calendar" || go.dataset.go === "profile-availability") return openProfileAvailability();
     return switchView(go.dataset.go);
   }
@@ -2791,7 +2805,7 @@ qs("#mobileMarkNotificationsRead").addEventListener("click", () => {
   renderNotifications();
   rememberCurrentNotifications();
 });
-qs("#openProfile").addEventListener("click", () => switchView("profile"));
+qs("#openProfile").addEventListener("click", openOwnProfile);
 qs("#openDeleteAccount").addEventListener("pointerup", openDeleteAccountModal);
 qs("#openDeleteAccount").addEventListener("click", (event) => {
   if (event.detail > 0 && "PointerEvent" in window) return;
